@@ -1,0 +1,8 @@
+pandas
+aiohttp
+requests
+asyncpraw
+humanize
+Pillow
+discord.py>=2.0
+PyNaCl
