@@ -912,7 +912,38 @@ class RobloxGroup(app_commands.Group):
             logger.info(
                 f"Failed to link Roblox account for {interaction.user}, bio did not match"
             )
+    @app_commands.command(
+        name="description", description="Provides the description of a Roblox account."
+    )
+    @app_commands.describe(
+        username="The username of the Roblox account (leave blank to use linked account)."
+    )
+    async def rbxdescription(self, interaction: discord.Interaction, username: str = None):
+        await interaction.response.defer()
+        discord_user_id = str(interaction.user.id)
+        if (
+            discord_user_id not in member_info
+            or "roblox_id" not in member_info[discord_user_id]
+        ):
+            await interaction.response.send_message(
+                "You don't have a linked Roblox account."
+            )
+            return
 
+        if username:
+            roblox_user_id = await GetRobloxID(username)
+            if roblox_user_id is None:
+                await interaction.response.send_message(
+                    f"Failed to retrieve Roblox ID for {username}."
+                )
+                return
+        else:
+            roblox_user_id = member_info[discord_user_id]["roblox_id"]
+            
+        bio = fetch_roblox_bio(roblox_user_id)
+        embed = discord.Embed(title=f"User Description for {roblox_user_id}", description=bio, color=0x808080)
+        await interaction.followup.send(embed=embed)
+        
     @app_commands.command(
         name="info", description="Provides info about your linked Roblox account."
     )
@@ -920,6 +951,7 @@ class RobloxGroup(app_commands.Group):
         username="The username of the Roblox account (leave blank to use linked account)."
     )
     async def info(self, interaction: discord.Interaction, username: str = None):
+        await interaction.response.defer()
         discord_user_id = str(interaction.user.id)
         member_info = open_file("info/member_info.json")
 
@@ -943,21 +975,8 @@ class RobloxGroup(app_commands.Group):
             roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
         embed = discord.Embed(title="Roblox Account Info", color=0x808080)
-        embed.add_field(
-            name="Name",
-            value=username
-            if username
-            else member_info[discord_user_id]["roblox_username"],
-        )
-        embed.add_field(
-            name="DisplayName",
-            value=f"{username} (@{username})"
-            if username
-            else f"{member_info[discord_user_id]['roblox_username']} (@{member_info[discord_user_id]['roblox_username']})",
-        )
-        embed.add_field(name="Creation date", value="Unknown")
-        await interaction.response.send_message(embed=embed)
-
+        embed.add_field(name="Nothing here yet!", value="Please try this in a later version.")
+        await interaction.followup.send(embed=embed)
 
 bot.tree.add_command(RobloxGroup())
 
