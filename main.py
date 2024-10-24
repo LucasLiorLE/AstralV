@@ -360,7 +360,7 @@ async def info(interaction: discord.Interaction):
         description="This bot is developed by LucasLiorLE.",
         color=0x808080,
     )
-    embed.add_field(name="Version", value="v1.0.0a")
+    embed.add_field(name="Version", value="v1.1.3a")
     embed.add_field(name="Server Count", value=len(bot.guilds), inline=True)
     embed.add_field(name="Library", value="Discord.py", inline=True)
     embed.add_field(name="Other", value="Ok")
