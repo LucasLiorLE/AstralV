@@ -78,12 +78,6 @@ def parse_duration(duration_str):
 
     return total_duration
 
-reddit = asyncpraw.Reddit(
-    client_id="",
-    client_secret="",
-    user_agent="",
-) # type: 
-
 def check_user(interaction: discord.Interaction, original_user: discord.User) -> bool:
     return interaction.user.id == original_user.id
 
@@ -101,10 +95,24 @@ def save_file(filename, data):
             default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o,
         )
 
+secrets = open_file("storage/secrets.json")
+
+client_id = secrets.get("client_id")
+client_secret = secrets.get("client_secret")
+user_agent = secrets.get("user_agent")
+cr_API = secrets.get("cr_API")
+token = secrets.get("token")
+
+reddit = asyncpraw.Reddit(
+    client_id=client_id,
+    client_secret=client_secret,
+    user_agent=user_agent,
+) 
+
 async def log_error(channel, error_message):
     if channel:
         await channel.send(f"An error occurred: {error_message}")
-
+        
 @bot.event
 async def on_command_error(interaction, error):
     error_channel = bot.get_channel(1292021826414837770)
@@ -339,7 +347,7 @@ async def info(interaction: discord.Interaction):
         description="This bot is developed by LucasLiorLE.",
         color=0x808080,
     )
-    embed.add_field(name="Version", value="v1.0.0a")
+    embed.add_field(name="Version", value="v1.1.3a")
     embed.add_field(name="Server Count", value=len(bot.guilds), inline=True)
     embed.add_field(name="Library", value="Discord.py", inline=True)
     embed.add_field(name="Other", value="Ok")
@@ -569,7 +577,6 @@ async def mlevel(interaction: discord.Interaction, current_level: int, current_e
 """
 CLASH ROYALE COMMANDS
 """
-cr_API = "" # type: 
 
 async def get_player_data(tag: str):
     api_url = f"https://api.clashroyale.com/v1/players/{tag}"  
@@ -2969,4 +2976,4 @@ async def report(
     else:
         await interaction.followup.send("Report channel not found.", ephemeral=True)
 
-bot.run("")
+bot.run(token)
