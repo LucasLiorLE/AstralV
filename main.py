@@ -14,7 +14,6 @@ import humanize
 import datetime
 import traceback
 
-# Going to use these for later image commands
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps, ImageFont, ImageSequence
 from datetime import datetime, timedelta, timezone
@@ -130,7 +129,6 @@ async def on_command_error(interaction, error):
     else:
         await log_error(error_channel, str(error))
 
-
 @bot.event
 async def on_application_command_error(interaction: discord.Interaction, error):
     error_channel = bot.get_channel(1292021826414837770)
@@ -148,7 +146,6 @@ async def on_application_command_error(interaction: discord.Interaction, error):
         )
     else:
         await log_error(error_channel, str(error))
-
 
 class ReplyModal(discord.ui.Modal):
     def __init__(self, user, message_id, reply_author):
@@ -196,7 +193,6 @@ class ReplyModal(discord.ui.Modal):
                 "Failed to send the DM or log the reply.", ephemeral=True
             )
 
-
 class ReplyButton(Button):
     def __init__(self, user, message_id):
         super().__init__(label="Reply", style=discord.ButtonStyle.primary)
@@ -207,10 +203,7 @@ class ReplyButton(Button):
         modal = ReplyModal(self.user, self.message_id, interaction.user)
         await interaction.response.send_modal(modal)
 
-
 user_last_message_time = {}
-
-
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
@@ -229,8 +222,8 @@ async def on_message(message):
                         embed = discord.Embed(
                             title="Direct Message Received",
                             description=f"**User:** {message.author.mention}\n"
-                            f"**Message:** {message.content or '[No text content]'}\n"
-                            f"**Message ID:** {message.id}",
+                                        f"**Message:** {message.content or '[No text content]'}\n"
+                                        f"**Message ID:** {message.id}",
                             color=discord.Color.blue(),
                             timestamp=message.created_at,
                         )
@@ -243,9 +236,7 @@ async def on_message(message):
                                     inline=False,
                                 )
 
-                        reply_button = ReplyButton(
-                            user=message.author, message_id=message.id
-                        )
+                        reply_button = ReplyButton(user=message.author, message_id=message.id)
                         view = discord.ui.View()
                         view.add_item(reply_button)
 
@@ -261,9 +252,8 @@ async def on_message(message):
             member_data[member_id] = {"EXP": 0}
 
         last_message_time = user_last_message_time.get(member_id)
-        if last_message_time is None or current_time - last_message_time >= timedelta(
-            minutes=1
-        ):
+
+        if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
             message_length = len(message.content)
             exp_gain = math.floor(message_length / 15)
 
@@ -272,6 +262,7 @@ async def on_message(message):
 
             save_file("info/member_info.json", member_data)
 
+        await bot.process_commands(message)
 
 @bot.event
 async def on_ready():
@@ -284,11 +275,9 @@ async def on_ready():
     except Exception as e:
         logging.error(f"Failed to sync commands: {e}")
 
-
 @bot.command(name="test", help="Test to see if the bot works")
 async def test(interaction):
     await interaction.send("test!")
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -316,7 +305,6 @@ async def ccp(interaction: discord.Interaction, choice: str, user_id: str):
         )
 
     await interaction.followup.send(message)
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -350,7 +338,6 @@ async def ping(interaction: discord.Interaction):
     )
     await interaction.followup.send(embed=embed)
 
-
 @bot.tree.command(name="info", description="Displays information about the bot.")
 async def info(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -375,7 +362,6 @@ async def info(interaction: discord.Interaction):
     view.add_item(button)
 
     await interaction.followup.send(embed=embed, view=view)
-
 
 @bot.tree.command(name="serverinfo", description="Shows information about the server.")
 async def serverinfo(interaction: discord.Interaction):
@@ -416,7 +402,6 @@ async def serverinfo(interaction: discord.Interaction):
     except Exception as e:
         logger.error(f"Error in /serverinfo command: {str(e)}")
         await interaction.followup.send("An error occurred while fetching server info.")
-
 
 @bot.tree.command(name="roleinfo", description="Provides information for a role.")
 @app_commands.describe(
@@ -462,7 +447,6 @@ async def roleinfo(interaction: discord.Interaction, role: discord.Role):
     )
     await interaction.followup.send(embed=embed)
 
-
 @bot.tree.command(name="userinfo", description="Provides information about a user.")
 @app_commands.describe(
     member="The member to get the info for",
@@ -484,7 +468,6 @@ async def userinfo(interaction: discord.Interaction, member: discord.Member = No
         text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url
     )
     await interaction.followup.send(embed=embed)
-
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):
@@ -536,7 +519,7 @@ class AvatarGroup(app_commands.Group):
             )
             embed.set_image(
                 url=member.display_avatar.url
-            ) 
+            )  
             embed.set_footer(
                 text=f"Requested by {interaction.user}",
                 icon_url=interaction.user.avatar.url,
@@ -551,8 +534,45 @@ class AvatarGroup(app_commands.Group):
                 "An error occurred while fetching the server avatar."
             )
 
-
 bot.tree.add_command(AvatarGroup())
+
+@bot.tree.command(name="mlevel", description="Calculate mee6 levels and how long it will take you to achieve them.")
+@app_commands.describe( 
+    current_level="Your current level",
+    current_exp="Your current EXP in that level",
+    target_level="The level you want to achieve",
+    hours_per_day="Hours you will chat everyday"
+)
+async def mlevel(interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, hours_per_day: int):
+    await interaction.response.defer()
+
+    def exp_required(level):
+        total_exp = 0
+        for l in range(1, level + 1):
+            total_exp += 5 * (l ** 2) + 50 * l + 100
+        return total_exp
+
+    target_exp = exp_required(target_level)
+    current_level_exp = exp_required(current_level)
+    required_exp = target_exp - (current_level_exp + current_exp)
+    estimated_messages = required_exp / 20
+    estimated_days = math.ceil(required_exp / (hours_per_day * 1200))
+
+    embed = discord.Embed(
+        title="Mee6 Level Calculator",
+        description=f"Estimated based off you chat {hours_per_day} hours per day and gain {hours_per_day * 1200} EXP.\n**Other Info**\nCurrent Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}\nTotal EXP: {current_level_exp}",
+        color=discord.Color.blue()
+    )
+    embed.add_field(name="Required EXP", value=f"{required_exp:,}", inline=True)
+    embed.add_field(name="Estimated Messages", value=f"{math.ceil(estimated_messages * 1.5):,}", inline=True)
+    embed.add_field(name="Estimated Days", value=f"{estimated_days:,}", inline=True)
+    embed.set_footer(
+        text=f"Requested by {interaction.user}",
+        icon_url=interaction.user.avatar.url,
+    )
+
+    await interaction.followup.send(embed=embed)
+    logger.info(f"Level command used by {interaction.user}. Current Level: {current_level}, Target Level: {target_level}")
 
 """
 CLASH ROYALE COMMANDS
@@ -563,12 +583,12 @@ async def get_player_data(tag: str):
     headers = {
         "Authorization": f"Bearer {cr_API}"  
     }
-    
+
     async with aiohttp.ClientSession() as session:
         async with session.get(api_url, headers=headers) as response:
             logger.info(f"API URL: {api_url}")
             logger.info(f"Response Status Code: {response.status}")
-            
+
             try:
                 response_json = await response.json()
 
@@ -591,14 +611,14 @@ async def get_player_data(tag: str):
                     f"Status code: {response.status}. Message: {message}, Type: {error_type}"
                 )
                 return None
-            
+
 async def get_clan_data(clan_tag: str):
     api_url = f"https://api.clashroyale.com/v1/clans/{clan_tag}"
-    
+
     headers = {
         "Authorization": f"Bearer {cr_API}",
     }
-    
+
     async with aiohttp.ClientSession() as session:
         async with session.get(api_url, headers=headers) as response:
             if response.status == 200:
@@ -617,7 +637,7 @@ async def get_clan_data(clan_tag: str):
             else:
                 logger.error(f"Failed to fetch clan data: {response.status} {await response.text()}")
                 return None
-            
+
 class ProfileView(View):
     def __init__(self, player_data, current_page="main"):
         super().__init__(timeout=None)
@@ -627,7 +647,7 @@ class ProfileView(View):
         self.main_button = Button(label="Main", style=discord.ButtonStyle.primary)
         self.main_button.callback = self.show_main_page
         self.add_item(self.main_button)
-        
+
         self.deck_button = Button(label="Deck", style=discord.ButtonStyle.secondary)
         self.deck_button.callback = self.show_deck_page
         self.add_item(self.deck_button)
@@ -647,7 +667,7 @@ class ProfileView(View):
     async def show_main_page(self, interaction: discord.Interaction):
         self.current_page = "main"
         self.update_buttons()
-        
+
         embed = self.create_main_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
@@ -694,14 +714,14 @@ class ProfileView(View):
                 level = card.get("level", "Unknown")
                 star_level = card.get("starLevel", "0")
                 emoji = self.get_card_emoji(name)
-                
+
                 card_id = card.get("id")
                 if card_id:
                         card_ids.append(str(card_id))
-                
+
                 field_value = f"{emoji} | Level: {level} | Star Level: {star_level}"
                 embed.add_field(name=f"Card {index + 1}: {name}", value=field_value, inline=False)
-        
+
         embed.description=f"[Click here to copy the deck](https://link.clashroyale.com/en/?clashroyale://copyDeck?deck={'%3B'.join(card_ids)}&l=Royals)"
 
         return embed
@@ -712,11 +732,11 @@ class ProfileView(View):
         if emoji_id:
             return f"<:{formatted_name}:{emoji_id}>"
         return "❓" 
-    
+
 class ClashRoyaleCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="cr", description="Clash Royale related commands")
-        
+
     @app_commands.command(name="connect", description="Connect your Clash Royale profile.")
     @app_commands.describe(
         tag="Your player tag",
@@ -728,11 +748,11 @@ class ClashRoyaleCommandGroup(app_commands.Group):
             tag = f"#{tag}"
 
         player_data = await get_player_data(tag.replace("#", "%23"))
-        
+
         if not player_data:
             await interaction.response.send_message("Failed to retrieve data for the provided player tag.", ephemeral=True)
             return
-                
+
         random_deck = random.sample(
             ["Giant", "Mini P.E.K.K.A", "Fireball", "Archers", "Minions", "Knight", "Musketeer", "Arrows"], k=8
         )
@@ -826,13 +846,11 @@ class ClashRoyaleCommandGroup(app_commands.Group):
             await interaction.followup.send(f"Clan data not found for tag: {clantag}")
             logger.warning(f"Clan data not found for tag: {clantag}")
 
-
 bot.tree.add_command(ClashRoyaleCommandGroup())
 
 """
 ROBLOX COMMANDS
 """
-
 
 async def fetch_roblox_bio(roblox_user_id):
     async with aiohttp.ClientSession() as session:
@@ -840,7 +858,6 @@ async def fetch_roblox_bio(roblox_user_id):
         async with session.get(url) as response:
             data = await response.json()
             return data.get("description", "")
-
 
 async def GetRobloxID(roblox_username):
     async with aiohttp.ClientSession() as session:
@@ -854,7 +871,6 @@ async def GetRobloxID(roblox_username):
         if not data["data"]:
             return None
         return data["data"][0]["id"]
-
 
 class RobloxGroup(app_commands.Group):
     def __init__(self):
@@ -910,14 +926,14 @@ class RobloxGroup(app_commands.Group):
             logger.info(
                 f"Failed to link Roblox account for {interaction.user}, bio did not match"
             )
-
     @app_commands.command(
-        name="info", description="Provides info about your linked Roblox account."
+        name="description", description="Provides the description of a Roblox account."
     )
     @app_commands.describe(
         username="The username of the Roblox account (leave blank to use linked account)."
     )
-    async def info(self, interaction: discord.Interaction, username: str = None):
+    async def rbxdescription(self, interaction: discord.Interaction, username: str = None):
+        await interaction.response.defer()
         discord_user_id = str(interaction.user.id)
         member_info = open_file("info/member_info.json")
 
@@ -940,22 +956,262 @@ class RobloxGroup(app_commands.Group):
         else:
             roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-        embed = discord.Embed(title="Roblox Account Info", color=0x808080)
-        embed.add_field(
-            name="Name",
-            value=username
-            if username
-            else member_info[discord_user_id]["roblox_username"],
-        )
-        embed.add_field(
-            name="DisplayName",
-            value=f"{username} (@{username})"
-            if username
-            else f"{member_info[discord_user_id]['roblox_username']} (@{member_info[discord_user_id]['roblox_username']})",
-        )
-        embed.add_field(name="Creation date", value="Unknown")
-        await interaction.response.send_message(embed=embed)
+        bio = fetch_roblox_bio(roblox_user_id)
+        embed = discord.Embed(title=f"User Description for {roblox_user_id}", description=bio, color=0x808080)
+        await interaction.followup.send(embed=embed)
 
+    @app_commands.command(
+        name="info", description="Provides info about your linked Roblox account."
+    )
+    @app_commands.describe(
+        username="The username of the Roblox account (leave blank to use linked account)."
+    )
+    async def rbxinfo(self, interaction: discord.Interaction, username: str = None):
+        await interaction.response.defer()
+        discord_user_id = str(interaction.user.id)
+        member_info = open_file("info/member_info.json")
+
+        if (
+            discord_user_id not in member_info
+            or "roblox_id" not in member_info[discord_user_id]
+        ):
+            await interaction.followup.send(
+                "You don't have a linked Roblox account."
+            )
+            logger.info(f"User {discord_user_id} tried accessing info without a linked Roblox account.")
+            return
+
+        if username:
+            roblox_user_id = await GetRobloxID(username)
+            if roblox_user_id is None:
+                await interaction.followup.send(
+                    f"Failed to retrieve Roblox ID for {username}."
+                )
+                logger.warning(f"Failed to retrieve Roblox ID for username: {username}")
+                return
+        else:
+            roblox_user_id = member_info[discord_user_id]["roblox_id"]
+            logger.info(f"Fetching data for Roblox user ID: {roblox_user_id}")
+
+        async with aiohttp.ClientSession() as session:
+            async def fetch_friends_count(roblox_user_id: int):
+                try:
+                    async with session.get(f"https://friends.roblox.com/v1/users/{roblox_user_id}/friends/count") as response:
+                        data = await response.json()
+                        return data.get("count", 0)
+                except Exception as e:
+                    logger.error(f"Error fetching friends count for {roblox_user_id}: {e}")
+                    return 0
+
+            async def fetch_followers_count(roblox_user_id: int):
+                try:
+                    async with session.get(f"https://friends.roblox.com/v1/users/{roblox_user_id}/followers/count") as response:
+                        data = await response.json()
+                        return data.get("count", 0)
+                except Exception as e:
+                    logger.error(f"Error fetching followers count for {roblox_user_id}: {e}")
+                    return 0
+
+            async def fetch_following_count(roblox_user_id: int):
+                try:
+                    async with session.get(f"https://friends.roblox.com/v1/users/{roblox_user_id}/followings/count") as response:
+                        data = await response.json()
+                        return data.get("count", 0)
+                except Exception as e:
+                    logger.error(f"Error fetching following count for {roblox_user_id}: {e}")
+                    return 0
+
+            async def fetch_user_presence(roblox_user_id: int):
+                try:
+                    async with session.post(
+                        "https://presence.roblox.com/v1/presence/users",
+                        json={"userIds": [roblox_user_id]}
+                    ) as response:
+                        data = await response.json()
+                        return data["userPresences"][0]
+                except Exception as e:
+                    logger.error(f"Error fetching presence for {roblox_user_id}: {e}")
+                    return None
+
+            async def fetch_user_info(roblox_user_id: int):
+                try:
+                    async with session.get(f"https://users.roblox.com/v1/users/{roblox_user_id}") as response:
+                        return await response.json()
+                except Exception as e:
+                    logger.error(f"Error fetching user info for {roblox_user_id}: {e}")
+                    return None
+
+            async def check_premium(roblox_user_id: int):
+                try:
+                    headers = {
+                        'accept': 'application/json'
+                    }
+                    url = f"https://premiumfeatures.roblox.com/v1/users/{roblox_user_id}/validate-membership"
+                    logger.info(f"Requesting URL: {url}")
+
+                    async with session.get(url, headers=headers) as response:
+                        logger.info(f"Response status: {response.status}")
+
+                        if response.status == 200:
+                            return await response.json()
+                        else:
+                            logger.error(f"Error fetching user info for {roblox_user_id}: {response.status} - {await response.text()}")
+                            return None
+                except Exception as e:
+                    logger.error(f"Error fetching user info for {roblox_user_id}: {e}")
+                    return None
+
+            is_premium = await check_premium(roblox_user_id)
+            logger.info(f"{roblox_user_id} Premium check: {is_premium}")
+
+            friends_count = await fetch_friends_count(roblox_user_id)
+            logger.info(f"Fetched {friends_count} friends for user {roblox_user_id}")
+
+            followers_count = await fetch_followers_count(roblox_user_id)
+            logger.info(f"Fetched {followers_count} followers for user {roblox_user_id}")
+
+            following_count = await fetch_following_count(roblox_user_id)
+            logger.info(f"Fetched {following_count} following for user {roblox_user_id}")
+
+            presence_data = await fetch_user_presence(roblox_user_id)
+            if presence_data is None:
+                await interaction.followup.send_message(
+                    "Failed to fetch user presence. Please try again later."
+                )
+                logger.error(f"Presence data could not be retrieved for user {roblox_user_id}")
+                return
+
+            user_info = await fetch_user_info(roblox_user_id)
+            if user_info is None:
+                await interaction.followup.send_message(
+                    "Failed to fetch user information. Please try again later."
+                )
+                logger.error(f"User info could not be retrieved for user {roblox_user_id}")
+                return
+
+        embed = discord.Embed(title=f"{'<:Premium:1298832636805910589>' if is_premium else ''}Roblox Account Info", color=0x808080)
+        display_name = user_info.get("displayName", "N/A")
+        username = user_info.get("name", "N/A")
+        embed.add_field(
+            name="Username",
+            value=f"{display_name} (@{username})",
+            inline=False,
+        )
+        embed.add_field(
+            name="Friends/Followers/Following",
+            value=f"Friends: {friends_count}\nFollowers: {followers_count}\nFollowing: {following_count}",
+            inline=False,
+        )
+
+        status = "Offline" if presence_data["userPresenceType"] == 0 else "Online"
+        last_online = datetime.strptime(presence_data["lastOnline"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
+        last_online_str = last_online.strftime("%m-%d-%Y")  
+        embed.add_field(
+            name="Status",
+            value=f"{status} | Last online: {last_online_str}",
+            inline=False,
+        )
+        creation_date = datetime.strptime(user_info["created"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
+        creation_date_str = creation_date.strftime("%m-%d-%Y")  
+        embed.set_footer(
+            text=f"Account created: {creation_date_str} | Requested by {interaction.user}",
+            icon_url=interaction.user.avatar.url
+        )
+
+        await interaction.followup.send(embed=embed)
+        logger.info(f"Sent Roblox info embed for user {roblox_user_id}")
+
+    @app_commands.command(
+        name="avatar", description="Provides a Roblox account's avatar."
+    )
+    @app_commands.describe(
+        username="The username of the Roblox account (leave blank to use linked account).",
+        items="Whether or not to display the list of currently worn items (default: False)."
+    )
+    async def rbxavatar(self, interaction: discord.Interaction, username: str = None, items: bool = False):
+        await interaction.response.defer()
+        discord_user_id = str(interaction.user.id)
+        member_info = open_file("info/member_info.json")
+
+        if (
+            discord_user_id not in member_info
+            or "roblox_id" not in member_info[discord_user_id]
+        ):
+            await interaction.followup.send(
+                "You don't have a linked Roblox account."
+            )
+            logger.info(f"User {discord_user_id} tried accessing info without a linked Roblox account.")
+            return
+
+        if username:
+            roblox_user_id = await GetRobloxID(username)
+            if roblox_user_id is None:
+                await interaction.followup.send(
+                    f"Failed to retrieve Roblox ID for {username}."
+                )
+                logger.warning(f"Failed to retrieve Roblox ID for username: {username}")
+                return
+        else:
+            roblox_user_id = member_info[discord_user_id]["roblox_id"]
+            logger.info(f"Fetching data for Roblox user ID: {roblox_user_id}")
+
+        async with aiohttp.ClientSession() as session:
+            async def get_avatar_items(session, roblox_user_id: int):
+                url = f"https://avatar.roblox.com/v1/users/{roblox_user_id}/currently-wearing"
+                try:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if not data['assetIds']:  
+                                return None  
+                            return data['assetIds']
+                        else:
+                            return None
+                except Exception as e:
+                    logger.error(f"Error fetching avatar items: {e}")
+                    return None
+
+            async def get_avatar_thumbnail(session, roblox_user_id: int):
+                url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={roblox_user_id}&size=720x720&format=Png&isCircular=false"
+                try:
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if data and data['data'][0]['state'] == 'Completed':
+                                return data['data'][0]['imageUrl']
+                            else:
+                                return None
+                        else:
+                            return None
+                except Exception as e:
+                    logger.error(f"Error fetching avatar thumbnail: {e}")
+                    return None
+
+            avatar_thumbnail_url = await get_avatar_thumbnail(session, roblox_user_id)
+
+            if items:
+                asset_ids = await get_avatar_items(session, roblox_user_id)
+            else:
+                asset_ids = None
+
+            embed = discord.Embed(
+                title="Roblox Avatar View",
+                color=discord.Color.blue()
+            )
+            embed.set_image(url=avatar_thumbnail_url)  
+            embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+
+            if items:
+                if asset_ids:
+                    urls = [f"https://www.roblox.com/catalog/{asset_id}" for asset_id in asset_ids]
+                    url_list = '\n'.join(urls)
+                    embed.description = url_list  
+                else:
+                    embed.description = "This user has no currently worn items."  
+            else:
+                embed.description = "Currently worn items are not displayed."
+
+            await interaction.followup.send(embed=embed)
 
 bot.tree.add_command(RobloxGroup())
 
@@ -1073,7 +1329,6 @@ class GloveView(discord.ui.View):
         )
 
         await interaction.response.edit_message(embed=gamepass_embed, view=self)
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -1274,11 +1529,9 @@ async def cgloves(interaction: discord.Interaction, username: str = None):
                 "An error occurred while fetching the user's gloves."
             )
 
-
 """
 FUN COMMANDS
 """
-
 
 @bot.tree.command(name="say", description="Say a message in a channel")
 @app_commands.describe(
@@ -1328,7 +1581,6 @@ async def say(
             f"An error occurred when trying to send the message: {e}"
         )
 
-
 @bot.tree.command(name="dm", description="Directly message a person.")
 @app_commands.describe(
     user="The user to DM",
@@ -1353,7 +1605,6 @@ async def dm(
             f"An error occurred when trying to send the message: {e}"
         )
 
-
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="fact", description="Fetches a random fact.")
@@ -1376,7 +1627,6 @@ async def fact(interaction: discord.Interaction):
             )
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -1406,7 +1656,6 @@ async def joke(interaction: discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
 
-
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="cat", description="Fetches a cute cat picture.")
@@ -1429,7 +1678,6 @@ async def cat(interaction: discord.Interaction):
             )
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -1454,7 +1702,6 @@ async def dog(interaction: discord.Interaction):
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
 
-
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="quote", description="Fetches an inspirational quote.")
@@ -1477,7 +1724,6 @@ async def quote(interaction: discord.Interaction):
             )
     except Exception as e:
         await interaction.followup.send(f"An error occurred: {str(e)}")
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -1536,11 +1782,9 @@ async def meme(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"An error occurred: {str(e)}")
 
-
 """
 MODERATION COMMANDS
 """
-
 
 async def store_modlog(modlog, user, moderator, reason):
     preferences = open_file("info/preferences.json")
@@ -1601,7 +1845,6 @@ async def store_modlog(modlog, user, moderator, reason):
     save_file("modlogs.json", modlogs)
     save_file("modstats.json", modstats)
 
-
 @bot.tree.command(name="setlogs", description="Changes the log channels of your server")
 @app_commands.describe(
     option="Choose the type of log (Message Logs, DM Logs, Mod Logs)",
@@ -1635,7 +1878,6 @@ async def setlogs(
         response_map.get(option, "Invalid option selected.")
     )
 
-
 @bot.tree.command(name="setroles", description="Allows you to set the server roles")
 @app_commands.describe(
     option="Choose the role to set", role="The role to set for members"
@@ -1653,7 +1895,6 @@ async def setroles(interaction: discord.Interaction, option: str, role: discord.
     save_file("preferences.json", preferences)
 
     await interaction.followup.send(f"The role '{role.name}' has been set for members.")
-
 
 @bot.tree.command(
     name="purge", description="Deletes a set amount of messages from a specified user."
@@ -1700,7 +1941,6 @@ async def purge(
     embed = discord.Embed(title="Messages deleted", description=reason)
     await interaction.followup.send(embed=embed, delete_after=5)
 
-
 @bot.tree.command(
     name="clean", description="Clears up to 10 bot messages, or a specified amount."
 )
@@ -1734,7 +1974,6 @@ async def clean(interaction: discord.Interaction, amount: int = 10):
     await store_modlog(modlog, None, interaction.user.name, reason)
     embed = discord.Embed(title="Messages deleted", description=reason)
     await interaction.followup.send(embed=embed, delete_after=5)
-
 
 @bot.tree.command(name="lock", description="Lock a channel.")
 @app_commands.describe(
@@ -1786,7 +2025,6 @@ async def lock(
         ephemeral=True,
     )
 
-
 @bot.tree.command(name="unlock", description="Unlock a channel.")
 @app_commands.describe(
     channel="The channel to unlock (default is the current channel)",
@@ -1833,7 +2071,6 @@ async def unlock(
         f"{channel.mention} has been unlocked for {role.name}.\nReason: {reason}",
         ephemeral=True,
     )
-
 
 @bot.tree.command(
     name="slowmode", description="Sets or removes the slowmode delay for the channel."
@@ -1895,7 +2132,6 @@ async def slowmode(interaction: discord.Interaction, delay: int = None):
             ephemeral=True,
         )
 
-
 @bot.tree.command(name="nick", description="Changes a member's nickname.")
 @app_commands.describe(
     member="The member to manage nicknames for",
@@ -1935,7 +2171,6 @@ async def nick(interaction: discord.Interaction, member: discord.Member, new_nic
             ),
             ephemeral=True,
         )
-
 
 @bot.tree.command(name="mute", description="Mutes a member for a specified duration")
 async def mute(
@@ -2001,7 +2236,6 @@ async def mute(
             f"Mute Member Error: An error occurred while trying to mute the member: {str(e)}"
         )
 
-
 @bot.tree.command(name="unmute", description="Unmutes a member.")
 @commands.has_permissions(kick_members=True)
 async def unmute(
@@ -2035,7 +2269,6 @@ async def unmute(
             f"An error occurred while trying to unmute the member: {str(e)}"
         )
 
-
 @bot.tree.command(name="kick", description="Kick a member out of the guild.")
 @commands.has_permissions(kick_members=True)
 async def kick(
@@ -2061,7 +2294,6 @@ async def kick(
         text="If you think this is a mistake, please contact an staff member"
     )
     await member.send(embed=embed)
-
 
 class DelLog(discord.ui.Select):
     def __init__(
@@ -2139,7 +2371,6 @@ class DelLog(discord.ui.Select):
             await interaction.response.send_message(
                 "Invalid selection.", ephemeral=True
             )
-
 
 @bot.tree.command(name="warn", description="Warns a member.")
 @app_commands.describe(member="The member to warn.", reason="Reason for the warn.")
@@ -2220,15 +2451,15 @@ async def warn(interaction: discord.Interaction, member: discord.Member, reason:
     await store_modlog(modlog, None, interaction.user.name, reason)
 
     punishment_durations = {
-        "spamming": 1 * 60 * 60,  # 1 hour
-        "flood": 1 * 60 * 60,  # 1 hour
-        "bot commands": 0.5 * 60 * 60,  # 30 minutes
-        "soft nsfw": 2 * 60 * 60,  # 2 hours
-        "hard nsfw": 24 * 60 * 60,  # 24 hours
-        "advertising": 6 * 60 * 60,  # 6 hours
-        "tragic event joke": 12 * 60 * 60,  # 12 hours
-        "fatherless joke": 3 * 60 * 60,  # 3 hours
-        "kys joke": 6 * 60 * 60,  # 6 hours
+        "spamming": 1 * 60 * 60,  
+        "flood": 1 * 60 * 60,  
+        "bot commands": 0.5 * 60 * 60,  
+        "soft nsfw": 2 * 60 * 60,  
+        "hard nsfw": 24 * 60 * 60,  
+        "advertising": 6 * 60 * 60,  
+        "tragic event joke": 12 * 60 * 60,  
+        "fatherless joke": 3 * 60 * 60,  
+        "kys joke": 6 * 60 * 60,  
     }
 
     mute_duration = punishment_durations.get(reason.lower(), 0)
@@ -2253,7 +2484,6 @@ async def warn(interaction: discord.Interaction, member: discord.Member, reason:
                     color=0xFF0000,
                 )
             )
-
 
 @bot.tree.command(name="warns", description="Displays the warnings for a member.")
 @app_commands.describe(member="The member whose warnings you want to view.")
@@ -2287,7 +2517,6 @@ async def warns(interaction: discord.Interaction, member: discord.Member = None)
             f"No warnings found for {member.display_name}.", ephemeral=True
         )
 
-
 @bot.tree.command(name="note", description="Gives a note to a member.")
 @app_commands.describe(
     member="The member to add a note to", note="Whatever you want to say"
@@ -2310,7 +2539,6 @@ async def note(interaction: discord.Interaction, member: discord.Member, note: s
             color=0xFFA500,
         )
     )
-
 
 @bot.tree.command(name="notes", description="Displays the notes for a member")
 @app_commands.describe(member="The member whose notes you want to view.")
@@ -2344,7 +2572,6 @@ async def notes(interaction: discord.Interaction, member: discord.Member = None)
         await interaction.followup.send(
             f"No notes found for {member.display_name}.", ephemeral=True
         )
-
 
 async def send_modlog_embed(
     interaction: discord.Interaction, user: discord.User, page: int
@@ -2397,7 +2624,6 @@ async def send_modlog_embed(
 
     return embed, total_logs, total_pages
 
-
 class LogSelect(discord.ui.Select):
     def __init__(self, options, interaction, user, current_page):
         super().__init__(
@@ -2428,7 +2654,6 @@ class LogSelect(discord.ui.Select):
         self.placeholder = f"Current page: {selected_page}"
         await interaction.message.edit(view=self.view)
 
-
 @bot.tree.command(name="modlogs", description="View moderation logs for a user.")
 async def modlogs(interaction: discord.Interaction, user: discord.User, page: int = 1):
     embed, total_logs, total_pages = await send_modlog_embed(interaction, user, page)
@@ -2446,7 +2671,6 @@ async def modlogs(interaction: discord.Interaction, user: discord.User, page: in
     view.add_item(select_menu)
 
     await interaction.response.send_message(embed=embed, view=view)
-
 
 @bot.tree.command(
     name="modstats", description="Check the moderation statistics of a moderator"
@@ -2513,17 +2737,14 @@ async def modstats(interaction: discord.Interaction, member: discord.Member = No
 
     await interaction.followup.send(embed=embed)
 
-
 """
 OTHER COMMANDS
 """
-
 
 def get_next_report_id(reports_data):
     if reports_data:
         return max(map(int, reports_data.keys())) + 1
     return 1
-
 
 def blacklist_user(user_id):
     member_info = open_file("info/member_info.json")
@@ -2533,11 +2754,9 @@ def blacklist_user(user_id):
         member_info[str(user_id)]["TicketBlacklist"] = True
     save_file("info/member_info.json", member_info)
 
-
 def is_user_blacklisted(user_id):
     member_info = open_file("info/member_info.json")
     return member_info.get(str(user_id), {}).get("TicketBlacklist", False)
-
 
 class ReportButtons(discord.ui.View):
     def __init__(self, report_id, reports_data, message):
@@ -2672,7 +2891,6 @@ class ReportButtons(discord.ui.View):
 
         await self.message.edit(embed=embed, view=None)
 
-
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="report", description="Report an in game rule breaker")
@@ -2757,6 +2975,5 @@ async def report(
         await interaction.followup.send(f"Your report has been submitted for {user}.")
     else:
         await interaction.followup.send("Report channel not found.", ephemeral=True)
-
 
 bot.run(token)
