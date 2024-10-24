@@ -30,7 +30,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 class StatusManager:
     def __init__(self, bot):
         self.bot = bot
@@ -50,7 +49,6 @@ class StatusManager:
             )
             await asyncio.sleep(600)
 
-
 intents = discord.Intents.default()
 intents.message_content = True
 intents.messages = True
@@ -58,7 +56,6 @@ intents.guilds = True
 intents.dm_messages = True
 intents.members = True
 bot = commands.Bot(command_prefix="?", intents=intents)
-
 
 def parse_duration(duration_str):
     duration_regex = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
@@ -82,23 +79,13 @@ def parse_duration(duration_str):
 
     return total_duration
 
-
-reddit = asyncpraw.Reddit(
-    client_id="",
-    client_secret="",
-    user_agent="",
-) # type: 
-
-
 def check_user(interaction: discord.Interaction, original_user: discord.User) -> bool:
     return interaction.user.id == original_user.id
-
 
 def open_file(filename):
     with open(filename, "r") as f:
         file_data = json.load(f)
     return file_data
-
 
 def save_file(filename, data):
     with open(filename, "w") as f:
@@ -109,12 +96,24 @@ def save_file(filename, data):
             default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o,
         )
 
+secrets = open_file("storage/secrets.json")
+
+client_id = secrets.get("client_id")
+client_secret = secrets.get("client_secret")
+user_agent = secrets.get("user_agent")
+cr_API = secrets.get("cr_API")
+token = secrets.get("token")
+
+reddit = asyncpraw.Reddit(
+    client_id=client_id,
+    client_secret=client_secret,
+    user_agent=user_agent,
+) 
 
 async def log_error(channel, error_message):
     if channel:
         await channel.send(f"An error occurred: {error_message}")
-
-
+        
 @bot.event
 async def on_command_error(interaction, error):
     error_channel = bot.get_channel(1292021826414837770)
@@ -558,7 +557,6 @@ bot.tree.add_command(AvatarGroup())
 """
 CLASH ROYALE COMMANDS
 """
-cr_API = "" # type: 
 
 async def get_player_data(tag: str):
     api_url = f"https://api.clashroyale.com/v1/players/{tag}"  
@@ -2761,4 +2759,4 @@ async def report(
         await interaction.followup.send("Report channel not found.", ephemeral=True)
 
 
-bot.run()
+bot.run(token)
