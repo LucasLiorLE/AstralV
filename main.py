@@ -698,8 +698,8 @@ class ProfileView(View):
         )
         embed.add_field(name="User", value=f"{name} ({user_id})", inline=False)
         embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({winrate:.2f}%)", inline=False)
-        embed.add_field(name="Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
-        embed.add_field(name="Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
+        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
         embed.add_field(name="Clan", value=f"{clan_name} ({clan_tag})", inline=False)
         return embed
 
@@ -1728,9 +1728,36 @@ async def quote(interaction: discord.Interaction):
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(
-    name="meme", description="Fetches a random meme from various subreddits."
+    name="meme",
+    description="Fetches a funny meme!"
 )
 async def meme(interaction: discord.Interaction):
+    await interaction.response.defer()
+    try:
+        response = requests.get("https://meme-api.com/gimme")
+        if response.status_code == 200:
+            data = reponse.json()[0]
+            embed = discord.Embed(
+                title=f"({data["title"]})[{data["postLink"]}]",
+                color=0x66CDAA
+            )
+            spoiler = data["spoiler"]
+            nsfw = data["nsfw"]
+            embed.set_image(url=data["url"])
+            embed.set_footer(text=f"{data["ups"] Upvotes | By: {data["author"]}")
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.followup.send("An error occured when trying to fetch the meme")
+    except Exception as e:
+        await interaction.folllowup.send(f"An error occurred: {e}")
+        
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@bot.tree.command(
+    name="reddit", description="Fetches a random meme from various subreddits."
+)
+async def reddit(interaction: discord.Interaction):
     await interaction.response.defer()
     try:
         subreddit_names = [
