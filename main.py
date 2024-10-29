@@ -10,12 +10,14 @@ import requests
 import asyncio
 import asyncpraw
 import re
+import tempfile
 import humanize
 import datetime
 import traceback
 
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps, ImageFont, ImageSequence
+from moviepy.editor import VideoFileClip, AudioFileClip
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
@@ -23,6 +25,9 @@ import discord
 from discord import Role, app_commands
 from discord.ext import commands, tasks
 from discord.ui import Button, View, Modal, TextInput
+
+botAdmins = [721151215010054165]
+botMods = []
 
 logs = {}
 log_id_counter = 1  
@@ -35,14 +40,16 @@ def storage_log(type, error):
     if type not in logs:
         logs[type] = []
 
+    full_error = traceback.format_exc()
+
     log_entry = {
-        "Error": error,
+        "Error": full_error, 
         "ID": log_id_counter,
-        "time": int(time.time())
+        "Time": int(time.time())
     }
 
     logs[type].append(log_entry)
-    print(error)
+    print(full_error)
 
     log_id_counter += 1
 
@@ -126,7 +133,6 @@ reddit = asyncpraw.Reddit(
     user_agent=user_agent,
 ) 
 
-
 async def handle_error(interaction: discord.Interaction, error, log_error_id):
     embed = discord.Embed(title="An error occurred", color=discord.Color.red())
     embed.add_field(name="Error", value=str(error), inline=False)
@@ -141,7 +147,13 @@ async def handle_error(interaction: discord.Interaction, error, log_error_id):
 
 @bot.event
 async def on_application_command_error(interaction: discord.Interaction, error):
-    handle_error(interaction, error, log_error_id=log_id_counter)
+    if isinstance(error, discord.app_commands.errors.CommandInvokeError):
+        if interaction.response.is_done():
+            await interaction.followup.send("Please try again", empheral=True)
+        else:
+            await interaction.response.send_message("Please try again", empheral=True)
+    else:
+        handle_error(interaction, error, log_error_id=log_id_counter)
 
 @bot.event
 async def on_command_error(interaction: discord.Interaction, error):
@@ -273,10 +285,15 @@ async def on_ready():
 @bot.tree.command(name="error", description="Allows you to view a certain error.")
 async def view_error(interaction: discord.Interaction, error_id: int):
     await interaction.response.defer()
+
+    if interaction.user.id not in botAdmins:
+        await interaction.followup.send("You do not have permission to view this error.")
+        return
+
     for log_type, log_entries in logs.items():
         for entry in log_entries:
             if entry["ID"] == error_id:
-                timestamp = entry["time"]
+                timestamp = entry["Time"]
                 error_message = entry["Error"]
                 embed = discord.Embed(
                     title=f"Error ID: {error_id}",
@@ -355,7 +372,7 @@ async def info(interaction: discord.Interaction):
         description="This bot is developed by LucasLiorLE.",
         color=0x808080,
     )
-    embed.add_field(name="Version", value="v1.0.8a")
+    embed.add_field(name="Version", value="v1.0.7a")
     embed.add_field(name="Server Count", value=len(bot.guilds), inline=True)
     embed.add_field(name="Library", value="Discord.py", inline=True)
     embed.add_field(name="Other", value="Ok")
@@ -532,13 +549,15 @@ async def mlevel(interaction: discord.Interaction, current_level: int, current_e
     await interaction.followup.send(embed=embed)
 
 """
+<<<<<<< Updated upstream
+=======
 GEOMETRY DASH COMMANDS
 """
 class GeometryDashCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="gd", description="Geometry Dash related commands")
 
-    @app_commands.command(name="gdprofile", description="Fetch a Geometry Dash profile.")
+    @app_commands.command(name="profile", description="Fetch a Geometry Dash profile.")
     @app_commands.describe(username="The Geometry Dash username to fetch.")
     async def gdprofile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
@@ -579,19 +598,19 @@ class GeometryDashCommandGroup(app_commands.Group):
                         value=(
                             f"**Total Beaten**: {data['demons']}\n"
                             f"**Classic Demons**:\n"
-                            f" - <:EasyDemon:1299319586197471253> Easy: {data['classicDemonsCompleted']['easy']}\n"
-                            f" - <:MediumDemon:1299319602936942635> Medium: {data['classicDemonsCompleted']['medium']}\n"
-                            f" - <:HardDemon:1299319619571552318> Hard: {data['classicDemonsCompleted']['hard']}\n"
-                            f" - <:InsaneDemon:1299319639959928872> Insane: {data['classicDemonsCompleted']['insane']}\n"
-                            f" - <:ExtremeDemon:1299319662995046420> Extreme: {data['classicDemonsCompleted']['extreme']}\n"
-                            f" - <:WeeklyDemon:1299320499146330152> Weekly: {data['classicDemonsCompleted']['weekly']}\n"
-                            f" - <:Gauntlet:1299320799458627626> Gauntlet: {data['classicDemonsCompleted']['gauntlet']}\n\n"
+                            f"<:EasyDemon:1299319586197471253> Easy: {data['classicDemonsCompleted']['easy']}\n"
+                            f"<:MediumDemon:1299319602936942635> Medium: {data['classicDemonsCompleted']['medium']}\n"
+                            f"<:HardDemon:1299319619571552318> Hard: {data['classicDemonsCompleted']['hard']}\n"
+                            f"<:InsaneDemon:1299319639959928872> Insane: {data['classicDemonsCompleted']['insane']}\n"
+                            f"<:ExtremeDemon:1299319662995046420> Extreme: {data['classicDemonsCompleted']['extreme']}\n"
+                            f"<:WeeklyDemon:1299320499146330152> Weekly: {data['classicDemonsCompleted']['weekly']}\n"
+                            f"<:Gauntlet:1299320799458627626> Gauntlet: {data['classicDemonsCompleted']['gauntlet']}\n\n"
                             f"**Platformer Demons**:\n"
-                            f" - <:EasyDemon:1299319586197471253> Easy: {data['platformerDemonsCompleted']['easy']}\n"
-                            f" - <:MediumDemon:1299319602936942635> Medium: {data['platformerDemonsCompleted']['medium']}\n"
-                            f" - <:HardDemon:1299319619571552318> Hard: {data['platformerDemonsCompleted']['hard']}\n"
-                            f" - <:ExtremeDemon:1299319662995046420> Insane: {data['platformerDemonsCompleted']['insane']}\n"
-                            f" - <:ExtremeDemon:1299319662995046420> Extreme: {data['platformerDemonsCompleted']['extreme']}"
+                            f"<:EasyDemon:1299319586197471253> Easy: {data['platformerDemonsCompleted']['easy']}\n"
+                            f"<:MediumDemon:1299319602936942635> Medium: {data['platformerDemonsCompleted']['medium']}\n"
+                            f"<:HardDemon:1299319619571552318> Hard: {data['platformerDemonsCompleted']['hard']}\n"
+                            f"<:ExtremeDemon:1299319662995046420> Insane: {data['platformerDemonsCompleted']['insane']}\n"
+                            f"<:ExtremeDemon:1299319662995046420> Extreme: {data['platformerDemonsCompleted']['extreme']}"
                         ),
                         inline=False
                     )
@@ -608,7 +627,7 @@ class GeometryDashCommandGroup(app_commands.Group):
                         embed.add_field(name="Social", value=social_links, inline=False)
 
                     embed.set_footer(
-                        text=f"Rank: {data["rank"]} | Requested by {interaction.user}",
+                        text=f"Rank: {"Leaderboard banned" if data["rank"] == 0 else f"Rank: {data['rank']}"} | Requested by {interaction.user}",
                         icon_url=interaction.user.avatar.url
                     )
 
@@ -728,7 +747,9 @@ class ProfileView(View):
         embed.add_field(name="User", value=f"{name} ({user_id})", inline=False)
         embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({winrate:.2f}%)", inline=False)
         embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
-        embed.add_field(name="<:GoblinTrophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
+        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
         embed.add_field(name="Clan", value=f"{clan_name} ({clan_tag})", inline=False)
         return embed
 
@@ -1291,7 +1312,7 @@ async def cgloves(interaction: discord.Interaction, username: str = None):
             discord_user_id not in member_info
             or "roblox_id" not in member_info[discord_user_id]
         ):
-            await interaction.followup.send("You need to provide a Roblox username or </roblox connect:1293791462260998156> your account first.")
+            await interaction.followup.send("You need to provide a Roblox username or connect your account first.")
             return
         roblox_id = member_info[discord_user_id]["roblox_id"]
     else:
@@ -1457,6 +1478,184 @@ async def cgloves(interaction: discord.Interaction, username: str = None):
 """
 FUN COMMANDS
 """
+class Convert(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="convert", description="Image conversion commands")
+
+    @app_commands.command(name="image", description="Convert an uploaded image to a specified format")
+    @app_commands.describe(
+        image="The image file you want to convert.",
+        format="The format you want to convert the image to."
+    )
+    @app_commands.choices(
+        format=[
+            app_commands.Choice(name="JPEG", value="jpeg"),
+            app_commands.Choice(name="PNG", value="png"),
+            app_commands.Choice(name="WEBP", value="webp"),
+            app_commands.Choice(name="GIF", value="gif"),
+            app_commands.Choice(name="BMP", value="bmp"),
+            app_commands.Choice(name="TIFF", value="tiff"),
+        ]
+    )
+    async def convert_image(
+        self,
+        interaction: discord.Interaction,
+        image: discord.Attachment,
+        format: app_commands.Choice[str]
+    ):
+        
+        await interaction.response.defer()
+        if not image.content_type.startswith("image/"):
+            await interaction.response.send_message("Please upload a valid image file.", ephemeral=True)
+            return
+
+        try:
+            img_data = await image.read()
+            image_pil = Image.open(io.BytesIO(img_data))
+
+            if format.value == "jpeg" and image_pil.mode == "RGBA":
+                image_pil = image_pil.convert("RGB")
+
+            output_buffer = io.BytesIO()
+            
+            if format.value == "gif" and image_pil.is_animated:
+                frames = []
+                for frame in ImageSequence.Iterator(image_pil):
+                    frame = frame.convert("RGBA")
+                    frames.append(frame)
+
+                frames[0].save(output_buffer, format="GIF", save_all=True, append_images=frames[1:], loop=0)
+            else:
+                output_filename = f"{image.filename.rsplit('.', 1)[0]}.{format.value.lower()}"
+                image_pil.save(output_buffer, format=format.value.upper())
+
+            output_buffer.seek(0)
+            
+            await interaction.followup.send(
+                content=f"Here is your converted image in {format.value.upper()} format:",
+                file=discord.File(fp=output_buffer, filename=f"converted_image.{format.value.lower()}")
+            )
+
+        except Exception as e:
+            await handle_error(interaction, e, log_error_id=log_id_counter)
+
+    @app_commands.command(name="video", description="Convert an uploaded video to a specified format")
+    @app_commands.describe(
+        video="The uploaded video file you want to convert.",
+        format="The format you want to convert the video to."
+    )
+    @app_commands.choices(
+        format=[
+            app_commands.Choice(name="MP4", value="mp4"),
+            app_commands.Choice(name="AVI", value="avi"),
+            app_commands.Choice(name="MOV", value="mov"),
+            app_commands.Choice(name="MKV", value="mkv"),
+            app_commands.Choice(name="GIF", value="gif"),
+            app_commands.Choice(name="MP3", value="mp3"),
+        ]
+    )
+    async def convert_video(
+        self,
+        interaction: discord.Interaction,
+        video: discord.Attachment,
+        format: app_commands.Choice[str]
+    ):
+        await interaction.response.defer()
+
+        try:
+            video_data = await video.read()
+            output_filename = await asyncio.to_thread(self.process_video, video_data, video.filename, format.value)
+
+            await interaction.followup.send(
+                content=f"Here is your converted file in {format.value.upper()} format:",
+                file=discord.File(fp=output_filename, filename=output_filename.split('/')[-1])
+            )
+
+        except Exception as e:
+            await handle_error(interaction, e, log_error_id=log_id_counter)
+
+    def process_video(self, video_data, original_filename, target_format):
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{original_filename.split('.')[-1]}") as temp_input:
+            temp_input.write(video_data)
+            temp_input_path = temp_input.name
+
+        output_filename = f"{tempfile.gettempdir()}/{original_filename.rsplit('.', 1)[0]}.{target_format.lower()}"
+
+        if target_format.lower() == "mp3":
+            input_audio = AudioFileClip(temp_input_path)
+            input_audio.write_audiofile(output_filename)
+        else:
+            input_video = VideoFileClip(temp_input_path)
+            input_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", remove_temp=True)
+
+        return output_filename
+
+bot.tree.add_command(Convert())
+
+@bot.tree.command(name="filedata", description="Display metadata for an uploaded file")
+@app_commands.describe(
+    file="The uploaded file to analyze."
+)
+async def filedata(
+    interaction: discord.Interaction,
+    file: discord.Attachment
+):
+    await interaction.response.defer()
+
+    try:
+        file_data = await file.read()
+        file_type = file.content_type
+        file_size = len(file_data) / (1024 * 1024)
+
+        file_info = f"**File Name:** {file.filename}\n**File Type:** {file_type}\n**File Size:** {file_size:.2f} MB\n"
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp_input:
+            temp_input.write(file_data)
+            temp_input_path = temp_input.name
+
+        if "video" in file_type:
+            clip = VideoFileClip(temp_input_path)
+            frame_rate = clip.fps
+            duration = clip.duration
+            bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
+            resolution = f"{clip.w}x{clip.h} pixels"
+            file_info += (
+                f"**Duration:** {duration:.2f} seconds\n"
+                f"**Frame Rate:** {frame_rate:.2f} fps\n"
+                f"**Bitrate:** {bitrate:.2f} kbps\n"
+                f"**Resolution:** {resolution}"
+            )
+            clip.close()
+
+        elif "audio" in file_type:
+            clip = AudioFileClip(temp_input_path)
+            duration = clip.duration
+            bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
+            file_info += (
+                f"**Duration:** {duration:.2f} seconds\n"
+                f"**Bitrate:** {bitrate:.2f} kbps"
+            )
+            clip.close()
+
+        elif "text" in file_type:
+            with open(temp_input_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            file_info += (
+                f"**Encoding:** UTF-8\n"
+                f"**Line Count:** {len(lines)}"
+            )
+
+        else:
+            file_info += "No additional metadata available for this file type."
+
+        await interaction.followup.send(content=file_info)
+
+    except Exception as e:
+        await interaction.followup.send(f"An error occurred: {e}", ephemeral=True)
+
+    finally:
+        if os.path.exists(temp_input_path):
+            os.remove(temp_input_path)
 
 @bot.tree.command(name="say", description="Say a message in a channel")
 @app_commands.describe(
@@ -1657,26 +1856,27 @@ async def meme(interaction: discord.Interaction):
 """
 MODERATION COMMANDS
 """
-
 async def store_modlog(modlog, user, moderator, reason):
     preferences = open_file("info/preferences.json")
     modlogs = open_file("info/modlogs.json")
     modstats = open_file("info/modstats.json")
     server_id = modlog["serverID"]
 
+    # Initialize modlogs for the server if it doesn't exist
     if server_id not in modlogs:
         modlogs[server_id] = {}
 
-    channel_id = preferences.get(server_id, {}).get("modLogs")
-    channel = None
+    # Initialize modstats for the server if it doesn't exist
+    if server_id not in modstats:
+        modstats[server_id] = {}
 
-    if channel_id:
-        channel = bot.get_channel(channel_id)
+    channel_id = preferences.get(server_id, {}).get("modLogs")
+    channel = bot.get_channel(channel_id) if channel_id else None
 
     embed = discord.Embed(title="Moderation Log", color=discord.Color.blue())
     embed.add_field(name="Type", value=modlog["type"], inline=False)
-    embed.add_field(name="Moderator", value=str(moderator), inline=False)
-    embed.add_field(name="Reason/Arguments", value=f"{reason}", inline=False)
+    embed.add_field(name="Moderator", value=moderator.name, inline=False)
+    embed.add_field(name="Reason/Arguments", value=reason, inline=False)
     embed.add_field(name="Time", value=f"<t:{int(time.time())}:F>")
 
     if user is not None:
@@ -1699,13 +1899,10 @@ async def store_modlog(modlog, user, moderator, reason):
 
         moderator_id = str(moderator.id)
 
-        if moderator_id not in modstats.get(server_id, {}):
+        if moderator_id not in modstats[server_id]:
             modstats[server_id][moderator_id] = {}
 
         if modlog["type"] in ["Kick", "Mute", "Ban"]:
-            if moderator_id not in modstats[server_id]:
-                modstats[server_id][moderator_id] = {}
-
             modstats[server_id][moderator_id][new_case_number] = {
                 "type": modlog["type"],
                 "timestamp": int(time.time()),
@@ -1714,8 +1911,9 @@ async def store_modlog(modlog, user, moderator, reason):
     if channel is not None:
         await channel.send(embed=embed)
 
-    save_file("modlogs.json", modlogs)
-    save_file("modstats.json", modstats)
+    save_file("info/modlogs.json", modlogs)
+    save_file("info/modstats.json", modstats)
+
 
 @bot.tree.command(name="setlogs", description="Changes the log channels of your server")
 @app_commands.describe(
@@ -1737,7 +1935,7 @@ async def setlogs(interaction: discord.Interaction, option: str, channel: discor
         preferences[guild_id] = {}
 
     preferences[guild_id][option] = channel.id
-    save_file("preferences.json", preferences)
+    save_file("info/preferences.json", preferences)
     response_map = {
         "messageLogs": f"Message Logs will be sent to: {channel.mention}",
         "dmLogs": f"DM Logs will be sent to: {channel.mention}",
@@ -1759,7 +1957,7 @@ async def setroles(interaction: discord.Interaction, option: str, role: discord.
             preferences[guild_id] = {}
 
         preferences[guild_id][option] = role.id
-        save_file("preferences.json", preferences)
+        save_file("info/preferences.json", preferences)
 
         await interaction.followup.send(f"The role '{role.name}' has been set for members.")
     except Exception as e:
@@ -1799,7 +1997,7 @@ async def purge(interaction: discord.Interaction, amount: int, user: discord.Use
     }
     reason = f"Deleted {len(messages_to_delete)} messages"
 
-    await store_modlog(modlog, None, interaction.user.name, reason)
+    await store_modlog(modlog, None, interaction.user, reason)
     embed = discord.Embed(title="Messages deleted", description=reason)
     await interaction.followup.send(embed=embed, delete_after=5)
 
@@ -1828,7 +2026,7 @@ async def clean(interaction: discord.Interaction, amount: int = 10):
     }
     reason = f"Deleted {len(amount)} bot messages"
 
-    await store_modlog(modlog, None, interaction.user.name, reason)
+    await store_modlog(modlog, None, interaction.user, reason)
     embed = discord.Embed(title="Messages deleted", description=reason)
     await interaction.followup.send(embed=embed, delete_after=5)
 
@@ -1968,7 +2166,7 @@ async def slowmode(interaction: discord.Interaction, delay: int = None):
             "type": "Slowmode",
             "channel": interaction.channel.id,
         }
-        await store_modlog(modlog, None, interaction.user.name, reason)
+        await store_modlog(modlog, None, interaction.user, reason)
 
     except Exception as e:
         await handle_error(interaction, e, log_error_id=log_id_counter)
@@ -2002,7 +2200,7 @@ async def nick(interaction: discord.Interaction, member: discord.Member, new_nic
             "type": "Nickname Change",
             "channel": interaction.channel.id,
         }
-        await store_modlog(modlog, None, interaction.user.name, reason)
+        await store_modlog(modlog, None, interaction.user, reason)
 
     except Exception as e:
         await handle_error(interaction, e, log_error_id=log_id_counter)    
@@ -2049,7 +2247,8 @@ async def mute(
         human_readable_time = (f"{int(hours)} hour(s) {int(minutes)} minute(s) {int(seconds)} second(s)")
         modlog = {"serverID": str(interaction.guild.id), "type": "Mute"}
         modlog_reason = f"{reason}\nMuted for {human_readable_time}"
-        await store_modlog(modlog, member, interaction.user.name, modlog_reason)
+        await store_modlog(modlog, member, interaction.user, modlog_reason) 
+
         embed = discord.Embed(title=f"{member.display_name} has been muted.", color=discord.Color.orange())
         embed.add_field(name="Moderator", value=interaction.user.mention, inline=False)
         embed.add_field(name="Reason", value=reason, inline=False)
@@ -2077,7 +2276,7 @@ async def unmute(
 
         modlog = {"serverID": str(interaction.guild.id), "type": "Unmute"}
 
-        await store_modlog(modlog, None, interaction.user.name, reason)
+        await store_modlog(modlog, None, interaction.user, reason)
 
         embed = discord.Embed(
             title=f"{member.display_name} has been unmuted.",
@@ -2104,7 +2303,7 @@ async def kick(
     await interaction.followup.send(f"{member} has been kicked. Reason: {reason}")
     modlog = {"serverID": str(interaction.guild.id), "type": "Kick"}
 
-    await store_modlog(modlog, None, interaction.user.name, reason)
+    await store_modlog(modlog, None, interaction.user, reason)
     embed = discord.Embed(
         title=f"You have been kicked in {interaction.guild.name}.",
         color=discord.Color.orange(),
@@ -2260,7 +2459,7 @@ async def warn(interaction: discord.Interaction, member: discord.Member, reason:
         "channel": interaction.channel.id,
     }
 
-    await store_modlog(modlog, None, interaction.user.name, reason)
+    await store_modlog(modlog, None, interaction.user, reason)
 
     punishment_durations = {
         "spamming": 1 * 60 * 60,
@@ -2478,7 +2677,7 @@ async def modstats(interaction: discord.Interaction, member: discord.Member = No
 
     await interaction.response.defer()
 
-    modstats = open_file("modstats.json")
+    modstats = open_file("info/modstats.json")
     stats = {
         "kick": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
         "mute": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
