@@ -1,19 +1,7 @@
-import json
-import os
-import random
-import time
-import math
-import io
-import ssl
-import aiohttp
-import requests
-import asyncio
-import asyncpraw
-import re
-import tempfile
-import humanize
-import datetime
-import traceback
+import json, os, io, ssl, re
+import random, time, datetime, math
+import aiohttp, requests, asyncio, asyncpraw
+import yt_dlp, tempfile, humanize, traceback
 
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageOps, ImageFont, ImageSequence
@@ -28,6 +16,7 @@ from discord.ui import Button, View, Modal, TextInput
 
 botAdmins = [721151215010054165]
 botMods = []
+botTesters = []
 
 logs = {}
 log_id_counter = 1  
@@ -1746,11 +1735,12 @@ class Convert(app_commands.Group):
     @app_commands.choices(
         format=[
             app_commands.Choice(name="MP4", value="mp4"),
-            app_commands.Choice(name="AVI", value="avi"),
+            app_commands.Choice(name="MP3", value="mp3"),
+            app_commands.Choice(name="WMV", value="wmv"),
             app_commands.Choice(name="MOV", value="mov"),
             app_commands.Choice(name="MKV", value="mkv"),
-            app_commands.Choice(name="GIF", value="gif"),
-            app_commands.Choice(name="MP3", value="mp3"),
+            app_commands.Choice(name="AVI", value="avi"),
+            app_commands.Choice(name="GIF", value="gif")
         ]
     )
     async def convert_video(
@@ -1788,7 +1778,56 @@ class Convert(app_commands.Group):
             input_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", remove_temp=True)
 
         return output_filename
+    
+    @app_commands.command(name="youtube", description="Convert a YouTube video into an MP4 or MP3 file!")
+    @app_commands.describe(
+        link="The YouTube video link",
+        resolution="The resolution of the video"
+    )
+    @app_commands.choices(
+        resolution=[
+            app_commands.Choice(name="144p (SD)", value="144p"),
+            app_commands.Choice(name="240p (SD)", value="240p"),
+            app_commands.Choice(name="360p (SD)", value="360p"),
+            app_commands.Choice(name="480p (SD)", value="480p"),
+            app_commands.Choice(name="720p (HD)", value="720p"),
+            app_commands.Choice(name="1080p (FHD)", value="1080p"),
+            app_commands.Choice(name="1440p (1K)", value="1440p"),
+            app_commands.Choice(name="2160p (4K)", value="2160p"),
+            app_commands.Choice(name="4320p (8K)", value="4320p"),
+        ]
+    )
+    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str):
+        await interaction.response.defer()
 
+        try:
+            if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
+                await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
+                return
+
+            ydl_opts = {
+                'format': f'bestvideo[height={resolution[:-1]}]+bestaudio/best[height={resolution[:-1]}]',
+                'outtmpl': '%(title)s.%(ext)s',
+            }
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info_dict = ydl.extract_info(link, download=False) 
+                video_title = info_dict.get('title', 'video') 
+
+                ydl.download([link])
+
+                output_path = f"{video_title}.mp4"
+
+                with open(output_path, 'rb') as f:
+                    await interaction.followup.send(file=discord.File(f, filename=video_title + ".mp4"))
+
+                os.remove(output_path)
+
+        except yt_dlp.utils.DownloadError as e:
+            await interaction.followup.send("An error occurred while downloading the video. Please check the link and try again.", ephemeral=True)
+        except Exception as e:
+            await handle_error(interaction, e, log_error_id=log_id_counter)
+            
 bot.tree.add_command(Convert())
 
 @bot.tree.command(name="filedata", description="Display metadata for an uploaded file") 
