@@ -1,17 +1,17 @@
-import json, os, io, ssl, re
+import json, os, io, re
 import random, time, datetime, math
 import aiohttp, requests, asyncio, asyncpraw
-import yt_dlp, tempfile, humanize, traceback
+import yt_dlp, tempfile, traceback
 
 from io import BytesIO
+from petpetgif import petpet as petpetgif
 from PIL import Image, ImageDraw, ImageOps, ImageFont, ImageSequence
 from moviepy.editor import VideoFileClip, AudioFileClip
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
 
 import discord
-from discord import Role, app_commands
-from discord.ext import commands, tasks
+from discord import app_commands
+from discord.ext import commands
 from discord.ui import Button, View, Modal, TextInput
 
 botAdmins = [721151215010054165]
@@ -361,7 +361,7 @@ async def info(interaction: discord.Interaction):
         description="This bot is developed by LucasLiorLE.",
         color=0x808080,
     )
-    embed.add_field(name="Version", value="v1.0.11a")
+    embed.add_field(name="Version", value="v1.1.0a")
     embed.add_field(name="Server Count", value=len(bot.guilds))
     embed.add_field(name="Library", value="Discord.py")
     embed.add_field(name="Other", value="Ok")
@@ -1468,6 +1468,76 @@ async def cgloves(interaction: discord.Interaction, username: str = None):
 FUN COMMANDS
 """
 
+class MemeifyGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="memeify", description="Generate memes!")
+
+    @app_commands.command(name="spongebob", description="Generates a Spongebob meme")
+    @app_commands.describe(text="The text you want to show on the paper")
+    async def spongebob(self, interaction: discord.Interaction, text: str):
+        await interaction.response.defer()  # Defers the response to avoid timeout
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"https://memeado.vercel.app/api/spongebob?text={text}") as response:
+                if response.status == 200:
+                    meme_url = str(response.url)  # Get the URL of the image directly
+                    await interaction.followup.send(content=meme_url)
+                else:
+                    await interaction.followup.send("Failed to generate the meme. Please try again later.")
+
+    @app_commands.command(name="drakelikehate", description="Generates a Drake Like Hate meme")
+    @app_commands.describe(text1="The text for the 'Like' part", text2="The text for the 'Hate' part")
+    async def drakelikehate(self, interaction: discord.Interaction, text1: str, text2: str):
+        await interaction.response.defer()  # Defers the response to avoid timeout
+
+        async with aiohttp.ClientSession() as session:
+            url = f"https://memeado.vercel.app/api/drakelikehate?text1={text1}&text2={text2}"
+            async with session.get(url) as response:
+                if response.status == 200:
+                    meme_url = str(response.url)  # Get the URL of the image directly
+                    await interaction.followup.send(content=meme_url)
+                else:
+                    await interaction.followup.send("Failed to generate the meme. Please try again later.")
+
+    @app_commands.command(name="petpet", description="Creates a pet-pet gif from a user's avatar, emoji, custom image URL, or uploaded file")
+    @app_commands.describe(
+        user="Use a member's avatar",
+        url="URL to an image to create a pet-pet gif (optional)",
+        attachment="File attachment to use for the pet-pet gif (optional)"
+    )
+    async def petpet(
+        self,
+        interaction: discord.Interaction,
+        user: discord.Member = None,
+        url: str = None,
+        attachment: discord.Attachment = None
+    ):
+        await interaction.response.defer()
+        if attachment:
+            image_data = await attachment.read()
+
+        elif url:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        await interaction.followup.send("Failed to retrieve the image from the URL.", ephemeral=True)
+                        return
+                    image_data = await response.read()
+
+        elif isinstance(user, discord.Member):
+            image_data = await user.display_avatar.read()
+        else:
+            image_data = await interaction.user.display_avatar.read()
+
+        source = BytesIO(image_data)
+        dest = BytesIO()
+        petpetgif.make(source, dest)
+        dest.seek(0)
+
+        await interaction.followup.send(file=discord.File(dest, filename="petpet.gif"))
+
+bot.tree.add_command(MemeifyGroup())
+
 @bot.tree.command(name="say", description="Say a message in a channel")
 @app_commands.describe(
     channel="The user to talk in",
@@ -1782,7 +1852,8 @@ class Convert(app_commands.Group):
     @app_commands.command(name="youtube", description="Convert a YouTube video into an MP4 or MP3 file!")
     @app_commands.describe(
         link="The YouTube video link",
-        resolution="The resolution of the video"
+        resolution="The resolution of the video",
+        output_format="The output format of the video"
     )
     @app_commands.choices(
         resolution=[
@@ -1792,38 +1863,51 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="480p (SD)", value="480p"),
             app_commands.Choice(name="720p (HD)", value="720p"),
             app_commands.Choice(name="1080p (FHD)", value="1080p"),
-            app_commands.Choice(name="1440p (1K)", value="1440p"),
+            app_commands.Choice(name="1440p (2K)", value="1440p"),
             app_commands.Choice(name="2160p (4K)", value="2160p"),
             app_commands.Choice(name="4320p (8K)", value="4320p"),
+        ],
+        output_format=[
+            app_commands.Choice(name="MP4", value="mp4"),
+            app_commands.Choice(name="MP3", value="mp3"),
         ]
     )
-    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str):
+    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str, output_format: str):
         await interaction.response.defer()
 
-        try:
-            if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
-                await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
-                return
+        if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
+            await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
+            return
 
+        def download_and_convert(link, resolution, output_format):
             ydl_opts = {
-                'format': f'bestvideo[height={resolution[:-1]}]+bestaudio/best[height={resolution[:-1]}]',
+                'format': f'bestvideo[height<={resolution[:-1]}]+bestaudio/best',
                 'outtmpl': '%(title)s.%(ext)s',
+                'postprocessors': [{
+                    'key': 'FFmpegVideoConvertor',
+                    'preferedformat': output_format,
+                }],
+                'cookiefile': 'storage/cookies.txt',
+                'noplaylist': True,
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(link, download=False) 
-                video_title = info_dict.get('title', 'video') 
+                info_dict = ydl.extract_info(link, download=True)
+                video_title = info_dict.get('title', 'video')
+                output_path = f"{video_title}.{output_format}"
+            
+            return output_path
 
-                ydl.download([link])
+        try:
+            # Run the download and conversion in a separate thread using asyncio.to_thread
+            output_path = await asyncio.to_thread(download_and_convert, link, resolution, output_format)
 
-                output_path = f"{video_title}.mp4"
+            await interaction.followup.send(file=discord.File(output_path))
 
-                with open(output_path, 'rb') as f:
-                    await interaction.followup.send(file=discord.File(f, filename=video_title + ".mp4"))
+            # Clean up the output file after sending
+            os.remove(output_path)
 
-                os.remove(output_path)
-
-        except yt_dlp.utils.DownloadError as e:
+        except yt_dlp.utils.DownloadError:
             await interaction.followup.send("An error occurred while downloading the video. Please check the link and try again.", ephemeral=True)
         except Exception as e:
             await handle_error(interaction, e, log_error_id=log_id_counter)
