@@ -774,12 +774,10 @@ class ProfileView(View):
 
 class ClashRoyaleCommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="cr", description="Clash Royale related commands")
-
+        super().__init__(name="cr", description="Clash Royale related commands.")
+    
     @app_commands.command(name="connect", description="Connect your Clash Royale profile.")
-    @app_commands.describe(
-        tag="Your player tag",
-    )   
+    @app_commands.describe(tag="Your player tag")
     async def crconnect(self, interaction: discord.Interaction, tag: str):
         await interaction.response.defer()
 
@@ -792,31 +790,35 @@ class ClashRoyaleCommandGroup(app_commands.Group):
             await interaction.response.send_message("Failed to retrieve data for the provided player tag.", ephemeral=True)
             return
 
-        random_deck = random.sample(
-            ["Giant", "Mini P.E.K.K.A", "Fireball", "Archers", "Minions", "Knight", "Musketeer", "Arrows"], k=8
-        )
+        random_deck = random.sample(["Giant", "Mini P.E.K.K.A", "Fireball", "Archers", "Minions", "Knight", "Musketeer", "Arrows"], k=8)
         random_deck_str = " ".join(f"`{card}`" for card in random_deck)
-        await interaction.followup.send(f"Please use the following deck: {random_deck_str}\nYou have 5 minutes to make it.")
+        await interaction.followup.send(
+            f"Since Clash Royale's API is slow, please leave your main deck like the following: {random_deck_str}\n"
+            "If you don’t get verified within 10 minutes, please try again."
+        )
 
-        await asyncio.sleep(300)
+        for minute in range(10):
+            await asyncio.sleep(60)
 
-        current_deck = player_data.get("currentDeck", [])
-        player_deck_names = [card.get("name", "Unknown") for card in current_deck]
+            player_data = await get_player_data(tag.replace("#", "%23"))
+            current_deck = player_data.get("currentDeck", [])
+            player_deck_names = [card.get("name", "Unknown") for card in current_deck]
 
-        if sorted(player_deck_names) == sorted(random_deck):
-            member_info = open_file("info/member_info.json")
-            discord_user_id = str(interaction.user.id)
+            if sorted(player_deck_names) == sorted(random_deck):
+                member_info = open_file("info/member_info.json")
+                discord_user_id = str(interaction.user.id)
 
-            if discord_user_id not in member_info:
-                member_info[discord_user_id] = {}
+                if discord_user_id not in member_info:
+                    member_info[discord_user_id] = {}
 
-            member_info[discord_user_id]["cr_id"] = tag
-            save_file("info/member_info.json", member_info)
+                member_info[discord_user_id]["cr_id"] = tag
+                save_file("info/member_info.json", member_info)
 
-            await interaction.followup.send("Deck matched! Your Clash Royale ID has been successfully linked.")
-        else:
-            await interaction.followup.send("Deck did not match. Please try again.")
+                await interaction.followup.send("Deck matched! Your Clash Royale ID has been successfully linked.")
+                return
 
+        await interaction.followup.send("Deck did not match within the 10-minute limit. Please try again.")
+        
     @app_commands.command(name="profile", description="Get Clash Royale player profile data")
     @app_commands.describe(
         tag="The user's tag (The one with the #, optional)",
@@ -863,13 +865,13 @@ class ClashRoyaleCommandGroup(app_commands.Group):
         if clan_data:
             embed = discord.Embed(title=f"Clan Data for {clan_data['name']}", color=discord.Color.blue())
 
-            embed.add_field(name="Name", value=f"{clan_data['name']} ({clan_data['tag']})")
-            embed.add_field(name="Clan Score", value=clan_data['clanScore'])
-            embed.add_field(name="Clan Trophies", value=clan_data['clanWarTrophies'])
-            embed.add_field(name="Required Trophies", value=clan_data['requiredTrophies'])
-            embed.add_field(name="Weekly Donations", value=clan_data['donationsPerWeek'])
-            embed.add_field(name="Members", value=clan_data['members'])
-            embed.add_field(name="Description", value=clan_data['description'])
+            embed.add_field(name="<:Clan:1300957220422549514> Name", value=f"{clan_data['name']} ({clan_data['tag']})")
+            embed.add_field(name="<:Trophy:1299093384882950245> Clan Score", value=clan_data['clanScore'])
+            embed.add_field(name="<:ClanTrophies:1300956037272309850> Clan Trophies", value=clan_data['clanWarTrophies'])
+            embed.add_field(name="<:Trophy:1299093384882950245> Required Trophies", value=clan_data['requiredTrophies'])
+            embed.add_field(name="<:Cards:1300955092534558850> Weekly Donations", value=clan_data['donationsPerWeek'])
+            embed.add_field(name="<:Members:1300956053588152373> Members", value=clan_data['members'])
+            embed.add_field(name="<:Clan:1300957220422549514> Description", value=clan_data['description'])
 
             embed.set_footer(text=f"The clan is currently **{clan_data['type']}**")
 
