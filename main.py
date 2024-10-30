@@ -350,12 +350,8 @@ async def ping(interaction: discord.Interaction):
 @bot.tree.command(name="info", description="Displays information about the bot.")
 async def info(interaction: discord.Interaction):
     await interaction.response.defer()
-    embed = discord.Embed(
-        title="Bot Info",
-        description="This bot is developed by LucasLiorLE.",
-        color=0x808080,
-    )
-    embed.add_field(name="Version", value="v1.1.0a")
+    embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
+    embed.add_field(name="Version", value="v1.1.1a")
     embed.add_field(name="Server Count", value=len(bot.guilds))
     embed.add_field(name="Library", value="Discord.py")
     embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 60 hours+")
@@ -1532,6 +1528,53 @@ async def meme(interaction: discord.Interaction):
 """
 INFORMATIVE COMMANDS
 """
+@bot.tree.command(name="define", description="Define a word")
+@app_commands.describe(word="The word you want to define")
+async def define(interaction: discord.Interaction, word: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
+            if response.status != 200:
+                await interaction.response.send_message("Could not find the definition.")
+                return
+            data = await response.json()
+
+    entry = data[0]
+    phonetic = entry.get('phonetics', [{}])[0].get('text', 'N/A')
+    origin = entry.get('origin', 'N/A')
+    meanings = entry.get('meanings', [])
+    
+    embed = discord.Embed(title=f"Definition for {word} ({phonetic})", color=discord.Color.blue())
+    embed.add_field(name="Origin", value=origin, inline=False)
+
+    meanings_text = ""
+    for meaning in meanings:
+        part_of_speech = meaning.get("partOfSpeech", "N/A")
+        definitions = meaning.get("definitions", [])
+        meanings_text += f"**{part_of_speech}**:\n"
+        for definition in definitions:
+            definition_text = definition.get("definition", "N/A")
+            example = definition.get("example", "N/A")
+            meanings_text += f"- {definition_text}\n  *Example:* {example}\n"
+    embed.add_field(name="Meanings", value=meanings_text or "No meanings found.", inline=False)
+
+    audio_url = entry.get('phonetics', [{}])[0].get('audio', None)
+    if audio_url:
+        audio_url = audio_url.lstrip("//")
+        audio_file_name = f"{word}_pronunciation.mp3"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(audio_url) as audio_response:
+                if audio_response.status == 200:
+                    with open(audio_file_name, 'wb') as f:
+                        f.write(await audio_response.read())
+        
+        await interaction.response.send_message(embed=embed, file=discord.File(audio_file_name))
+
+        os.remove(audio_file_name)
+    else:
+        await interaction.response.send_message(embed=embed)
+
+
 class Convert(app_commands.Group):
     def __init__(self):
         super().__init__(name="convert", description="Image conversion commands")
