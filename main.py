@@ -1531,10 +1531,12 @@ INFORMATIVE COMMANDS
 @bot.tree.command(name="define", description="Define a word")
 @app_commands.describe(word="The word you want to define")
 async def define(interaction: discord.Interaction, word: str):
+    await interaction.response.defer()
+
     async with aiohttp.ClientSession() as session:
         async with session.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
             if response.status != 200:
-                await interaction.response.send_message("Could not find the definition.")
+                await interaction.followup.send("Could not find the definition.")
                 return
             data = await response.json()
 
@@ -1546,16 +1548,25 @@ async def define(interaction: discord.Interaction, word: str):
     embed = discord.Embed(title=f"Definition for {word} ({phonetic})", color=discord.Color.blue())
     embed.add_field(name="Origin", value=origin, inline=False)
 
-    meanings_text = ""
+    field_count = 0
+
     for meaning in meanings:
         part_of_speech = meaning.get("partOfSpeech", "N/A")
         definitions = meaning.get("definitions", [])
-        meanings_text += f"**{part_of_speech}**:\n"
+
         for definition in definitions:
+            if field_count >= 20:
+                break  
             definition_text = definition.get("definition", "N/A")
             example = definition.get("example", "N/A")
-            meanings_text += f"- {definition_text}\n  *Example:* {example}\n"
-    embed.add_field(name="Meanings", value=meanings_text or "No meanings found.", inline=False)
+            field_name = f"{part_of_speech} Definition {field_count + 1}"
+            field_value = f"{definition_text}\n*Example:* {example}"
+            
+            if len(field_value) > 1024:
+                field_value = field_value[:1021] + "..."
+
+            embed.add_field(name=field_name, value=field_value, inline=False)
+            field_count += 1
 
     audio_url = entry.get('phonetics', [{}])[0].get('audio', None)
     if audio_url:
@@ -1568,13 +1579,11 @@ async def define(interaction: discord.Interaction, word: str):
                     with open(audio_file_name, 'wb') as f:
                         f.write(await audio_response.read())
         
-        await interaction.response.send_message(embed=embed, file=discord.File(audio_file_name))
-
+        await interaction.followup.send(embed=embed, file=discord.File(audio_file_name))
         os.remove(audio_file_name)
     else:
-        await interaction.response.send_message(embed=embed)
-
-
+        await interaction.followup.send(embed=embed)
+        
 class Convert(app_commands.Group):
     def __init__(self):
         super().__init__(name="convert", description="Image conversion commands")
