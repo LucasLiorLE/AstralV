@@ -2523,9 +2523,9 @@ class AlertGroup(app_commands.Group):
    )
    @app_commands.choices(
        type=[
-           app_command.Choice(name="Alert", value="alert"),
-           app_command.Choice(name="Update", value="update"),
-           app_command.Choice(name="Warning", value="warning")
+           app_commands.Choice(name="Alert", value="alert"),
+           app_commands.Choice(name="Update", value="update"),
+           app_commands.Choice(name="Warning", value="warning")
        ]
    )
    async def alert_send(self, interaction: discord.Interaction, type: str, description: str):
