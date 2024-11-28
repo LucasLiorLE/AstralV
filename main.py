@@ -36,6 +36,35 @@ class StatusManager:
             )
             await asyncio.sleep(600)
 
+class thanksgiving_manager:
+    def __init__(self, bot: discord.Client):
+        self.bot = bot
+        self.timestamp = 1732770000
+        self.user_id = 1173963781706088451
+        self.owner_id = 721151215010054165
+        self.last_checked = None
+
+    async def start(self):
+        while True:
+            try:
+                current_timestamp = int(datetime.now().timestamp())
+
+                if current_timestamp >= self.timestamp:
+                    print(f'Target timestamp detected! Sending DM to user {self.user_id}.')
+                    user = await self.bot.fetch_user(self.user_id)
+                    owner = await self.bot.fetch_user(self.owner_id)
+                    await user.send('Why err, hi, happy thanksgiving!\nI\'m chatting here mainly because I probably won\'t be on tomorrow...\nI have no idea if you are 2 or 3 hours ahead of me, so I\'m guessing 2.')
+                    await user.send('https://cdn.discordapp.com/attachments/1290875612541751378/1311500188795408485/IMG_7315.png?ex=6749153b&is=6747c3bb&hm=2e65040b968ae1ed7923a3d3089bc2b44f0fb4d09f2bc2d42632ca9cf09e725e&')
+                    await user.send('-# I\'m literally praying this works, I have no idea if it will.')
+
+                    await owner.send("It worked omg")
+                    break
+                self.last_checked = int(datetime.now().timestamp())
+
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"An error occurred in the timestamp checker: {e}")
+
 intents = discord.Intents.default()
 intents.message_content = True
 intents.messages = True
@@ -44,47 +73,54 @@ intents.dm_messages = True
 intents.members = True
 bot = commands.Bot(command_prefix="?", intents=intents)
 
-
 logs = {}
-log_id_counter = 1  
+log_id_counter = 1
 
-def store_log(type, message):
-    global log_id_counter  
+def store_log(log_type: str, message: str) -> int:
+    global log_id_counter
 
-    type = type.title()
+    log_type = log_type.title()
 
-    if type not in logs:
-        logs[type] = []
+    if log_type not in logs:
+        logs[log_type] = []
+
+    if not isinstance(message, str):
+        raise ValueError("Message must be a string.")
 
     log_entry = {
-        "Message": message, 
+        "Message": message,
         "ID": log_id_counter,
-        "Time": int(time.time())
+        "Time": int(time.time()),
     }
 
-    logs[type].append(log_entry)
-    print(message)
+    logs[log_type].append(log_entry)
+    print(f"[{log_type}] {message}")
 
+    current_id = log_id_counter
     log_id_counter += 1
 
-async def handle_logs(interaction: discord.Interaction, message: str, log_error_id: int, type: str = "error"):
-    if type == "error":
-        embed = discord.Embed(title="An error occurred", color=discord.Color.red())
-        embed.add_field(name="Error", value=str(message), inline=False)
-        embed.add_field(name="ID", value=log_error_id, inline=False)
-        if interaction.response.is_done(): await interaction.followup.send(embed=embed, ephemeral=True)
-        else: await interaction.response.send_message(embed=embed, ephemeral=True)
-        full_error = traceback.format_exc()
-        store_log(type, full_error)
-    else: store_log(type, message)
+    return current_id
 
-@bot.event
-async def on_app_command_error(interaction: discord.Interaction, error):
-	await handle_logs(interaction, error, log_error_id=log_id_counter)
-    
-@bot.event
-async def on_command_error(interaction: discord.Interaction, error):
-    await handle_logs(interaction, error, log_error_id=log_id_counter)
+async def handle_logs(interaction: discord.Interaction, error: Exception, log_type: str = "error"):
+    global log_id_counter
+    log_type = log_type.title()
+
+    if log_type == "Error" and isinstance(error, Exception):
+        embed = discord.Embed(title="An error occurred", color=discord.Color.red())
+        embed.add_field(name="Error", value=str(error), inline=False)
+        embed.add_field(name="ID", value=log_id_counter - 1)
+
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        full_error = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
+        log_id = store_log(log_type, full_error)
+        print(f"Logged error with ID: {log_id - 1}")
+    else:
+        log_id = store_log(log_type, str(error))
+        print(f"Logged '{log_type}' with ID: {log_id - 1}")
 
 def parse_duration(duration_str):
     duration_regex = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
@@ -261,31 +297,51 @@ async def on_ready():
     await bot.tree.sync()
     status_manager = StatusManager(bot)
     bot.loop.create_task(status_manager.change_status())
+    manager = thanksgiving_manager(bot)  # Create the manager instance
+    bot.loop.create_task(manager.start())  # Run the `start` coroutine
 
+
+@bot.tree.command(name="error_test", description="Demonstrates intentional error generation")
+async def error_test(interaction: discord.Interaction):
+    error_list = []
+    try:
+        print(error_list[0])  # This will raise IndexError
+    except Exception as error:
+        log_id = store_log("error", ''.join(traceback.format_exception(type(error), error, error.__traceback__)))
+        await handle_logs(interaction, error)  # No need for log_error_id here
+        
 @bot.tree.command(name="error", description="Allows you to view a certain error.")
 async def view_error(interaction: discord.Interaction, error_id: int):
     await interaction.response.defer()
 
+    # Check if the user is an admin
     if interaction.user.id not in botAdmins:
-        await interaction.followup.send("You do not have permission to view this error.")
+        await interaction.followup.send("You do not have permission to view this error.", ephemeral=True)
         return
 
+    # Search for the error ID in logs
     for log_type, log_entries in logs.items():
         for entry in log_entries:
             if entry["ID"] == error_id:
+                # Extract log details
                 timestamp = entry["Time"]
-                error_message = entry["Error"]
+                error_message = entry.get("Message", "No error message available.")  # Use 'Message' key
+                
+                # Create the embed
                 embed = discord.Embed(
                     title=f"Error ID: {error_id}",
                     color=discord.Color.red()
                 )
                 embed.add_field(name="Type", value=log_type.capitalize(), inline=False)
                 embed.add_field(name="Error", value=error_message, inline=False)
-                embed.add_field(name="Timestamp", value=timestamp, inline=False)
+                embed.add_field(name="Timestamp", value=f"<t:{timestamp}:F>", inline=False)  # Discord timestamp format
+                
                 await interaction.followup.send(embed=embed)
                 return
 
-    await interaction.followup.send(f"No error found with ID {error_id}")
+    # If no matching error ID is found
+    await interaction.followup.send(f"No error found with ID {error_id}", ephemeral=True)
+
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -299,116 +355,132 @@ async def view_error(interaction: discord.Interaction, error_id: int):
 )
 async def ccp(interaction: discord.Interaction, choice: str, user_id: str):
     await interaction.response.defer()
+    try:
+        if choice == "increase":
+            message = f"<@{user_id}> (我们的) Good work citizen, and glory to the CCP! Remember to redeem your food units after 12:00 P.M."
+        elif choice == "decrease":
+            message = (
+                f"<@{user_id}> (我们的) :arrow_double_down: Your Social Credit Score has decreased "
+                ":arrow_double_down:. Please refrain from making more of these comments or we will have "
+                "to send a Reeducation Squad to your location. Thank you! Glory to the CCP! :flag_cn: (我们的)"
+            )
 
-    if choice == "increase":
-        message = f"<@{user_id}> (我们的) Good work citizen, and glory to the CCP! Remember to redeem your food units after 12:00 P.M."
-    elif choice == "decrease":
-        message = (
-            f"<@{user_id}> (我们的) :arrow_double_down: Your Social Credit Score has decreased "
-            ":arrow_double_down:. Please refrain from making more of these comments or we will have "
-            "to send a Reeducation Squad to your location. Thank you! Glory to the CCP! :flag_cn: (我们的)"
-        )
-
-    await interaction.followup.send(message)
+        await interaction.followup.send(message)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="ping", description="Shows your latency and the bot's latency.")
 async def ping(interaction: discord.Interaction):
-    await interaction.response.defer()
-    start_time = time.time()
-    processing_start_time = time.time()
-    await asyncio.sleep(0.1)
-    processing_time = (time.time() - processing_start_time) * 1000
-    end_time = time.time()
-    round_trip_latency = round((end_time - start_time) * 1000)
-    bot_latency = round(bot.latency * 1000)
-    color = (0x00FF00 if bot_latency < 81 else 0xFFFF00 if bot_latency < 201 else 0xFF0000)
-    embed = discord.Embed(
-        title="Pong! 🏓",
-        description=(
-            f"Your approximate latency: {round_trip_latency}ms\n"
-            f"Bot's latency: {bot_latency}ms\n"
-            f"Processing Time: {processing_time:.2f}ms\n"
-            f"Response Time: {round_trip_latency + processing_time:.2f}ms"
-        ),
-        color=color,
-    )
-    await interaction.followup.send(embed=embed)
+    await interaction.response.defer(empheral=True)
+    try:
+        start_time = time.time()
+        processing_start_time = time.time()
+        await asyncio.sleep(0.1)
+        processing_time = (time.time() - processing_start_time) * 1000
+        end_time = time.time()
+        round_trip_latency = round((end_time - start_time) * 1000)
+        bot_latency = round(bot.latency * 1000)
+        color = (0x00FF00 if bot_latency < 81 else 0xFFFF00 if bot_latency < 201 else 0xFF0000)
+        embed = discord.Embed(
+            title="Pong! 🏓",
+            description=(
+                f"Your approximate latency: {round_trip_latency}ms\n"
+                f"Bot's latency: {bot_latency}ms\n"
+                f"Processing Time: {processing_time:.2f}ms\n"
+                f"Response Time: {round_trip_latency + processing_time:.2f}ms"
+            ),
+            color=color,
+        )
+        await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="info", description="Displays information about the bot.")
 async def info(interaction: discord.Interaction):
-    await interaction.response.defer()
-    embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-    embed.add_field(name="Version", value="v1.1.5a")
-    embed.add_field(name="Server Count", value=len(bot.guilds))
-    embed.add_field(name="Library", value="Discord.py")
-    embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
-    embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+    await interaction.response.defer(empheral=True)
+    try:
+        embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
+        embed.add_field(name="Version", value="v1.1.8a")
+        embed.add_field(name="Server Count", value=len(bot.guilds))
+        embed.add_field(name="Library", value="Discord.py")
+        embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
+        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-    button = discord.ui.Button(label="Visit Website", url="https://lucasliorle.github.io")
-    view = discord.ui.View()
-    view.add_item(button)
+        button = discord.ui.Button(label="Visit Website", url="https://lucasliorle.github.io")
+        view = discord.ui.View()
+        view.add_item(button)
 
-    await interaction.followup.send(embed=embed, view=view)
+        await interaction.followup.send(embed=embed, view=view)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="serverinfo", description="Shows information about the server.")
 async def serverinfo(interaction: discord.Interaction):
     await interaction.response.defer()
-    guild = interaction.guild
+    try:
+        guild = interaction.guild
 
-    embed = discord.Embed(title="Server Info", color=0x808080)
-    embed.add_field(name="Owner", value=guild.owner.mention)
-    embed.add_field(name="Members", value=guild.member_count)
-    embed.add_field(name="Roles", value=len([role.name for role in guild.roles]))
-    embed.add_field(name="Category Channels", value=len(guild.categories))
-    embed.add_field(name="Text Channels", value=len([channel for channel in guild.text_channels]))
-    embed.add_field(name="Voice Channels", value=len([channel for channel in guild.voice_channels]))
-    embed.add_field(name="Role List", value=", ".join([role.name for role in guild.roles]), inline=False)
-    embed.add_field(name="Server ID", value=guild.id)
-    embed.add_field(name="Server Created", value=f"{guild.created_at.strftime("%m/%d/%Y %I:%M %p")}")
-    embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+        embed = discord.Embed(title="Server Info", color=0x808080)
+        embed.add_field(name="Owner", value=guild.owner.mention)
+        embed.add_field(name="Members", value=guild.member_count)
+        embed.add_field(name="Roles", value=len([role.name for role in guild.roles]))
+        embed.add_field(name="Category Channels", value=len(guild.categories))
+        embed.add_field(name="Text Channels", value=len([channel for channel in guild.text_channels]))
+        embed.add_field(name="Voice Channels", value=len([channel for channel in guild.voice_channels]))
+        embed.add_field(name="Role List", value=", ".join([role.name for role in guild.roles]), inline=False)
+        embed.add_field(name="Server ID", value=guild.id)
+        embed.add_field(name="Server Created", value=f"{guild.created_at.strftime("%m/%d/%Y %I:%M %p")}")
+        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-    await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="roleinfo", description="Provides information for a role.")
 @app_commands.describe(role="The role to get the info for")
 async def roleinfo(interaction: discord.Interaction, role: discord.Role):
     await interaction.response.defer()
+    try:
+        permissions = role.permissions
+        permissions_list = [perm for perm, value in permissions if value]
 
-    permissions = role.permissions
-    permissions_list = [perm for perm, value in permissions if value]
+        embed = discord.Embed(title=f"Role info for {role.name}", color=role.color)
+        embed.add_field(name="Role ID", value=role.id)
+        embed.add_field(name="Color", value=str(role.color))
+        embed.add_field(name="Mentionable", value=str(role.mentionable))
+        embed.add_field(name="Hoist", value=str(role.hoist))
+        embed.add_field(name="Position",value=f"{role.position}/{len(interaction.guild.roles)}",)
+        embed.add_field(name="Permissions",value=", ".join(permissions_list) if permissions_list else "No permissions")
+        embed.add_field(name="Member Count", value=len(role.members))
+        embed.add_field(name="Role Created On",value=f"{role.created_at.strftime("%m/%d/%Y %H:%M")} ({(datetime.now(timezone.utc) - role.created_at).days} days ago)")
 
-    embed = discord.Embed(title=f"Role info for {role.name}", color=role.color)
-    embed.add_field(name="Role ID", value=role.id)
-    embed.add_field(name="Color", value=str(role.color))
-    embed.add_field(name="Mentionable", value=str(role.mentionable))
-    embed.add_field(name="Hoist", value=str(role.hoist))
-    embed.add_field(name="Position",value=f"{role.position}/{len(interaction.guild.roles)}",)
-    embed.add_field(name="Permissions",value=", ".join(permissions_list) if permissions_list else "No permissions")
-    embed.add_field(name="Member Count", value=len(role.members))
-    embed.add_field(name="Role Created On",value=f"{role.created_at.strftime("%m/%d/%Y %H:%M")} ({(datetime.now(timezone.utc) - role.created_at).days} days ago)")
+        if role.icon:
+            embed.set_thumbnail(url=role.icon.url)
 
-    if role.icon:
-        embed.set_thumbnail(url=role.icon.url)
-
-    embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
-    await interaction.followup.send(embed=embed)
+        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+        await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="userinfo", description="Provides information about a user.")
 @app_commands.describe(member="The member to get the info for",)
 async def userinfo(interaction: discord.Interaction, member: discord.Member = None):
-    await interaction.response.defer()
-    member = member or interaction.user
-    embed = discord.Embed(title="User Info", color=0x808080)
-    embed.set_thumbnail(url=member.avatar.url)
-    embed.add_field(name="Username", value=member.display_name)
-    embed.add_field(name="User ID", value=member.id)
-    embed.add_field(name="Joined Discord", value=member.created_at.strftime("%b %d, %Y"))
-    embed.add_field(name="Joined Server", value=member.joined_at.strftime("%b %d, %Y"))
-    embed.add_field(name="Roles", value=", ".join([role.name for role in member.roles]))
-    embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
-    await interaction.followup.send(embed=embed)
+    await interaction.response.defer(empheral=True)
+    try:
+        member = member or interaction.user
+        embed = discord.Embed(title="User Info", color=0x808080)
+        embed.set_thumbnail(url=member.avatar.url)
+        embed.add_field(name="Username", value=member.display_name)
+        embed.add_field(name="User ID", value=member.id)
+        embed.add_field(name="Joined Discord", value=member.created_at.strftime("%b %d, %Y"))
+        embed.add_field(name="Joined Server", value=member.joined_at.strftime("%b %d, %Y"))
+        embed.add_field(name="Roles", value=", ".join([role.name for role in member.roles]))
+        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+        await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):
@@ -418,21 +490,27 @@ class AvatarGroup(app_commands.Group):
     @app_commands.describe(member="The member to get the avatar for")
     async def get(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
-        member = member or interaction.user
-        embed = discord.Embed(title=f"{member.display_name}'s Avatar", color=0x808080)
-        embed.set_image(url=member.avatar.url)
-        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
-        await interaction.followup.send(embed=embed)
+        try:
+            member = member or interaction.user
+            embed = discord.Embed(title=f"{member.display_name}'s Avatar", color=0x808080)
+            embed.set_image(url=member.avatar.url)
+            embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+            await interaction.followup.send(embed=embed)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="server", description="Displays a user's server-specific avatar if available.",)
     @app_commands.describe(member="The member to get the server-specific avatar for")
     async def server(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
-        member = member or interaction.user
-        embed = discord.Embed(title=f"{member.display_name}'s Server Avatar", color=0x808080)
-        embed.set_image(url=member.display_avatar.url)  
-        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
-        await interaction.followup.send(embed=embed)
+        try:
+            member = member or interaction.user
+            embed = discord.Embed(title=f"{member.display_name}'s Server Avatar", color=0x808080)
+            embed.set_image(url=member.display_avatar.url)  
+            embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+            await interaction.followup.send(embed=embed)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(AvatarGroup())
 
@@ -445,26 +523,28 @@ bot.tree.add_command(AvatarGroup())
 )
 async def mlevel(interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, hours_per_day: int):
     await interaction.response.defer()
+    try:
+        def exp_required(level):
+            total_exp = 0
+            for l in range(1, level + 1):
+                total_exp += 5 * (l ** 2) + 50 * l + 100
+            return total_exp
 
-    def exp_required(level):
-        total_exp = 0
-        for l in range(1, level + 1):
-            total_exp += 5 * (l ** 2) + 50 * l + 100
-        return total_exp
+        required_exp = exp_required(target_level) - (exp_required(current_level) + current_exp)
 
-    required_exp = exp_required(target_level) - (exp_required(current_level) + current_exp)
+        embed = discord.Embed(
+            title="Mee6 Level Calculator",
+            description=f"Estimated based off you chat {hours_per_day} hours per day and gain {hours_per_day * 1200} EXP.\n**Other Info**\nCurrent Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}\nTotal EXP: {exp_required(current_level)}",
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="Required EXP", value=f"{required_exp:,}")
+        embed.add_field(name="Estimated Messages", value=f"{round((required_exp / 20) * 1.5):,}")
+        embed.add_field(name="Estimated Days", value=f"{round(required_exp / (hours_per_day * 1200)):,}")
+        embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-    embed = discord.Embed(
-        title="Mee6 Level Calculator",
-        description=f"Estimated based off you chat {hours_per_day} hours per day and gain {hours_per_day * 1200} EXP.\n**Other Info**\nCurrent Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}\nTotal EXP: {exp_required(current_level)}",
-        color=discord.Color.blue()
-    )
-    embed.add_field(name="Required EXP", value=f"{required_exp:,}")
-    embed.add_field(name="Estimated Messages", value=f"{round((required_exp / 20) * 1.5):,}")
-    embed.add_field(name="Estimated Days", value=f"{round(required_exp / (hours_per_day * 1200)):,}")
-    embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
-
-    await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 """
 GEOMETRY DASH COMMANDS
@@ -478,69 +558,82 @@ class GeometryDashCommandGroup(app_commands.Group):
     @app_commands.describe(username="The Geometry Dash username to fetch.")
     async def gdprofile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://gdbrowser.com/api/profile/{username}") as response:
-                if response.status == 200:
-                    data = await response.json()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"https://gdbrowser.com/api/profile/{username}") as response:
+                    if response.status == 200:
+                        data = await response.json()
 
-                    if "username" not in data:
-                        await interaction.followup.send(f"User {username} not found.", ephemeral=True)
-                        return
-                    
-                    embed = discord.Embed(title="Geometry Dash Profile",description=f"Profile information for **{data['username']}**",color=discord.Color.blue())
-                    
-                    embed.add_field(name="Username",value=f"{data['username']} (Account ID: {data['accountID']})",inline=False)
-                    
-                    embed.add_field(
-                        name="Stats",
-                        value=(
-                            f"<:Stars:1299321915411791922> **Stars**: {data['stars']}\n"
-                            f"<:Moons:1299321898169274378> **Moons**: {data['moons']}\n"
-                            f"<:Coins:1299321945954713670> **Coins**: {data['coins']}\n"
-                            f"<:UserCoins:1299321964867092510> **User Coins**: {data['userCoins']}"
-                        ),
-                        inline=False
-                    )
-                    
-                    embed.add_field(
-                        name="Demons",
-                        value=(
-                            f"**Total Beaten**: {data['demons']}\n"
-                            f"**Classic Demons**:\n"
-                            f"<:EasyDemon:1299319586197471253> Easy: {data['classicDemonsCompleted']['easy']}\n"
-                            f"<:MediumDemon:1299319602936942635> Medium: {data['classicDemonsCompleted']['medium']}\n"
-                            f"<:HardDemon:1299319619571552318> Hard: {data['classicDemonsCompleted']['hard']}\n"
-                            f"<:InsaneDemon:1299319639959928872> Insane: {data['classicDemonsCompleted']['insane']}\n"
-                            f"<:ExtremeDemon:1299319662995046420> Extreme: {data['classicDemonsCompleted']['extreme']}\n"
-                            f"<:WeeklyDemon:1299320499146330152> Weekly: {data['classicDemonsCompleted']['weekly']}\n"
-                            f"<:Gauntlet:1299320799458627626> Gauntlet: {data['classicDemonsCompleted']['gauntlet']}\n\n"
-                            f"**Platformer Demons**:\n"
-                            f"<:EasyDemon:1299319586197471253> Easy: {data['platformerDemonsCompleted']['easy']}\n"
-                            f"<:MediumDemon:1299319602936942635> Medium: {data['platformerDemonsCompleted']['medium']}\n"
-                            f"<:HardDemon:1299319619571552318> Hard: {data['platformerDemonsCompleted']['hard']}\n"
-                            f"<:ExtremeDemon:1299319662995046420> Insane: {data['platformerDemonsCompleted']['insane']}\n"
-                            f"<:ExtremeDemon:1299319662995046420> Extreme: {data['platformerDemonsCompleted']['extreme']}"
-                        ),
-                        inline=False
-                    )
+                        if "username" not in data:
+                            await interaction.followup.send(f"User {username} not found.", ephemeral=True)
+                            return
+                        
+                        embed = discord.Embed(title="Geometry Dash Profile",description=f"Profile information for **{data['username']}**",color=discord.Color.blue())
+                        
+                        embed.add_field(name="Username",value=f"{data['username']} (Account ID: {data['accountID']})",inline=False)
+                        
+                        embed.add_field(
+                            name="Stats",
+                            value=(
+                                f"<:Stars:1299321915411791922> **Stars**: {data['stars']}\n"
+                                f"<:Moons:1299321898169274378> **Moons**: {data['moons']}\n"
+                                f"<:Coins:1299321945954713670> **Coins**: {data['coins']}\n"
+                                f"<:UserCoins:1299321964867092510> **User Coins**: {data['userCoins']}"
+                            ),
+                            inline=False
+                        )
+                        
+                        embed.add_field(
+                            name="Demons",
+                            value=(
+                                f"**Total Beaten**: {data['demons']}\n"
+                                f"**Classic Demons**:\n"
+                                f"<:EasyDemon:1299319586197471253> Easy: {data['classicDemonsCompleted']['easy']}\n"
+                                f"<:MediumDemon:1299319602936942635> Medium: {data['classicDemonsCompleted']['medium']}\n"
+                                f"<:HardDemon:1299319619571552318> Hard: {data['classicDemonsCompleted']['hard']}\n"
+                                f"<:InsaneDemon:1299319639959928872> Insane: {data['classicDemonsCompleted']['insane']}\n"
+                                f"<:ExtremeDemon:1299319662995046420> Extreme: {data['classicDemonsCompleted']['extreme']}\n"
+                                f"<:WeeklyDemon:1299320499146330152> Weekly: {data['classicDemonsCompleted']['weekly']}\n"
+                                f"<:Gauntlet:1299320799458627626> Gauntlet: {data['classicDemonsCompleted']['gauntlet']}\n\n"
+                                f"**Platformer Demons**:\n"
+                                f"<:EasyDemon:1299319586197471253> Easy: {data['platformerDemonsCompleted']['easy']}\n"
+                                f"<:MediumDemon:1299319602936942635> Medium: {data['platformerDemonsCompleted']['medium']}\n"
+                                f"<:HardDemon:1299319619571552318> Hard: {data['platformerDemonsCompleted']['hard']}\n"
+                                f"<:ExtremeDemon:1299319662995046420> Insane: {data['platformerDemonsCompleted']['insane']}\n"
+                                f"<:ExtremeDemon:1299319662995046420> Extreme: {data['platformerDemonsCompleted']['extreme']}"
+                            ),
+                            inline=False
+                        )
 
-                    social_links = ""
-                    if data.get("youtube"):
-                        social_links += f"[YouTube](https://www.youtube.com/channel/{data['youtube']})\n"
-                    if data.get("twitter"):
-                        social_links += f"[Twitter](https://twitter.com/{data['twitter']})\n"
-                    if data.get("twitch"):
-                        social_links += f"[Twitch](https://www.twitch.tv/{data['twitch']})\n"
+                        social_links = ""
+                        if data.get("youtube"):
+                            social_links += f"[YouTube](https://www.youtube.com/channel/{data['youtube']})\n"
+                        if data.get("twitter"):
+                            social_links += f"[Twitter](https://twitter.com/{data['twitter']})\n"
+                        if data.get("twitch"):
+                            social_links += f"[Twitch](https://www.twitch.tv/{data['twitch']})\n"
 
-                    if social_links:
-                        embed.add_field(name="Social", value=social_links, inline=False)
+                        if social_links:
+                            embed.add_field(name="Social", value=social_links, inline=False)
 
-                    embed.set_footer(text=f"Rank: {"Leaderboard banned" if data["rank"] == 0 else f"Rank: {data['rank']}"} | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+                        embed.set_footer(text=f"Rank: {"Leaderboard banned" if data["rank"] == 0 else f"Rank: {data['rank']}"} | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-                    await interaction.followup.send(embed=embed)
-                else: await interaction.followup.send(f"Failed to retrieve profile for {username}.", ephemeral=True)
+                        await interaction.followup.send(embed=embed)
+                    else: 
+                        await interaction.followup.send(f"Failed to retrieve profile for {username}.", ephemeral=True)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(GeometryDashCommandGroup())
+
+"""
+OSU COMMANDS
+class OsuCommandGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="osu", description="Osu related commands")
+
+bot.tree.add_command(OsuCommandGroup())
+"""
 
 """
 CLASH ROYALE COMMANDS
@@ -691,100 +784,106 @@ class ClashRoyaleCommandGroup(app_commands.Group):
     @app_commands.describe(tag="Your player tag")
     async def crconnect(self, interaction: discord.Interaction, tag: str):
         await interaction.response.defer()
+        try:
+            if not tag.startswith("#"):
+                tag = f"#{tag}"
 
-        if not tag.startswith("#"):
-            tag = f"#{tag}"
-
-        player_data = await get_player_data(tag.replace("#", "%23"))
-        if not player_data:
-            await interaction.followup.send("Failed to retrieve data for the provided player tag.", ephemeral=True)
-            return
-
-        random_deck = random.sample(["Giant", "Mini P.E.K.K.A", "Fireball", "Archers", "Minions", "Knight", "Musketeer", "Arrows"], k=8)
-        random_deck_str = " ".join(f"`{card}`" for card in random_deck)
-        await interaction.followup.send(
-            f"Please use the following deck: {random_deck_str}\nYou have 15 minutes to make it, which will be checked per minute.\n"
-            "Note that the Clash Royale API can be slow, so response times may vary."
-        )
-
-        end_time = datetime.now() + timedelta(minutes=15)
-        while datetime.now() < end_time:
             player_data = await get_player_data(tag.replace("#", "%23"))
-            current_deck = player_data.get("currentDeck", [])
-            player_deck_names = [card.get("name", "Unknown") for card in current_deck]
-
-            if sorted(player_deck_names) == sorted(random_deck):
-                member_info = open_file("info/member_info.json")
-                discord_user_id = str(interaction.user.id)
-
-                if discord_user_id not in member_info:
-                    member_info[discord_user_id] = {}
-
-                member_info[discord_user_id]["cr_id"] = tag
-                save_file("info/member_info.json", member_info)
-
-                await interaction.followup.send("Deck matched! Your Clash Royale ID has been successfully linked.")
+            if not player_data:
+                await interaction.followup.send("Failed to retrieve data for the provided player tag.", ephemeral=True)
                 return
 
-            await asyncio.sleep(60)
+            random_deck = random.sample(["Giant", "Mini P.E.K.K.A", "Fireball", "Archers", "Minions", "Knight", "Musketeer", "Arrows"], k=8)
+            random_deck_str = " ".join(f"`{card}`" for card in random_deck)
+            await interaction.followup.send(
+                f"Please use the following deck: {random_deck_str}\nYou have 15 minutes to make it, which will be checked per minute.\n"
+                "Note that the Clash Royale API can be slow, so response times may vary."
+            )
 
-        await interaction.followup.send("Deck did not match within 15 minutes. Please try again.")
+            end_time = datetime.now() + timedelta(minutes=15)
+            while datetime.now() < end_time:
+                player_data = await get_player_data(tag.replace("#", "%23"))
+                current_deck = player_data.get("currentDeck", [])
+                player_deck_names = [card.get("name", "Unknown") for card in current_deck]
+
+                if sorted(player_deck_names) == sorted(random_deck):
+                    member_info = open_file("info/member_info.json")
+                    discord_user_id = str(interaction.user.id)
+
+                    if discord_user_id not in member_info:
+                        member_info[discord_user_id] = {}
+
+                    member_info[discord_user_id]["cr_id"] = tag
+                    save_file("info/member_info.json", member_info)
+
+                    await interaction.followup.send("Deck matched! Your Clash Royale ID has been successfully linked.")
+                    return
+
+                await asyncio.sleep(60)
+
+            await interaction.followup.send("Deck did not match within 15 minutes. Please try again.")
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="profile", description="Get Clash Royale player profile data")
     @app_commands.describe(tag="The user's tag (The one with the #, optional)", user="The user ID of the member (optional)")
     async def clash_royale_profile(self, interaction: discord.Interaction, tag: str = None, user: str = None):
         await interaction.response.defer()
+        try:
+            member_info = open_file("info/member_info.json")
 
-        member_info = open_file("info/member_info.json")
+            if tag is None:
+                user_id = str(interaction.user.id)
+                cr_id = member_info.get(user_id, {}).get("cr_id")
 
-        if tag is None:
-            user_id = str(interaction.user.id)
-            cr_id = member_info.get(user_id, {}).get("cr_id")
-
-            if cr_id:
-                tag = cr_id
+                if cr_id:
+                    tag = cr_id
+                else:
+                    await interaction.followup.send("No linked Clash Royale account found.")
+                    return
             else:
-                await interaction.followup.send("No linked Clash Royale account found.")
-                return
-        else:
-            if not tag.startswith("#"):
-                tag = "#" + tag.strip()
+                if not tag.startswith("#"):
+                    tag = "#" + tag.strip()
 
 
-        player_data = await get_player_data(tag.replace("#", "%23"))
+            player_data = await get_player_data(tag.replace("#", "%23"))
 
-        if player_data:
-            view = ProfileView(player_data)
-            embed = view.create_main_embed()
-            await interaction.followup.send(embed=embed, view=view)
-        else:
-            await interaction.followup.send(f"Player data not found for tag: {tag}")
+            if player_data:
+                view = ProfileView(player_data)
+                embed = view.create_main_embed()
+                await interaction.followup.send(embed=embed, view=view)
+            else:
+                await interaction.followup.send(f"Player data not found for tag: {tag}")
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="clan", description="Get data about a Clash Royale clan")
     @app_commands.describe(clantag="The clan's tag (the one with the #)")
     async def clan(self, interaction: discord.Interaction, clantag: str):
         await interaction.response.defer()
+        try:
+            if not clantag.startswith("#"):
+                clantag = "#" + clantag.strip()
 
-        if not clantag.startswith("#"):
-            clantag = "#" + clantag.strip()
+            clan_data = await get_clan_data(clantag.replace("#", "%23"))
 
-        clan_data = await get_clan_data(clantag.replace("#", "%23"))
+            if clan_data:
+                embed = discord.Embed(title=f"Clan Data for {clan_data['name']}", color=discord.Color.blue())
 
-        if clan_data:
-            embed = discord.Embed(title=f"Clan Data for {clan_data['name']}", color=discord.Color.blue())
+                embed.add_field(name="<:Clan:1300957220422549514> Name", value=f"{clan_data['name']} ({clan_data['tag']})")
+                embed.add_field(name="<:Trophy:1299093384882950245> Clan Score", value=clan_data['clanScore'])
+                embed.add_field(name="<:ClanTrophies:1300956037272309850> Clan Trophies", value=clan_data['clanWarTrophies'])
+                embed.add_field(name="<:Trophy:1299093384882950245> Required Trophies", value=clan_data['requiredTrophies'])
+                embed.add_field(name="<:Cards:1300955092534558850> Weekly Donations", value=clan_data['donationsPerWeek'])
+                embed.add_field(name="<:Members:1300956053588152373> Members", value=clan_data['members'])
+                embed.add_field(name="<:Clan:1300957220422549514> Description", value=clan_data['description'])
+                embed.set_footer(text=f"The clan is currently {clan_data['type']} | Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
 
-            embed.add_field(name="<:Clan:1300957220422549514> Name", value=f"{clan_data['name']} ({clan_data['tag']})")
-            embed.add_field(name="<:Trophy:1299093384882950245> Clan Score", value=clan_data['clanScore'])
-            embed.add_field(name="<:ClanTrophies:1300956037272309850> Clan Trophies", value=clan_data['clanWarTrophies'])
-            embed.add_field(name="<:Trophy:1299093384882950245> Required Trophies", value=clan_data['requiredTrophies'])
-            embed.add_field(name="<:Cards:1300955092534558850> Weekly Donations", value=clan_data['donationsPerWeek'])
-            embed.add_field(name="<:Members:1300956053588152373> Members", value=clan_data['members'])
-            embed.add_field(name="<:Clan:1300957220422549514> Description", value=clan_data['description'])
-            embed.set_footer(text=f"The clan is currently {clan_data['type']} | Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
-
-            await interaction.followup.send(embed=embed)
-        else:
-            await interaction.followup.send(f"Clan data not found for tag: {clantag}")
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.followup.send(f"Clan data not found for tag: {clantag}")
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(ClashRoyaleCommandGroup())
 
@@ -820,200 +919,210 @@ class RobloxGroup(app_commands.Group):
     @app_commands.describe(username="The username to connect to")
     @app_commands.checks.cooldown(1, 60)
     async def rbxconnect(self, interaction: discord.Interaction, username: str):
-        color_sequence = " ".join(
-            random.choices(
-                ["orange", "strawberry", "pear", "apple", "banana", "watermelon"], k=10
+        await interaction.response.defer(empheral=True)
+        try:
+            color_sequence = " ".join(
+                random.choices(
+                    ["orange", "strawberry", "pear", "apple", "banana", "watermelon"], k=10
+                )
             )
-        )
-        await interaction.response.send_message(
-            f"Please update your Roblox bio with this sequence:\n**{color_sequence}**\nYou have 1 minute to complete it."
-        )
+            await interaction.followup.send(
+                f"Please update your Roblox bio with this sequence:\n**{color_sequence}**\nYou have 1 minute to complete it."
+            )
 
-        await asyncio.sleep(60)
+            await asyncio.sleep(60)
 
-        roblox_user_id = await GetRobloxID(username)
-        if roblox_user_id is None:
-            await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
-            return
+            roblox_user_id = await GetRobloxID(username)
+            if roblox_user_id is None:
+                await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
+                return
 
-        bio = await fetch_roblox_bio(roblox_user_id)
+            bio = await fetch_roblox_bio(roblox_user_id)
 
-        if color_sequence in bio:
-            member_info = open_file("info/member_info.json")
-            discord_user_id = str(interaction.user.id)
+            if color_sequence in bio:
+                member_info = open_file("info/member_info.json")
+                discord_user_id = str(interaction.user.id)
 
-            if discord_user_id not in member_info:
-                member_info[discord_user_id] = {}
+                if discord_user_id not in member_info:
+                    member_info[discord_user_id] = {}
 
-            member_info[discord_user_id]["roblox_username"] = username
-            member_info[discord_user_id]["roblox_id"] = roblox_user_id
-            save_file("info/member_info.json", member_info)
+                member_info[discord_user_id]["roblox_username"] = username
+                member_info[discord_user_id]["roblox_id"] = roblox_user_id
+                save_file("info/member_info.json", member_info)
 
-            await interaction.followup.send(f"Success! Your Roblox account is now linked.")
+                await interaction.followup.send(f"Success! Your Roblox account is now linked.")
 
-        else:
-            await interaction.followup.send("Failed! Your Roblox bio did not match the given sequence.")
+            else:
+                await interaction.followup.send("Failed! Your Roblox bio did not match the given sequence.")
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="description", description="Provides the description of a Roblox account.")
     @app_commands.describe(username="The username of the Roblox account (leave blank to use linked account).")
     async def rbxdescription(self, interaction: discord.Interaction, username: str = None):
         await interaction.response.defer()
-        discord_user_id = str(interaction.user.id)
-        member_info = open_file("info/member_info.json")
+        try:
+            discord_user_id = str(interaction.user.id)
+            member_info = open_file("info/member_info.json")
 
-        if (
-            discord_user_id not in member_info
-            or "roblox_id" not in member_info[discord_user_id]
-        ):
-            await interaction.response.send_message("You don't have a linked Roblox account.")
-            return
-
-        if username:
-            roblox_user_id = await GetRobloxID(username)
-            if roblox_user_id is None:
-                await interaction.response.send_message(f"Failed to retrieve Roblox ID for {username}.")
+            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
+                await interaction.response.send_message("You don't have a linked Roblox account.")
                 return
-        else:
-            roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-        bio = await fetch_roblox_bio(roblox_user_id)
-        embed = discord.Embed(title=f"User Description for {roblox_user_id}", description=bio, color=0x808080)
-        await interaction.followup.send(embed=embed)
+            if username:
+                roblox_user_id = await GetRobloxID(username)
+                if roblox_user_id is None:
+                    await interaction.response.send_message(f"Failed to retrieve Roblox ID for {username}.")
+                    return
+            else:
+                roblox_user_id = member_info[discord_user_id]["roblox_id"]
+
+            bio = await fetch_roblox_bio(roblox_user_id)
+            embed = discord.Embed(title=f"User Description for {roblox_user_id}", description=bio, color=0x808080)
+            await interaction.followup.send(embed=embed)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="info", description="Provides info about your linked Roblox account.")
     @app_commands.describe(username="The username of the Roblox account (leave blank to use linked account).")
     async def rbxinfo(self, interaction: discord.Interaction, username: str = None):
         await interaction.response.defer()
-        discord_user_id = str(interaction.user.id)
-        member_info = open_file("info/member_info.json")
+        try:
+            discord_user_id = str(interaction.user.id)
+            member_info = open_file("info/member_info.json")
 
-        if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
-            await interaction.followup.send("You don't have a linked Roblox account.")
-            return
-
-        if username:
-            roblox_user_id = await GetRobloxID(username)
-            if roblox_user_id is None:
-                await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
+            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
+                await interaction.followup.send("You don't have a linked Roblox account.")
                 return
-        else:
-            roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-        async with aiohttp.ClientSession() as session:
-            async def fetch_count(roblox_user_id: int, type: str):
-                async with session.get(f"https://friends.roblox.com/v1/users/{roblox_user_id}/{type}/count") as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data.get("count", 0)
+            if username:
+                roblox_user_id = await GetRobloxID(username)
+                if roblox_user_id is None:
+                    await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
+                    return
+            else:
+                roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-            async def fetch_user_presence(roblox_user_id: int):
-                async with session.post("https://presence.roblox.com/v1/presence/users", json={"userIds": [roblox_user_id]}) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        return data["userPresences"][0]
+            async with aiohttp.ClientSession() as session:
+                async def fetch_count(roblox_user_id: int, type: str):
+                    async with session.get(f"https://friends.roblox.com/v1/users/{roblox_user_id}/{type}/count") as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            return data.get("count", 0)
 
-            async def fetch_user_info(roblox_user_id: int):
-                async with session.get(f"https://users.roblox.com/v1/users/{roblox_user_id}") as response:
-                    if response.status == 200:
-                        return await response.json()
+                async def fetch_user_presence(roblox_user_id: int):
+                    async with session.post("https://presence.roblox.com/v1/presence/users", json={"userIds": [roblox_user_id]}) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            return data["userPresences"][0]
+
+                async def fetch_user_info(roblox_user_id: int):
+                    async with session.get(f"https://users.roblox.com/v1/users/{roblox_user_id}") as response:
+                        if response.status == 200:
+                            return await response.json()
 
 
-            async def check_premium(roblox_user_id: int):
-                headers = {'accept': 'application/json'}
-                url = f"https://premiumfeatures.roblox.com/v1/users/{roblox_user_id}/validate-membership"
+                async def check_premium(roblox_user_id: int):
+                    headers = {'accept': 'application/json'}
+                    url = f"https://premiumfeatures.roblox.com/v1/users/{roblox_user_id}/validate-membership"
 
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        return await response.json()
+                    async with session.get(url, headers=headers) as response:
+                        if response.status == 200:
+                            return await response.json()
 
-            is_premium = await check_premium(roblox_user_id)
-            friends_count = await fetch_count(roblox_user_id, "friends")
-            followers_count = await fetch_count(roblox_user_id, "followers")
-            following_count = await fetch_count(roblox_user_id, "followings")
-            presence_data = await fetch_user_presence(roblox_user_id)
-            user_info = await fetch_user_info(roblox_user_id)
+                is_premium = await check_premium(roblox_user_id)
+                friends_count = await fetch_count(roblox_user_id, "friends")
+                followers_count = await fetch_count(roblox_user_id, "followers")
+                following_count = await fetch_count(roblox_user_id, "followings")
+                presence_data = await fetch_user_presence(roblox_user_id)
+                user_info = await fetch_user_info(roblox_user_id)
 
-        embed = discord.Embed(title=f"{'<:Premium:1298832636805910589> ' if is_premium else ''}Roblox Account Info", color=0x808080)
-        display_name = user_info.get("displayName", "N/A")
-        username = user_info.get("name", "N/A")
-        embed.add_field(name="Username", value=f"{display_name} (@{username})", inline=False)
-        embed.add_field(name="Friends/Followers/Following", value=f"Friends: {friends_count}\nFollowers: {followers_count}\nFollowing: {following_count}", inline=False)
+            embed = discord.Embed(title=f"{'<:Premium:1298832636805910589> ' if is_premium else ''}Roblox Account Info", color=0x808080)
+            display_name = user_info.get("displayName", "N/A")
+            username = user_info.get("name", "N/A")
+            embed.add_field(name="Username", value=f"{display_name} (@{username})", inline=False)
+            embed.add_field(name="Friends/Followers/Following", value=f"Friends: {friends_count}\nFollowers: {followers_count}\nFollowing: {following_count}", inline=False)
 
-        status = "Offline" if presence_data["userPresenceType"] == 0 else "Ingame" if presence_data["userPresenceType"] == 1 else "Online"
-        last_online = datetime.strptime(presence_data["lastOnline"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
-        last_online_str = last_online.strftime("%m-%d-%Y")  
-        embed.add_field(name="Status", value=f"{status} | Last online: {last_online_str}", inline=False)
-        creation_date = datetime.strptime(user_info["created"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
-        creation_date_str = creation_date.strftime("%m-%d-%Y")  
-        embed.set_footer(text=f"Account created: {creation_date_str} | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+            status = "Offline" if presence_data["userPresenceType"] == 0 else "Ingame" if presence_data["userPresenceType"] == 1 else "Online"
+            last_online = datetime.strptime(presence_data["lastOnline"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
+            last_online_str = last_online.strftime("%m-%d-%Y")  
+            embed.add_field(name="Status", value=f"{status} | Last online: {last_online_str}", inline=False)
+            creation_date = datetime.strptime(user_info["created"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
+            creation_date_str = creation_date.strftime("%m-%d-%Y")  
+            embed.set_footer(text=f"Account created: {creation_date_str} | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-        await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="avatar", description="Provides a Roblox account's avatar.")
     @app_commands.describe(username="The username of the Roblox account (leave blank to use linked account).", items="Whether or not to display the list of currently worn items (default: False).")
     async def rbxavatar(self, interaction: discord.Interaction, username: str = None, items: bool = False):
         await interaction.response.defer()
-        discord_user_id = str(interaction.user.id)
-        member_info = open_file("info/member_info.json")
+        try:
+            discord_user_id = str(interaction.user.id)
+            member_info = open_file("info/member_info.json")
 
-        if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
-            await interaction.followup.send("You don't have a linked Roblox account.")
-            return
-
-        if username:
-            roblox_user_id = await GetRobloxID(username)
-            if roblox_user_id is None:
-                await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
+            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
+                await interaction.followup.send("You don't have a linked Roblox account.")
                 return
-        else:
-            roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-        async with aiohttp.ClientSession() as session:
-            async def get_avatar_items(session, roblox_user_id: int):
-                url = f"https://avatar.roblox.com/v1/users/{roblox_user_id}/currently-wearing"
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if not data['assetIds']:  
-                            return None  
-                        return data['assetIds']
-                    else:
-                        return None
+            if username:
+                roblox_user_id = await GetRobloxID(username)
+                if roblox_user_id is None:
+                    await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
+                    return
+            else:
+                roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-            async def get_avatar_thumbnail(session, roblox_user_id: int):
-                url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={roblox_user_id}&size=720x720&format=Png&isCircular=false"
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data and data['data'][0]['state'] == 'Completed':
-                            return data['data'][0]['imageUrl']
+            async with aiohttp.ClientSession() as session:
+                async def get_avatar_items(session, roblox_user_id: int):
+                    url = f"https://avatar.roblox.com/v1/users/{roblox_user_id}/currently-wearing"
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if not data['assetIds']:  
+                                return None  
+                            return data['assetIds']
                         else:
                             return None
-                    else:
-                        return None
 
-            avatar_thumbnail_url = await get_avatar_thumbnail(session, roblox_user_id)
+                async def get_avatar_thumbnail(session, roblox_user_id: int):
+                    url = f"https://thumbnails.roblox.com/v1/users/avatar?userIds={roblox_user_id}&size=720x720&format=Png&isCircular=false"
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            data = await response.json()
+                            if data and data['data'][0]['state'] == 'Completed':
+                                return data['data'][0]['imageUrl']
+                            else:
+                                return None
+                        else:
+                            return None
 
-            if items:
-                asset_ids = await get_avatar_items(session, roblox_user_id)
-            else:
-                asset_ids = None
+                avatar_thumbnail_url = await get_avatar_thumbnail(session, roblox_user_id)
 
-            embed = discord.Embed(title="Roblox Avatar View",color=discord.Color.blue())
-            embed.set_image(url=avatar_thumbnail_url)  
-            embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
-
-            if items:
-                if asset_ids:
-                    urls = [f"https://www.roblox.com/catalog/{asset_id}" for asset_id in asset_ids]
-                    url_list = '\n'.join(urls)
-                    embed.description = url_list  
+                if items:
+                    asset_ids = await get_avatar_items(session, roblox_user_id)
                 else:
-                    embed.description = "This user has no currently worn items."  
-            else:
-                embed.description = "Currently worn items are not displayed."
+                    asset_ids = None
 
-            await interaction.followup.send(embed=embed)
+                embed = discord.Embed(title="Roblox Avatar View",color=discord.Color.blue())
+                embed.set_image(url=avatar_thumbnail_url)  
+                embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+
+                if items:
+                    if asset_ids:
+                        urls = [f"https://www.roblox.com/catalog/{asset_id}" for asset_id in asset_ids]
+                        url_list = '\n'.join(urls)
+                        embed.description = url_list  
+                    else:
+                        embed.description = "This user has no currently worn items."  
+                else:
+                    embed.description = "Currently worn items are not displayed."
+
+                await interaction.followup.send(embed=embed)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(RobloxGroup())
 
@@ -1107,178 +1216,180 @@ class GloveView(discord.ui.View):
 @bot.tree.command(name="cgloves", description="Check all the user's gloves in slap battles.")
 @app_commands.describe(username="The user to check gloves for (leave empty to check your own)",)
 async def cgloves(interaction: discord.Interaction, username: str = None):
-    await interaction.response.defer()
+    await interaction.response.defer(empheral=True)
+    try:
+        discord_user_id = str(interaction.user.id)
 
-    discord_user_id = str(interaction.user.id)
-
-    if username is None:
-        member_info = open_file("info/member_info.json")
-        if (
-            discord_user_id not in member_info
-            or "roblox_id" not in member_info[discord_user_id]
-        ):
-            await interaction.followup.send("You need to provide a Roblox username or connect your account first.")
-            return
-        roblox_id = member_info[discord_user_id]["roblox_id"]
-    else:
-        roblox_id = await GetRobloxID(username)
-        if roblox_id is None:
-            await interaction.followup.send(f"No data found for the username: {username}")
-            return
-
-    gloves = open_file("storage/gloves.json")
-    all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
-    url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={','.join(map(str, all_badge_ids))}"
-
-    async with aiohttp.ClientSession() as session:
-        response = await session.get(url)
-
-        if response.status == 200:
-            data = await response.json()
-            if not data["data"]:
-                await interaction.followup.send(f"No badges found for the user: {username if username else interaction.user.name}")
+        if username is None:
+            member_info = open_file("info/member_info.json")
+            if (
+                discord_user_id not in member_info
+                or "roblox_id" not in member_info[discord_user_id]
+            ):
+                await interaction.followup.send("You need to provide a Roblox username or connect your account first.")
+                return
+            roblox_id = member_info[discord_user_id]["roblox_id"]
+        else:
+            roblox_id = await GetRobloxID(username)
+            if roblox_id is None:
+                await interaction.followup.send(f"No data found for the username: {username}")
                 return
 
-            owned = [
-                glove
-                for glove, badge_ids in gloves.items()
-                if all(
-                    any(badge.get("badgeId") == badge_id for badge in data["data"])
-                    for badge_id in badge_ids
+        gloves = open_file("storage/gloves.json")
+        all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
+        url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={','.join(map(str, all_badge_ids))}"
+
+        async with aiohttp.ClientSession() as session:
+            response = await session.get(url)
+
+            if response.status == 200:
+                data = await response.json()
+                if not data["data"]:
+                    await interaction.followup.send(f"No badges found for the user: {username if username else interaction.user.name}")
+                    return
+
+                owned = [
+                    glove
+                    for glove, badge_ids in gloves.items()
+                    if all(
+                        any(badge.get("badgeId") == badge_id for badge in data["data"])
+                        for badge_id in badge_ids
+                    )
+                ]
+                not_owned = [glove for glove in gloves.keys() if glove not in owned]
+
+                total_gloves = len(gloves)
+                owned_gloves = len(owned)
+                glove_percentage = (owned_gloves / total_gloves) * 100
+                glove_percentage_str = f"{glove_percentage:.1f}"
+
+                glove_embed = discord.Embed(
+                    title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
+                    description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
+                    color=0xFF0000,
                 )
-            ]
-            not_owned = [glove for glove in gloves.keys() if glove not in owned]
+                glove_embed.add_field(
+                    name="OWNED", 
+                    value=", ".join(owned) if owned else "None", inline=False
+                )
+                glove_embed.add_field(
+                    name="NOT OWNED",
+                    value=", ".join(not_owned) if not_owned else "None",
+                    inline=False,
+                )
 
-            total_gloves = len(gloves)
-            owned_gloves = len(owned)
-            glove_percentage = (owned_gloves / total_gloves) * 100
-            glove_percentage_str = f"{glove_percentage:.1f}"
+                obtained_gloves = {
+                    glove: badge["awardedDate"]
+                    for glove, badge_ids in gloves.items()
+                    for badge_id in badge_ids
+                    for badge in data["data"]
+                    if badge.get("badgeId") == badge_id
+                }
 
-            glove_embed = discord.Embed(
-                title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
-                description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
-                color=0xFF0000,
-            )
-            glove_embed.add_field(
-                name="OWNED", 
-                value=", ".join(owned) if owned else "None", inline=False
-            )
-            glove_embed.add_field(
-                name="NOT OWNED",
-                value=", ".join(not_owned) if not_owned else "None",
-                inline=False,
-            )
+                additional_badges = {
+                    "Welcome": 2124743766,
+                    "You met the owner": 2124760252,
+                    "you met snow": 2124760875,
+                    "[REDACTED]": 2124760911,
+                    "Divine Punishment": 2124760917,
+                    "really?": 2124760923,
+                    "barzil": 2124775097,
+                    "The one": 2124807750,
+                    "Ascend": 2124807752,
+                    "1 0 0": 2124836270,
+                    'The "Reverse" Incident': 2124912059,
+                    "Clipped Wings": 2147535393,
+                    "Apostle of Judgement": 4414399146292319,
+                    "court evidence": 2124760907,
+                    "duck": 2124760916,
+                    "The Lone Orange": 2128220957,
+                    "The Hunt Event": 1195935784919838,
+                    "The Backrooms": 2124929812,
+                    "pog": 2124760877,
+                }
 
-            obtained_gloves = {
-                glove: badge["awardedDate"]
-                for glove, badge_ids in gloves.items()
-                for badge_id in badge_ids
-                for badge in data["data"]
-                if badge.get("badgeId") == badge_id
-            }
+                badge_ids = ",".join(map(str, additional_badges.values()))
+                url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={badge_ids}"
 
-            additional_badges = {
-                "Welcome": 2124743766,
-                "You met the owner": 2124760252,
-                "you met snow": 2124760875,
-                "[REDACTED]": 2124760911,
-                "Divine Punishment": 2124760917,
-                "really?": 2124760923,
-                "barzil": 2124775097,
-                "The one": 2124807750,
-                "Ascend": 2124807752,
-                "1 0 0": 2124836270,
-                'The "Reverse" Incident': 2124912059,
-                "Clipped Wings": 2147535393,
-                "Apostle of Judgement": 4414399146292319,
-                "court evidence": 2124760907,
-                "duck": 2124760916,
-                "The Lone Orange": 2128220957,
-                "The Hunt Event": 1195935784919838,
-                "The Backrooms": 2124929812,
-                "pog": 2124760877,
-            }
+                async with aiohttp.ClientSession() as session:
+                    response = await session.get(url)
+                    if response.status == 200:
+                        data = await response.json()
 
-            badge_ids = ",".join(map(str, additional_badges.values()))
-            url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={badge_ids}"
+                        badge_embed = discord.Embed(
+                            title=f"Additional Badges for {username if username else interaction.user.name} ({roblox_id}):",
+                            color=0xFF0000,
+                        )
 
-            async with aiohttp.ClientSession() as session:
-                response = await session.get(url)
-                if response.status == 200:
-                    data = await response.json()
+                        obtained_badges = {badge["badgeId"]: badge["awardedDate"] for badge in data["data"]}
 
-                    badge_embed = discord.Embed(
-                        title=f"Additional Badges for {username if username else interaction.user.name} ({roblox_id}):",
-                        color=0xFF0000,
-                    )
+                        for badge_name, badge_id in additional_badges.items():
+                            if badge_id in obtained_badges:
+                                awarded_date = obtained_badges[badge_id]
+                                date, time, fraction = awarded_date.replace("Z", "+0000").partition(".")
+                                fraction = fraction[: fraction.index("+")][:6] + "+0000"
+                                awarded_date = f"{date}.{fraction}"
+                                awarded_date = datetime.strptime(awarded_date, "%Y-%m-%dT%H:%M:%S.%f%z")
+                                epoch_time = int(awarded_date.timestamp())
+                                badge_embed.add_field(
+                                    name=f"<:check:1292269189536682004> | {badge_name}",
+                                    value=f"Obtained on <t:{epoch_time}:F>",
+                                    inline=False,
+                                )
+                            else:
+                                badge_embed.add_field(
+                                    name=f"❌ | {badge_name}",
+                                    value="Not obtained",
+                                    inline=False,
+                                )
 
-                    obtained_badges = {badge["badgeId"]: badge["awardedDate"] for badge in data["data"]}
+                        gamepass_items = {
+                            "2x Slaps": 15037108,
+                            "5x Slaps": 15037147,
+                            "Radio": 16067226,
+                            "nothing": 16127797,
+                            "OVERKILL": 16361133,
+                            "Spectator": 19150776,
+                            "Custom death audio": 21651535,
+                            "CUSTOM GLOVE": 33742082,
+                            "Animation Pack": 37665008,
+                            "Vampire": 45176930,
+                            "Ultra Instinct": 85895851,
+                            "Cannoneer": 174818129,
+                        }
 
-                    for badge_name, badge_id in additional_badges.items():
-                        if badge_id in obtained_badges:
-                            awarded_date = obtained_badges[badge_id]
-                            date, time, fraction = awarded_date.replace("Z", "+0000").partition(".")
-                            fraction = fraction[: fraction.index("+")][:6] + "+0000"
-                            awarded_date = f"{date}.{fraction}"
-                            awarded_date = datetime.strptime(awarded_date, "%Y-%m-%dT%H:%M:%S.%f%z")
-                            epoch_time = int(awarded_date.timestamp())
-                            badge_embed.add_field(
-                                name=f"<:check:1292269189536682004> | {badge_name}",
-                                value=f"Obtained on <t:{epoch_time}:F>",
-                                inline=False,
-                            )
-                        else:
-                            badge_embed.add_field(
-                                name=f"❌ | {badge_name}",
-                                value="Not obtained",
-                                inline=False,
-                            )
+                        owned_gamepasses = []
+                        not_owned_gamepasses = []
 
-                    gamepass_items = {
-                        "2x Slaps": 15037108,
-                        "5x Slaps": 15037147,
-                        "Radio": 16067226,
-                        "nothing": 16127797,
-                        "OVERKILL": 16361133,
-                        "Spectator": 19150776,
-                        "Custom death audio": 21651535,
-                        "CUSTOM GLOVE": 33742082,
-                        "Animation Pack": 37665008,
-                        "Vampire": 45176930,
-                        "Ultra Instinct": 85895851,
-                        "Cannoneer": 174818129,
-                    }
+                        async with aiohttp.ClientSession() as session:
+                            for item_name, item_id in gamepass_items.items():
+                                url = f"https://inventory.roblox.com/v1/users/{roblox_id}/items/1/{item_id}/is-owned"
+                                async with session.get(url) as item_response:
+                                    if item_response.status == 200:
+                                        item_data = await item_response.json()
+                                        if item_data:
+                                            owned_gamepasses.append(item_name)
+                                        else:
+                                            not_owned_gamepasses.append(item_name)
 
-                    owned_gamepasses = []
-                    not_owned_gamepasses = []
+                        view = GloveView(
+                            badge_embed,
+                            glove_embed,
+                            full_glove_data=obtained_gloves,
+                            obtained_gloves=obtained_gloves,
+                            roblox_id=roblox_id,
+                            owned_gamepasses=owned_gamepasses,
+                            not_owned_gamepasses=not_owned_gamepasses,
+                        )
 
-                    async with aiohttp.ClientSession() as session:
-                        for item_name, item_id in gamepass_items.items():
-                            url = f"https://inventory.roblox.com/v1/users/{roblox_id}/items/1/{item_id}/is-owned"
-                            async with session.get(url) as item_response:
-                                if item_response.status == 200:
-                                    item_data = await item_response.json()
-                                    if item_data:
-                                        owned_gamepasses.append(item_name)
-                                    else:
-                                        not_owned_gamepasses.append(item_name)
+                        await interaction.followup.send(embeds=[glove_embed], view=view)
 
-                    view = GloveView(
-                        badge_embed,
-                        glove_embed,
-                        full_glove_data=obtained_gloves,
-                        obtained_gloves=obtained_gloves,
-                        roblox_id=roblox_id,
-                        owned_gamepasses=owned_gamepasses,
-                        not_owned_gamepasses=not_owned_gamepasses,
-                    )
-
-                    await interaction.followup.send(embeds=[glove_embed], view=view)
-
-                else:
-                    await interaction.followup.send("An error occurred while fetching the user's badges.")
-        else:
-            await interaction.followup.send("An error occurred while fetching the user's gloves.")
+                    else:
+                        await interaction.followup.send("An error occurred while fetching the user's badges.")
+            else:
+                await interaction.followup.send("An error occurred while fetching the user's gloves.")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 """
 FUN COMMANDS
@@ -1291,30 +1402,34 @@ class MemeifyGroup(app_commands.Group):
     @app_commands.command(name="spongebob", description="Generates a Spongebob meme")
     @app_commands.describe(text="The text you want to show on the paper")
     async def spongebob(self, interaction: discord.Interaction, text: str):
-        await interaction.response.defer()
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://memeado.vercel.app/api/spongebob?text={text}") as response:
-                if response.status == 200:
-                    meme_url = str(response.url)
-                    await interaction.followup.send(content=meme_url)
-                else:
-                    await interaction.followup.send("Failed to generate the meme. Please try again later.")
+        await interaction.response.defer(empheral=True)
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"https://memeado.vercel.app/api/spongebob?text={text}") as response:
+                    if response.status == 200:
+                        meme_url = str(response.url)
+                        await interaction.followup.send(content=meme_url)
+                    else:
+                        await interaction.followup.send("Failed to generate the meme. Please try again later.")
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="drakelikehate", description="Generates a Drake Like Hate meme")
     @app_commands.describe(text1="The text for the 'Like' part", text2="The text for the 'Hate' part")
     async def drakelikehate(self, interaction: discord.Interaction, text1: str, text2: str):
-        await interaction.response.defer()
-
-        async with aiohttp.ClientSession() as session:
-            url = f"https://memeado.vercel.app/api/drakelikehate?text1={text1}&text2={text2}"
-            async with session.get(url) as response:
-                if response.status == 200:
-                    meme_url = str(response.url)
-                    await interaction.followup.send(content=meme_url)
-                else:
-                    await interaction.followup.send("Failed to generate the meme. Please try again later.")
-
+        await interaction.response.defer(empheral=True)
+        try:
+            async with aiohttp.ClientSession() as session:
+                url = f"https://memeado.vercel.app/api/drakelikehate?text1={text1}&text2={text2}"
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        meme_url = str(response.url)
+                        await interaction.followup.send(content=meme_url)
+                    else:
+                        await interaction.followup.send("Failed to generate the meme. Please try again later.")
+        except Exception as error:
+            await handle_logs(interaction, error)
+            
     @app_commands.command(name="petpet", description="Creates a pet-pet gif from a user's avatar, emoji, custom image URL, or uploaded file")
     @app_commands.describe(
         user="Use a member's avatar",
@@ -1322,29 +1437,32 @@ class MemeifyGroup(app_commands.Group):
         attachment="File attachment to use for the pet-pet gif (optional)"
     )
     async def petpet(self, interaction: discord.Interaction, user: discord.Member = None, url: str = None, attachment: discord.Attachment = None):
-        await interaction.response.defer()
-        if attachment:
-            image_data = await attachment.read()
+        await interaction.response.defer(empheral=True)
+        try:
+            if attachment:
+                image_data = await attachment.read()
 
-        elif url:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        await interaction.followup.send("Failed to retrieve the image from the URL.", ephemeral=True)
-                        return
-                    image_data = await response.read()
+            elif url:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        if response.status != 200:
+                            await interaction.followup.send("Failed to retrieve the image from the URL.", ephemeral=True)
+                            return
+                        image_data = await response.read()
 
-        elif isinstance(user, discord.Member):
-            image_data = await user.display_avatar.read()
-        else:
-            image_data = await interaction.user.display_avatar.read()
+            elif isinstance(user, discord.Member):
+                image_data = await user.display_avatar.read()
+            else:
+                image_data = await interaction.user.display_avatar.read()
 
-        source = BytesIO(image_data)
-        dest = BytesIO()
-        petpet.make(source, dest)
-        dest.seek(0)
+            source = BytesIO(image_data)
+            dest = BytesIO()
+            petpet.make(source, dest)
+            dest.seek(0)
 
-        await interaction.followup.send(file=discord.File(dest, filename="petpet.gif"))
+            await interaction.followup.send(file=discord.File(dest, filename="petpet.gif"))
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(MemeifyGroup())
 
@@ -1364,25 +1482,27 @@ async def say(
     message_id: str = None,
 ):
     await interaction.response.defer()
-    reference_message = None
+    try:
+        reference_message = None
 
-    if message_id:
-        try:
-            reference_message = await channel.fetch_message(int(message_id))
-        except discord.NotFound:
-            await interaction.followup.send(f"Message with ID {message_id} not found in {channel.mention}.")
-            return
-        except discord.HTTPException as e:
-            await interaction.followup.send(f"An error occurred while fetching the message: {e}")
-            return
+        if message_id:
+            try:
+                reference_message = await channel.fetch_message(int(message_id))
+            except discord.NotFound:
+                await interaction.followup.send(f"Message with ID {message_id} not found in {channel.mention}.")
+                return
+            except discord.HTTPException as e:
+                await interaction.followup.send(f"An error occurred while fetching the message: {e}")
+                return
 
-    if attachment:
-        await channel.send(content=message, file=await attachment.to_file(), reference=reference_message)
-    else:
-        await channel.send(content=message, reference=reference_message)
+        if attachment:
+            await channel.send(content=message, file=await attachment.to_file(), reference=reference_message)
+        else:
+            await channel.send(content=message, reference=reference_message)
 
-    await interaction.followup.send(f"Sent '{message}' to {channel.mention}")
-
+        await interaction.followup.send(f"Sent '{message}' to {channel.mention}")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="dm", description="Directly message a person.")
 @app_commands.describe(
@@ -1397,118 +1517,137 @@ async def dm(
     attachment: discord.Attachment = None,
 ):
     await interaction.response.defer()
-    if attachment:
-        await user.send(content=message, file=await attachment.to_file())
-    else:
-        await user.send(content=message)
-    await interaction.followup.send(f"Sent '{message}' to {user}")              
+    try:
+        if attachment:
+            await user.send(content=message, file=await attachment.to_file())
+        else:
+            await user.send(content=message)
+        await interaction.followup.send(f"Sent '{message}' to {user}")              
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="fact", description="Fetches a random fact.")
 async def fact(interaction: discord.Interaction):
     await interaction.response.defer()
-    url = "https://uselessfacts.jsph.pl/random.json?language=en"
-    response = requests.get(url)
+    try:
+        url = "https://uselessfacts.jsph.pl/random.json?language=en"
+        response = requests.get(url)
 
-    if response.status_code == 200:
-        data = response.json()
+        if response.status_code == 200:
+            data = response.json()
 
-        embed = discord.Embed(title="Random Fact 🤓", description=data["text"], color=0x9370DB)
-        await interaction.followup.send(content=None, embed=embed)
-    else:
-        await interaction.followup.send(content="An error occurred while fetching the fact.")
+            embed = discord.Embed(title="Random Fact 🤓", description=data["text"], color=0x9370DB)
+            await interaction.followup.send(content=None, embed=embed)
+        else:
+            await interaction.followup.send(content="An error occurred while fetching the fact.")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="joke", description="Fetches a random joke.")
 async def joke(interaction: discord.Interaction):
     await interaction.response.defer()
-    url = "https://official-joke-api.appspot.com/jokes/random"
-    response = requests.get(url)
+    try:
+        url = "https://official-joke-api.appspot.com/jokes/random"
+        response = requests.get(url)
 
-    if response.status_code == 200:
-        data = response.json()
-        if "setup" in data and "punchline" in data:
-            joke_setup = data["setup"]
-            joke_punchline = data["punchline"]
-            await interaction.followup.send(content=f"**{joke_setup}**\n\n*||{joke_punchline}||*")
+        if response.status_code == 200:
+            data = response.json()
+            if "setup" in data and "punchline" in data:
+                joke_setup = data["setup"]
+                joke_punchline = data["punchline"]
+                await interaction.followup.send(content=f"**{joke_setup}**\n\n*||{joke_punchline}||*")
+            else:
+                await interaction.followup.send(content="Sorry, I couldn't fetch a joke right now. Try again later!")
         else:
-            await interaction.followup.send(content="Sorry, I couldn't fetch a joke right now. Try again later!")
-    else:
-        await interaction.followup.send(content="An error occurred while fetching the joke.")
- 
+            await interaction.followup.send(content="An error occurred while fetching the joke.")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="cat", description="Fetches a cute cat picture.")
 async def cat(interaction: discord.Interaction):
     await interaction.response.defer()
-    url = "https://api.thecatapi.com/v1/images/search"
-    response = requests.get(url)
+    try:
+        url = "https://api.thecatapi.com/v1/images/search"
+        response = requests.get(url)
 
-    if response.status_code == 200:
-        data = response.json()
-        cat_image_url = data[0]["url"]
+        if response.status_code == 200:
+            data = response.json()
+            cat_image_url = data[0]["url"]
 
-        embed = discord.Embed(title="Here's a cute cat for you!", color=0xFFA07A)
-        embed.set_image(url=cat_image_url)
-        await interaction.followup.send(content=None, embed=embed)
-    else:
-        await interaction.followup.send(content="An error occurred while fetching the cat picture.")
+            embed = discord.Embed(title="Here's a cute cat for you!", color=0xFFA07A)
+            embed.set_image(url=cat_image_url)
+            await interaction.followup.send(content=None, embed=embed)
+        else:
+            await interaction.followup.send(content="An error occurred while fetching the cat picture.")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="dog", description="Fetches an adorable dog picture.")
 async def dog(interaction: discord.Interaction):
     await interaction.response.defer()
-    url = "https://dog.ceo/api/breeds/image/random"
-    response = requests.get(url)
+    try:
+        url = "https://dog.ceo/api/breeds/image/random"
+        response = requests.get(url)
 
-    if response.status_code == 200:
-        data = response.json()
-        dog_image_url = data["message"]
+        if response.status_code == 200:
+            data = response.json()
+            dog_image_url = data["message"]
 
-        embed = discord.Embed(title="Here's a cute dog for you!", color=0xADD8E6)
-        embed.set_image(url=dog_image_url)
-        await interaction.followup.send(content=None, embed=embed)
-    else:
-        await interaction.followup.send(content="An error occurred while fetching the dog picture.")
+            embed = discord.Embed(title="Here's a cute dog for you!", color=0xADD8E6)
+            embed.set_image(url=dog_image_url)
+            await interaction.followup.send(content=None, embed=embed)
+        else:
+            await interaction.followup.send(content="An error occurred while fetching the dog picture.")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="quote", description="Fetches an inspirational quote.")
 async def quote(interaction: discord.Interaction):
     await interaction.response.defer()
-    url = "https://zenquotes.io/api/random"
-    response = requests.get(url)
+    try:
+        url = "https://zenquotes.io/api/random"
+        response = requests.get(url)
 
-    if response.status_code == 200:
-        data = response.json()[0]
+        if response.status_code == 200:
+            data = response.json()[0]
 
-        embed = discord.Embed(title=data["q"], description=f"-{data['a']}", color=0x66CDAA)
-        await interaction.followup.send(content=None, embed=embed)
-    else:
-        await interaction.followup.send(content="An error occurred while fetching the quote.")
-
+            embed = discord.Embed(title=data["q"], description=f"-{data['a']}", color=0x66CDAA)
+            await interaction.followup.send(content=None, embed=embed)
+        else:
+            await interaction.followup.send(content="An error occurred while fetching the quote.")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="meme", description="Fetches a funny meme!")
 async def meme(interaction: discord.Interaction):
     await interaction.response.defer()
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://meme-api.com/gimme") as response:
-            if response.status == 200:  
-                data = await response.json()
-                meme_data = data[0]
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get("https://meme-api.com/gimme") as response:
+                if response.status == 200:  
+                    data = await response.json()
+                    meme_data = data[0]
 
-                embed = discord.Embed(title=f"({meme_data['title']})[{meme_data['postLink']}]", color=0x66CDAA)
-                embed.set_image(url=meme_data["url"])
-                embed.set_footer(text=f"{meme_data['ups']} Upvotes | By: {meme_data['author']} | Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
-                await interaction.followup.send(embed=embed)
-            else:
-                await interaction.followup.send("An error occurred when trying to fetch the meme")
+                    embed = discord.Embed(title=f"({meme_data['title']})[{meme_data['postLink']}]", color=0x66CDAA)
+                    embed.set_image(url=meme_data["url"])
+                    embed.set_footer(text=f"{meme_data['ups']} Upvotes | By: {meme_data['author']} | Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send("An error occurred when trying to fetch the meme")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 """
 INFORMATIVE COMMANDS
@@ -1517,59 +1656,61 @@ INFORMATIVE COMMANDS
 @bot.tree.command(name="define", description="Define a word")
 @app_commands.describe(word="The word you want to define")
 async def define(interaction: discord.Interaction, word: str):
-    await interaction.response.defer()
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
-            if response.status != 200:
-                await interaction.followup.send("Could not find the definition.")
-                return
-            
-            data = await response.json()
-    
-    entry = data[0]
-    phonetic = entry.get('phonetics', [{}])[0].get('text', 'N/A')
-    origin = entry.get('origin', 'N/A')
-    meanings = entry.get('meanings', [])
-    
-    embed = discord.Embed(title=f"Definition for **{word}** ({phonetic})", color=discord.Color.blue())
-
-    if origin != "N/A":
-        embed.add_field(name="Origin", value=origin, inline=False)
-
-    for meaning in meanings:
-        part_of_speech = meaning.get("partOfSpeech", "N/A")
-        definitions = meaning.get("definitions", [])
-
-        for definition in definitions:
-            field_value = f"**Definition**: {definition.get('definition', '') or 'Nothing'}\n"
-            field_value += f"**Example**: {definition.get('example', 'Nothing')}\n"
-
-            synonyms = definition.get("synonyms", [])
-            antonyms = definition.get("antonyms", [])
-            if synonyms:
-                field_value += f"**Synonyms**: {', '.join(synonyms)}\n"
-            if antonyms:
-                field_value += f"**Antonyms**: {', '.join(antonyms)}\n"
-
-            embed.add_field(name=part_of_speech.capitalize(), value=field_value, inline=False)
-
-    audio_urls = [phonetic.get("audio", "") for phonetic in entry.get("phonetics", []) if phonetic.get("audio")]
-
-    if audio_urls:
-        audio_url = audio_urls[0].lstrip("//")
-        audio_file_name = f"{word}_pronunciation.mp3"
-
+    await interaction.response.defer(empheral=True)
+    try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(audio_url) as audio_response:
-                if audio_response.status == 200:
-                    with open(audio_file_name, 'wb') as f:
-                        f.write(await audio_response.read())
+            async with session.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
+                if response.status != 200:
+                    await interaction.followup.send("Could not find the definition.")
+                    return
+                
+                data = await response.json()
         
-        await interaction.followup.send(embed=embed, file=discord.File(audio_file_name))
-        os.remove(audio_file_name)
-    else:
-        await interaction.followup.send(embed=embed)
+        entry = data[0]
+        phonetic = entry.get('phonetics', [{}])[0].get('text', 'N/A')
+        origin = entry.get('origin', 'N/A')
+        meanings = entry.get('meanings', [])
+        
+        embed = discord.Embed(title=f"Definition for **{word}** ({phonetic})", color=discord.Color.blue())
+
+        if origin != "N/A":
+            embed.add_field(name="Origin", value=origin, inline=False)
+
+        for meaning in meanings:
+            part_of_speech = meaning.get("partOfSpeech", "N/A")
+            definitions = meaning.get("definitions", [])
+
+            for definition in definitions:
+                field_value = f"**Definition**: {definition.get('definition', '') or 'Nothing'}\n"
+                field_value += f"**Example**: {definition.get('example', 'Nothing')}\n"
+
+                synonyms = definition.get("synonyms", [])
+                antonyms = definition.get("antonyms", [])
+                if synonyms:
+                    field_value += f"**Synonyms**: {', '.join(synonyms)}\n"
+                if antonyms:
+                    field_value += f"**Antonyms**: {', '.join(antonyms)}\n"
+
+                embed.add_field(name=part_of_speech.capitalize(), value=field_value, inline=False)
+
+        audio_urls = [phonetic.get("audio", "") for phonetic in entry.get("phonetics", []) if phonetic.get("audio")]
+
+        if audio_urls:
+            audio_url = audio_urls[0].lstrip("//")
+            audio_file_name = f"{word}_pronunciation.mp3"
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(audio_url) as audio_response:
+                    if audio_response.status == 200:
+                        with open(audio_file_name, 'wb') as f:
+                            f.write(await audio_response.read())
+            
+            await interaction.followup.send(embed=embed, file=discord.File(audio_file_name))
+            os.remove(audio_file_name)
+        else:
+            await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 class Convert(app_commands.Group):
     def __init__(self):
@@ -1588,39 +1729,41 @@ class Convert(app_commands.Group):
         ]
     )
     async def convert_image(self, interaction: discord.Interaction, image: discord.Attachment, format: str):
-        
         await interaction.response.defer()
-        if not image.content_type.startswith("image/"):
-            await interaction.response.send_message("Please upload a valid image file.", ephemeral=True)
-            return
+        try:
+            if not image.content_type.startswith("image/"):
+                await interaction.response.send_message("Please upload a valid image file.", ephemeral=True)
+                return
 
-        img_data = await image.read()
-        image_pil = Image.open(io.BytesIO(img_data))
+            img_data = await image.read()
+            image_pil = Image.open(io.BytesIO(img_data))
 
-        if format.value == "jpeg" and image_pil.mode == "RGBA":
-            image_pil = image_pil.convert("RGB")
+            if format.value == "jpeg" and image_pil.mode == "RGBA":
+                image_pil = image_pil.convert("RGB")
 
-        output_buffer = io.BytesIO()
-        
-        if format.value == "gif" and image_pil.is_animated:
-            frames = []
-            for frame in ImageSequence.Iterator(image_pil):
-                frame = frame.convert("RGBA")
-                frames.append(frame)
+            output_buffer = io.BytesIO()
+            
+            if format.value == "gif" and image_pil.is_animated:
+                frames = []
+                for frame in ImageSequence.Iterator(image_pil):
+                    frame = frame.convert("RGBA")
+                    frames.append(frame)
 
-            frames[0].save(output_buffer, format="GIF", save_all=True, append_images=frames[1:], loop=0)
-        else:
-            output_filename = f"{image.filename.rsplit('.', 1)[0]}.{format.value.lower()}"
-            image_pil.save(output_buffer, format=format.value.upper())
+                frames[0].save(output_buffer, format="GIF", save_all=True, append_images=frames[1:], loop=0)
+            else:
+                output_filename = f"{image.filename.rsplit('.', 1)[0]}.{format.value.lower()}"
+                image_pil.save(output_buffer, format=format.value.upper())
 
-        output_buffer.seek(0)
-        
-        await interaction.followup.send(
-            content=f"Here is your converted image in {format.value.upper()} format:",
-            file=discord.File(fp=output_buffer, filename=f"{output_filename}.{format.value.lower()}")
-        )
+            output_buffer.seek(0)
+            
+            await interaction.followup.send(
+                content=f"Here is your converted image in {format.value.upper()} format:",
+                file=discord.File(fp=output_buffer, filename=f"{output_filename}.{format.value.lower()}")
+            )
 
-        os.remove(output_filename)
+            os.remove(output_filename)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="video", description="Convert an uploaded video to a specified format")
     @app_commands.describe(video="The uploaded video file you want to convert.", format="The format you want to convert the video to.")
@@ -1637,29 +1780,32 @@ class Convert(app_commands.Group):
     )
     async def convert_video(self, interaction: discord.Interaction, video: discord.Attachment, format: str):
         await interaction.response.defer()
-        video_data = await video.read()
-        output_filename = await asyncio.to_thread(self.process_video, video_data, video.filename, format.value)
+        try:
+            video_data = await video.read()
+            output_filename = await asyncio.to_thread(self.process_video, video_data, video.filename, format.value)
 
-        await interaction.followup.send(
-            content=f"Here is your converted file in {format.value.upper()} format:",
-            file=discord.File(fp=output_filename, filename=output_filename.split('/')[-1])
-        )
+            await interaction.followup.send(
+                content=f"Here is your converted file in {format.value.upper()} format:",
+                file=discord.File(fp=output_filename, filename=output_filename.split('/')[-1])
+            )
 
-    def process_video(self, video_data, original_filename, target_format):
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{original_filename.split('.')[-1]}") as temp_input:
-            temp_input.write(video_data)
-            temp_input_path = temp_input.name
+            def process_video(self, video_data, original_filename, target_format):
+                with tempfile.NamedTemporaryFile(delete=False, suffix=f".{original_filename.split('.')[-1]}") as temp_input:
+                    temp_input.write(video_data)
+                    temp_input_path = temp_input.name
 
-        output_filename = f"{tempfile.gettempdir()}/{original_filename.rsplit('.', 1)[0]}.{target_format.lower()}"
+                output_filename = f"{tempfile.gettempdir()}/{original_filename.rsplit('.', 1)[0]}.{target_format.lower()}"
 
-        if target_format.lower() == "mp3":
-            input_audio = AudioFileClip(temp_input_path)
-            input_audio.write_audiofile(output_filename)
-        else:
-            input_video = VideoFileClip(temp_input_path)
-            input_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", remove_temp=True)
+                if target_format.lower() == "mp3":
+                    input_audio = AudioFileClip(temp_input_path)
+                    input_audio.write_audiofile(output_filename)
+                else:
+                    input_video = VideoFileClip(temp_input_path)
+                    input_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", remove_temp=True)
 
-        return output_filename
+                return output_filename
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="youtube", description="Convert a YouTube video into an MP4 or MP3 file!")
     @app_commands.describe(
@@ -1686,34 +1832,36 @@ class Convert(app_commands.Group):
     )
     async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str, output_format: str):
         await interaction.response.defer()
+        try:
+            if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
+                await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
+                return
 
-        if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
-            await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
-            return
+            def download_and_convert(link, resolution, output_format):
+                ydl_opts = {
+                    'format': f'bestvideo[height<={resolution[:-1]}]+bestaudio/best',
+                    'outtmpl': '%(title)s.%(ext)s',
+                    'postprocessors': [{
+                        'key': 'FFmpegVideoConvertor',
+                        'preferedformat': output_format,
+                    }],
+                    'cookiefile': 'storage/cookies.txt',
+                    'noplaylist': True,
+                }
 
-        def download_and_convert(link, resolution, output_format):
-            ydl_opts = {
-                'format': f'bestvideo[height<={resolution[:-1]}]+bestaudio/best',
-                'outtmpl': '%(title)s.%(ext)s',
-                'postprocessors': [{
-                    'key': 'FFmpegVideoConvertor',
-                    'preferedformat': output_format,
-                }],
-                'cookiefile': 'storage/cookies.txt',
-                'noplaylist': True,
-            }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info_dict = ydl.extract_info(link, download=True)
+                    video_title = re.sub(r'[<>:"/\\|?*]', '', (info_dict.get('title', 'video')))
+                    output_path = f"{video_title}.{output_format}"
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(link, download=True)
-                video_title = re.sub(r'[<>:"/\\|?*]', '', (info_dict.get('title', 'video')))
-                output_path = f"{video_title}.{output_format}"
+                return output_path
 
-            return output_path
+            output_path = await asyncio.to_thread(download_and_convert, link, resolution, output_format)
 
-        output_path = await asyncio.to_thread(download_and_convert, link, resolution, output_format)
-
-        await interaction.followup.send(file=discord.File(output_path))
-        os.remove(output_path)
+            await interaction.followup.send(file=discord.File(output_path))
+            os.remove(output_path)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(Convert())
 
@@ -1721,55 +1869,58 @@ bot.tree.add_command(Convert())
 @app_commands.describe(file="The uploaded file to analyze.")
 async def filedata(interaction: discord.Interaction, file: discord.Attachment):
     await interaction.response.defer()
-    file_data = await file.read()
-    file_type = file.content_type
-    file_size = len(file_data) / (1024 * 1024)
+    try:
+        file_data = await file.read()
+        file_type = file.content_type
+        file_size = len(file_data) / (1024 * 1024)
 
-    file_info = f"**File Name:** {file.filename}\n**File Type:** {file_type}\n**File Size:** {file_size:.2f} MB\n"
+        file_info = f"**File Name:** {file.filename}\n**File Type:** {file_type}\n**File Size:** {file_size:.2f} MB\n"
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp_input:
-        temp_input.write(file_data)
-        temp_input_path = temp_input.name
+        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp_input:
+            temp_input.write(file_data)
+            temp_input_path = temp_input.name
 
-    if "video" in file_type:
-        clip = VideoFileClip(temp_input_path)
-        frame_rate = clip.fps
-        duration = clip.duration
-        bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
-        resolution = f"{clip.w}x{clip.h} pixels"
-        file_info += (
-            f"**Duration:** {duration:.2f} seconds\n"
-            f"**Frame Rate:** {frame_rate:.2f} fps\n"
-            f"**Bitrate:** {bitrate:.2f} kbps\n"
-            f"**Resolution:** {resolution}"
-        )
-        clip.close()
+        if "video" in file_type:
+            clip = VideoFileClip(temp_input_path)
+            frame_rate = clip.fps
+            duration = clip.duration
+            bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
+            resolution = f"{clip.w}x{clip.h} pixels"
+            file_info += (
+                f"**Duration:** {duration:.2f} seconds\n"
+                f"**Frame Rate:** {frame_rate:.2f} fps\n"
+                f"**Bitrate:** {bitrate:.2f} kbps\n"
+                f"**Resolution:** {resolution}"
+            )
+            clip.close()
 
-    elif "audio" in file_type:
-        clip = AudioFileClip(temp_input_path)
-        duration = clip.duration
-        bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
-        file_info += (
-            f"**Duration:** {duration:.2f} seconds\n"
-            f"**Bitrate:** {bitrate:.2f} kbps"
-        )
-        clip.close()
+        elif "audio" in file_type:
+            clip = AudioFileClip(temp_input_path)
+            duration = clip.duration
+            bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
+            file_info += (
+                f"**Duration:** {duration:.2f} seconds\n"
+                f"**Bitrate:** {bitrate:.2f} kbps"
+            )
+            clip.close()
 
-    elif "text" in file_type:
-        with open(temp_input_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        file_info += (
-            f"**Encoding:** UTF-8\n"
-            f"**Line Count:** {len(lines)}"
-        )
+        elif "text" in file_type:
+            with open(temp_input_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            file_info += (
+                f"**Encoding:** UTF-8\n"
+                f"**Line Count:** {len(lines)}"
+            )
 
-    else:
-        file_info += "No additional metadata available for this file type."
+        else:
+            file_info += "No additional metadata available for this file type."
 
-    await interaction.followup.send(content=file_info)
+        await interaction.followup.send(content=file_info)
 
-    if os.path.exists(temp_input_path):
-        os.remove(temp_input_path)
+        if os.path.exists(temp_input_path):
+            os.remove(temp_input_path)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 """
 MODERATION COMMANDS
@@ -1881,7 +2032,6 @@ async def check_mod(interaction: discord.Interaction, permission_name: str):
         return False
     return True
 
-
 @bot.tree.command(name="setlogs", description="Changes the log channels of your server")
 @app_commands.describe(option="Choose the type of log (Message Logs, DM Logs, Mod Logs)", channel="The channel to send logs to")
 @app_commands.choices(
@@ -1893,19 +2043,22 @@ async def check_mod(interaction: discord.Interaction, permission_name: str):
 )
 async def setlogs(interaction: discord.Interaction, option: str, channel: discord.TextChannel):
     await interaction.response.defer()
-    server_info = open_file("info/server_info.json")
-    guild_id = str(interaction.guild_id)
+    try:
+        server_info = open_file("info/server_info.json")
+        guild_id = str(interaction.guild_id)
 
-    if not await check_mod(interaction, "administrator"):
-        return
-    
-    if guild_id not in server_info["preferences"]:
-        server_info["preferences"][guild_id] = {}
+        if not await check_mod(interaction, "administrator"):
+            return
+        
+        if guild_id not in server_info["preferences"]:
+            server_info["preferences"][guild_id] = {}
 
-    server_info["preferences"][guild_id][option] = channel.id
-    save_file("info/server_info.json", server_info)
+        server_info["preferences"][guild_id][option] = channel.id
+        save_file("info/server_info.json", server_info)
 
-    await interaction.followup.send(f"{option.name} will be set to: {channel.mention}")
+        await interaction.followup.send(f"{option.name} will be set to: {channel.mention}")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="setroles", description="Allows you to set the server roles")
 @app_commands.describe(option="Choose the role to set", role="The role to set for members")
@@ -1918,81 +2071,88 @@ async def setlogs(interaction: discord.Interaction, option: str, channel: discor
 )
 async def setroles(interaction: discord.Interaction, option: str, role: discord.Role):
     await interaction.response.defer()
-    server_info = open_file("info/server_info.json")
-    guild_id = str(interaction.guild_id)
+    try:
+        server_info = open_file("info/server_info.json")
+        guild_id = str(interaction.guild_id)
 
-    if not await check_mod(interaction, "administrator"):
-        return
+        if not await check_mod(interaction, "administrator"):
+            return
 
-    if guild_id not in server_info["preferences"]:
-        server_info["preferences"][guild_id] = {}
+        if guild_id not in server_info["preferences"]:
+            server_info["preferences"][guild_id] = {}
 
-    server_info["preferences"][guild_id][option] = role.id
-    save_file("info/server_info.json", server_info)
+        server_info["preferences"][guild_id][option] = role.id
+        save_file("info/server_info.json", server_info)
 
-    await interaction.followup.send(f"The role '{role.name}' has been set for members.")
-    
+        await interaction.followup.send(f"The role '{role.name}' has been set for members.")
+    except Exception as error:
+        await handle_logs(interaction, error)
+
 @bot.tree.command(name="purge", description="Deletes a set amount of messages from a specified user.")
 @app_commands.describe(user="The user whose messages you want to delete (optional)", amount="The number of messages to delete")
 async def purge(interaction: discord.Interaction, amount: int, user: discord.User = None):
     await interaction.response.defer()
-    
-    if not await check_mod(interaction, "manage_messages"):
-        return
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
 
-    if amount <= 0:
-        await interaction.followup.send("The amount must be greater than zero.", ephemeral=True)
-        return
+        if amount <= 0:
+            await interaction.followup.send("The amount must be greater than zero.", ephemeral=True)
+            return
 
-    messages_to_delete = []
+        messages_to_delete = []
 
-    if user is None:
-        deleted_messages = await interaction.channel.purge(limit=amount)
-        messages_to_delete = deleted_messages
-    else:
-        async for message in interaction.channel.history(limit=None):
-            if len(messages_to_delete) >= amount:
-                break
-            if message.author.id == user.id:
-                messages_to_delete.append(message)
+        if user is None:
+            deleted_messages = await interaction.channel.purge(limit=amount)
+            messages_to_delete = deleted_messages
+        else:
+            async for message in interaction.channel.history(limit=None):
+                if len(messages_to_delete) >= amount:
+                    break
+                if message.author.id == user.id:
+                    messages_to_delete.append(message)
 
-        for message in messages_to_delete:
-            await message.delete()
+            for message in messages_to_delete:
+                await message.delete()
 
-    modlog = {"serverID": str(interaction.guild_id), "type": "Purge", "channel": interaction.channel.id}
-    reason = f"Deleted {len(messages_to_delete)} messages"
+        modlog = {"serverID": str(interaction.guild_id), "type": "Purge", "channel": interaction.channel.id}
+        reason = f"Deleted {len(messages_to_delete)} messages"
 
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
-    embed = discord.Embed(title="Messages deleted", description=reason)
-    await interaction.followup.send(embed=embed, delete_after=5)
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+        embed = discord.Embed(title="Messages deleted", description=reason)
+        await interaction.followup.send(embed=embed, delete_after=5)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="clean", description="Clears up to 10 bot messages, or a specified amount.")
 @app_commands.describe(amount="The number of bot messages to delete (optional, default is 10)")
 async def clean(interaction: discord.Interaction, amount: int = 10):
     await interaction.response.defer()
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
 
-    if not await check_mod(interaction, "manage_messages"):
-        return
+        if amount <= 0:
+            await interaction.followup.send("The amount must be greater than zero.", ephemeral=True)
+            return
 
-    if amount <= 0:
-        await interaction.followup.send("The amount must be greater than zero.", ephemeral=True)
-        return
+        deleted_count = 0
 
-    deleted_count = 0
+        async for message in interaction.channel.history(limit=None):
+            if deleted_count >= amount:
+                break
+            if message.author.bot:
+                await message.delete()
+                deleted_count += 1
 
-    async for message in interaction.channel.history(limit=None):
-        if deleted_count >= amount:
-            break
-        if message.author.bot:
-            await message.delete()
-            deleted_count += 1
+        modlog = {"serverID": str(interaction.guild_id), "type": "Clean", "channel": interaction.channel.id}
+        reason = f"Deleted {deleted_count} bot messages"
 
-    modlog = {"serverID": str(interaction.guild_id), "type": "Clean", "channel": interaction.channel.id}
-    reason = f"Deleted {deleted_count} bot messages"
-
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
-    embed = discord.Embed(title="Messages deleted", description=reason)
-    await interaction.followup.send(embed=embed, delete_after=5)
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+        embed = discord.Embed(title="Messages deleted", description=reason)
+        await interaction.followup.send(embed=embed, delete_after=5)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="lock", description="Lock a channel.")
 @app_commands.describe(
@@ -2003,32 +2163,35 @@ async def clean(interaction: discord.Interaction, amount: int = 10):
 @app_commands.checks.has_permissions(manage_channels=True)
 async def lock(interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
     await interaction.response.defer()
-    channel = channel or interaction.channel
-    server_info = open_file("info/server_info.json")
-    guild_id = str(interaction.guild_id)
-    
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    
-    if role is None:
-        role_id = server_info["preferences"].get(guild_id, {}).get("member")
-        role = interaction.guild.get_role(role_id) if role_id else None
+    try:
+        channel = channel or interaction.channel
+        server_info = open_file("info/server_info.json")
+        guild_id = str(interaction.guild_id)
+        
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        
+        if role is None:
+            role_id = server_info["preferences"].get(guild_id, {}).get("member")
+            role = interaction.guild.get_role(role_id) if role_id else None
 
-    if role is None:
-        await interaction.followup.send("No role found to lock the channel for.", ephemeral=True)
-        return
+        if role is None:
+            await interaction.followup.send("No role found to lock the channel for.", ephemeral=True)
+            return
 
-    if role not in channel.overwrites:
-        overwrites = {role: discord.PermissionOverwrite(send_messages=False)}
-        await channel.edit(overwrites=overwrites)
-    else:
-        await channel.set_permissions(role, send_messages=False)
+        if role not in channel.overwrites:
+            overwrites = {role: discord.PermissionOverwrite(send_messages=False)}
+            await channel.edit(overwrites=overwrites)
+        else:
+            await channel.set_permissions(role, send_messages=False)
 
-    modlog = {"serverID": str(interaction.guild_id), "type": "Lock", "channel": channel.id, }
-    reason_with_role = f"{reason}. Role: {role.name}"
-    await store_modlog(modlog, None, interaction.user.name, reason_with_role, interaction.guild.id)
+        modlog = {"serverID": str(interaction.guild_id), "type": "Lock", "channel": channel.id, }
+        reason_with_role = f"{reason}. Role: {role.name}"
+        await store_modlog(modlog, None, interaction.user.name, reason_with_role, interaction.guild.id)
 
-    await interaction.followup.send(f"{channel.mention} has been locked for {role.name}.\nReason: {reason}", ephemeral=True)
+        await interaction.followup.send(f"{channel.mention} has been locked for {role.name}.\nReason: {reason}", ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="unlock", description="Unlock a channel.")
 @app_commands.describe(
@@ -2039,114 +2202,132 @@ async def lock(interaction: discord.Interaction, channel: discord.TextChannel = 
 @app_commands.checks.has_permissions(manage_channels=True)
 async def unlock(interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
     await interaction.response.defer()
-    channel = channel or interaction.channel
-    server_info = open_file("info/server_info.json")
-    guild_id = str(interaction.guild_id)
-    
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    
-    if role is None:
-        role_id = server_info["preferences"].get(guild_id, {}).get("member")
-        role = interaction.guild.get_role(role_id) if role_id else None
+    try:
+        channel = channel or interaction.channel
+        server_info = open_file("info/server_info.json")
+        guild_id = str(interaction.guild_id)
+        
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        
+        if role is None:
+            role_id = server_info["preferences"].get(guild_id, {}).get("member")
+            role = interaction.guild.get_role(role_id) if role_id else None
 
-    if role is None:
-        await interaction.followup.send("No role found to unlock the channel for.", ephemeral=True)
-        return
+        if role is None:
+            await interaction.followup.send("No role found to unlock the channel for.", ephemeral=True)
+            return
 
-    if role in channel.overwrites:
-        await channel.set_permissions(role, send_messages=True)
+        if role in channel.overwrites:
+            await channel.set_permissions(role, send_messages=True)
 
-    modlog = {"serverID": str(interaction.guild_id), "type": "Unlock", "channel": channel.id, }
-    reason_with_role = f"{reason}. Role: {role.name}"
-    await store_modlog(modlog, None, interaction.user.name, reason_with_role, interaction.guild.id)
+        modlog = {"serverID": str(interaction.guild_id), "type": "Unlock", "channel": channel.id, }
+        reason_with_role = f"{reason}. Role: {role.name}"
+        await store_modlog(modlog, None, interaction.user.name, reason_with_role, interaction.guild.id)
 
-    await interaction.followup.send(f"{channel.mention} has been unlocked for {role.name}.\nReason: {reason}", ephemeral=True)
+        await interaction.followup.send(f"{channel.mention} has been unlocked for {role.name}.\nReason: {reason}", ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="slowmode", description="Sets or removes the slowmode delay for the channel.")
 @app_commands.describe(delay="Slowmode in seconds (max of 21600, omit for no slowmode)")
 @app_commands.checks.has_permissions(manage_messages=True)
 async def slowmode(interaction: discord.Interaction, delay: int = None):
     await interaction.response.defer()
-    channel_name = interaction.channel.name
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    if delay is None:
-        await interaction.channel.edit(slowmode_delay=0)
-        reason = f"Slowmode removed in #{channel_name}."
-        await interaction.followup.send(embed=discord.Embed(title="Slowmode", description="Slowmode has been removed.", color=0x00FF00), ephemeral=True)
-    elif 0 <= delay <= 21600:
-        await interaction.channel.edit(slowmode_delay=delay)
-        reason = f"Slowmode set to {delay} seconds in #{channel_name}."
-        await interaction.followup.send(embed=discord.Embed(title="Slowmode", description=f"Slowmode set to {delay} seconds.", color=0x00FF00), ephemeral=True)
-    else:
-        await interaction.followup.send(embed=discord.Embed(title="Slowmode Error", description="Please provide a delay between 0 and 21600 seconds.", color=0xFF0000), ephemeral=True)
-        return
+    try:
+        channel_name = interaction.channel.name
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        if delay is None:
+            await interaction.channel.edit(slowmode_delay=0)
+            reason = f"Slowmode removed in #{channel_name}."
+            await interaction.followup.send(embed=discord.Embed(title="Slowmode", description="Slowmode has been removed.", color=0x00FF00), ephemeral=True)
+        elif 0 <= delay <= 21600:
+            await interaction.channel.edit(slowmode_delay=delay)
+            reason = f"Slowmode set to {delay} seconds in #{channel_name}."
+            await interaction.followup.send(embed=discord.Embed(title="Slowmode", description=f"Slowmode set to {delay} seconds.", color=0x00FF00), ephemeral=True)
+        else:
+            await interaction.followup.send(embed=discord.Embed(title="Slowmode Error", description="Please provide a delay between 0 and 21600 seconds.", color=0xFF0000), ephemeral=True)
+            return
 
-    modlog = {"serverID": str(interaction.guild_id), "type": "Slowmode", "channel": interaction.channel.id, }
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+        modlog = {"serverID": str(interaction.guild_id), "type": "Slowmode", "channel": interaction.channel.id, }
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="nick", description="Changes a member's nickname.")
 @app_commands.describe(member="The member to manage nicknames for", new_nick="The new nickname of the member")
 @app_commands.checks.has_permissions(manage_nicknames=True)
 async def nick(interaction: discord.Interaction, member: discord.Member, new_nick: str):
     await interaction.response.defer()
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    old_nick = member.display_name
-    await member.edit(nick=new_nick)
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        old_nick = member.display_name
+        await member.edit(nick=new_nick)
 
-    reason = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} for {member.display_name}"
-    await interaction.followup.send(embed=discord.Embed(title="Nickname Changed", description=f"Changed {old_nick}'s nickname to {new_nick}.", color=0x32A852), ephemeral=True)
+        reason = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} for {member.display_name}"
+        await interaction.followup.send(embed=discord.Embed(title="Nickname Changed", description=f"Changed {old_nick}'s nickname to {new_nick}.", color=0x32A852), ephemeral=True)
 
-    modlog = {"serverID": str(interaction.guild_id), "type": "Nickname Change", "channel": interaction.channel.id, }
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+        modlog = {"serverID": str(interaction.guild_id), "type": "Nickname Change", "channel": interaction.channel.id, }
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="mute", description="Mutes a member for a specified duration")
 async def mute(interaction: discord.Interaction, member: discord.Member, time: str, reason: str = "No reason provided"):
     await interaction.response.defer()
-    if not await check_mod(interaction, "timeout_members"):
-        return
-    duration = parse_duration(time)
+    try:
+        if not await check_mod(interaction, "timeout_members"):
+            return
+        duration = parse_duration(time)
 
-    if not duration:
-        await interaction.followup.send("Invalid time format. Please use formats like `1h10m15s` or `15s1h10m`.")
-        return
+        if not duration:
+            await interaction.followup.send("Invalid time format. Please use formats like `1h10m15s` or `15s1h10m`.")
+            return
 
-    until = discord.utils.utcnow() + duration
-    await member.timeout(until, reason=reason)
+        until = discord.utils.utcnow() + duration
+        await member.timeout(until, reason=reason)
 
-    hours, remainder = divmod(duration.total_seconds(), 3600)
-    minutes, seconds = divmod(remainder, 60)
-    human_readable_time = (f"{int(hours)} hour(s) {int(minutes)} minute(s) {int(seconds)} second(s)")
-    await dmbed(interaction, member, "muted", reason, human_readable_time)
+        hours, remainder = divmod(duration.total_seconds(), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        human_readable_time = (f"{int(hours)} hour(s) {int(minutes)} minute(s) {int(seconds)} second(s)")
+        await dmbed(interaction, member, "muted", reason, human_readable_time)
 
-    modlog = {"serverID": str(interaction.guild.id), "type": "Mute"}
-    await store_modlog(modlog, member, interaction.user, f"{reason}\nMuted for {human_readable_time}", interaction.guild.id) 
+        modlog = {"serverID": str(interaction.guild.id), "type": "Mute"}
+        await store_modlog(modlog, member, interaction.user, f"{reason}\nMuted for {human_readable_time}", interaction.guild.id) 
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="unmute", description="Unmutes a member.")
 @commands.has_permissions(kick_members=True)
 async def unmute(interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
     await interaction.response.defer()
-    if not await check_mod(interaction, "timeout_members"):
-        return
-    await member.timeout(None, reason=reason)
-    await dmbed(interaction, member, "unmuted", reason)
+    try:
+        if not await check_mod(interaction, "timeout_members"):
+            return
+        await member.timeout(None, reason=reason)
+        await dmbed(interaction, member, "unmuted", reason)
 
-    modlog = {"serverID": str(interaction.guild.id), "type": "Unmute"}
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+        modlog = {"serverID": str(interaction.guild.id), "type": "Unmute"}
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="kick", description="Kick a member out of the guild.")
 @commands.has_permissions(kick_members=True)
 async def kick(interaction: discord.Interaction, member: discord.Member, reason: str = "No Reason Provided."):
     await interaction.response.defer()
-    if not await check_mod(interaction, "kick_members"):
-        return
-    await member.kick(reason=reason)
-    await dmbed(interaction, member, "kicked", reason)
+    try:
+        if not await check_mod(interaction, "kick_members"):
+            return
+        await member.kick(reason=reason)
+        await dmbed(interaction, member, "kicked", reason)
 
-    modlog = {"serverID": str(interaction.guild.id), "type": "Kick"}
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+        modlog = {"serverID": str(interaction.guild.id), "type": "Kick"}
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 class DelLog(discord.ui.Select):
     def __init__(
@@ -2231,123 +2412,136 @@ class DelLog(discord.ui.Select):
 )
 async def warn(interaction: discord.Interaction, member: discord.Member, reason: str):
     await interaction.response.defer()  
-    if not await check_mod(interaction, "manage_messages"):
-        return    
-    server_info = open_file("info/server_info.json")  
-    if str(member.id) in server_info["warnings"]:
-        last_warning_time = server_info["warnings"][str(member.id)][-1]["time"]
-        if int(time.time()) - int(last_warning_time) < 60:
-            await interaction.followup.send(embed=discord.Embed(title="Warning Error", description=f"{member.mention} has been warned recently and cannot be warned again yet.", color=0xFF0000))
-            return
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return    
+        server_info = open_file("info/server_info.json")  
+        if str(member.id) in server_info["warnings"]:
+            last_warning_time = server_info["warnings"][str(member.id)][-1]["time"]
+            if int(time.time()) - int(last_warning_time) < 60:
+                await interaction.followup.send(embed=discord.Embed(title="Warning Error", description=f"{member.mention} has been warned recently and cannot be warned again yet.", color=0xFF0000))
+                return
 
-    member_warnings = server_info["warnings"].get(str(member.id), [])
-    member_warnings.append(
-        {
-            "reason": reason,
-            "moderator": interaction.user.id,
-            "time": int(time.time()),
+        member_warnings = server_info["warnings"].get(str(member.id), [])
+        member_warnings.append(
+            {
+                "reason": reason,
+                "moderator": interaction.user.id,
+                "time": int(time.time()),
+            }
+        )
+
+        server_info["warnings"][str(member.id)] = member_warnings
+        save_file("info/server_info", server_info)
+
+        await dmbed(interaction, member, "kicked", reason)
+
+        modlog = {
+            "serverID": str(interaction.guild_id),
+            "type": "Warn",
+            "channel": interaction.channel.id,
         }
-    )
 
-    server_info["warnings"][str(member.id)] = member_warnings
-    save_file("info/server_info", server_info)
+        await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
 
-    await dmbed(interaction, member, "kicked", reason)
+        punishment_durations = {
+            "spamming": 1 * 60 * 60,
+            "flood": 1 * 60 * 60,
+            "bot commands": 0.5 * 60 * 60,
+            "soft nsfw": 2 * 60 * 60,
+            "hard nsfw": 24 * 60 * 60,
+            "advertising": 6 * 60 * 60,
+            "tragic event joke": 12 * 60 * 60,
+            "fatherless joke": 3 * 60 * 60,
+            "kys joke": 6 * 60 * 60,
+        }
 
-    modlog = {
-        "serverID": str(interaction.guild_id),
-        "type": "Warn",
-        "channel": interaction.channel.id,
-    }
+        mute_duration = punishment_durations.get(reason.lower(), 0)
+        if len(member_warnings) > 2:
+            mute_duration += (len(member_warnings) - 2) * 60 * 60
 
-    await store_modlog(modlog, None, interaction.user, reason, interaction.guild.id)
-
-    punishment_durations = {
-        "spamming": 1 * 60 * 60,
-        "flood": 1 * 60 * 60,
-        "bot commands": 0.5 * 60 * 60,
-        "soft nsfw": 2 * 60 * 60,
-        "hard nsfw": 24 * 60 * 60,
-        "advertising": 6 * 60 * 60,
-        "tragic event joke": 12 * 60 * 60,
-        "fatherless joke": 3 * 60 * 60,
-        "kys joke": 6 * 60 * 60,
-    }
-
-    mute_duration = punishment_durations.get(reason.lower(), 0)
-    if len(member_warnings) > 2:
-        mute_duration += (len(member_warnings) - 2) * 60 * 60
-
-    if mute_duration > 0:
-        try:
-            await member.timeout(timedelta(seconds=mute_duration))
-            await interaction.followup.send(embed=discord.Embed(title="Member Muted", description=f"{member.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings)} warnings.", color=0xFF0000))
-        except discord.Forbidden:
-            await interaction.followup.send(embed=discord.Embed(title="Mute Failed", description=f"Failed to mute {member.mention} due to insufficient permissions.", color=0xFF0000))
+        if mute_duration > 0:
+            try:
+                await member.timeout(timedelta(seconds=mute_duration))
+                await interaction.followup.send(embed=discord.Embed(title="Member Muted", description=f"{member.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings)} warnings.", color=0xFF0000))
+            except discord.Forbidden:
+                await interaction.followup.send(embed=discord.Embed(title="Mute Failed", description=f"Failed to mute {member.mention} due to insufficient permissions.", color=0xFF0000))
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="warns", description="Displays the warnings for a member.")
 @app_commands.describe(member="The member whose warnings you want to view.")
 async def warns(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    member = member or interaction.user
-    server_info = open_file("info/server_info.json")
-    member_warnings = server_info["warnings"].get(str(member.id), [])
-    embed = discord.Embed(title=f"Warnings for {member.display_name}", color=0xFFA500)
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        member = member or interaction.user
+        server_info = open_file("info/server_info.json")
+        member_warnings = server_info["warnings"].get(str(member.id), [])
+        embed = discord.Embed(title=f"Warnings for {member.display_name}", color=0xFFA500)
 
-    if member_warnings:
-        for warning in member_warnings:
-            time_str = f"<t:{warning['time']}:R>"
-            moderator = interaction.guild.get_member(warning["moderator"])
-            moderator_name = moderator.display_name if moderator else "Unknown"
-            embed.add_field(name=f"Warned by {moderator_name}", value=f"Reason: {warning['reason']}\nTime: {time_str}", inline=False)
+        if member_warnings:
+            for warning in member_warnings:
+                time_str = f"<t:{warning['time']}:R>"
+                moderator = interaction.guild.get_member(warning["moderator"])
+                moderator_name = moderator.display_name if moderator else "Unknown"
+                embed.add_field(name=f"Warned by {moderator_name}", value=f"Reason: {warning['reason']}\nTime: {time_str}", inline=False)
 
-        view = discord.ui.View()
-        del_log_dropdown = DelLog("warns", member, embed, interaction)
-        view.add_item(del_log_dropdown)
-        await interaction.followup.send(embed=embed, view=view)
-    else:
-        await interaction.followup.send(f"No warnings found for {member.display_name}.", ephemeral=True)
-        
+            view = discord.ui.View()
+            del_log_dropdown = DelLog("warns", member, embed, interaction)
+            view.add_item(del_log_dropdown)
+            await interaction.followup.send(embed=embed, view=view)
+        else:
+            await interaction.followup.send(f"No warnings found for {member.display_name}.", ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
+
 @bot.tree.command(name="note", description="Gives a note to a member.")
 @app_commands.describe(member="The member to add a note to", note="Whatever you want to say")
 async def note(interaction: discord.Interaction, member: discord.Member, note: str):
     await interaction.response.defer()
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    server_info = open_file("info/server_info.json")
-    member_notes = server_info["notes"].get(str(member.id), [])
-    member_notes.append({"note": note, "moderator": interaction.user.id, "time": int(time.time())})
-    server_info["notes"][str(member.id)] = member_notes
-    save_file("info/server_info.json", server_info)
-    await interaction.followup.send(embed=discord.Embed(title="Note Added", description=f"Added note to: {member.mention}; {note}", color=0xFFA500))
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        server_info = open_file("info/server_info.json")
+        member_notes = server_info["notes"].get(str(member.id), [])
+        member_notes.append({"note": note, "moderator": interaction.user.id, "time": int(time.time())})
+        server_info["notes"][str(member.id)] = member_notes
+        save_file("info/server_info.json", server_info)
+        await interaction.followup.send(embed=discord.Embed(title="Note Added", description=f"Added note to: {member.mention}; {note}", color=0xFFA500))
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="notes", description="Displays the notes for a member")
 @app_commands.describe(member="The member whose notes you want to view.")
 async def notes(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    member = member or interaction.user
-    server_info = open_file("info/server_info.json")
-    member_notes = server_info["notes"].get(str(member.id), [])
-    embed = discord.Embed(title=f"Notes for {member.display_name}", color=0xFFA500)
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        member = member or interaction.user
+        server_info = open_file("info/server_info.json")
+        member_notes = server_info["notes"].get(str(member.id), [])
+        embed = discord.Embed(title=f"Notes for {member.display_name}", color=0xFFA500)
 
-    if member_notes:
-        for note in member_notes:
-            time_str = f"<t:{note['time']}:R>"
-            moderator = interaction.guild.get_member(note["moderator"])
-            moderator_name = moderator.display_name if moderator else "Unknown"
-            embed.add_field(name=f"Note by {moderator_name}",value=f"Note: {note['note']}\nTime: {time_str}",inline=False)
+        if member_notes:
+            for note in member_notes:
+                time_str = f"<t:{note['time']}:R>"
+                moderator = interaction.guild.get_member(note["moderator"])
+                moderator_name = moderator.display_name if moderator else "Unknown"
+                embed.add_field(name=f"Note by {moderator_name}",value=f"Note: {note['note']}\nTime: {time_str}",inline=False)
 
-        view = discord.ui.View()
-        del_log_dropdown = DelLog("notes", member, embed, interaction)
-        view.add_item(del_log_dropdown)
+            view = discord.ui.View()
+            del_log_dropdown = DelLog("notes", member, embed, interaction)
+            view.add_item(del_log_dropdown)
 
-        await interaction.followup.send(embed=embed, view=view)
-    else:
-        await interaction.followup.send(f"No notes found for {member.display_name}.", ephemeral=True)
+            await interaction.followup.send(embed=embed, view=view)
+        else:
+            await interaction.followup.send(f"No notes found for {member.display_name}.", ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
+
 async def send_modlog_embed(interaction: discord.Interaction, user: discord.User, page: int):
     server_info = open_file("info/server_info.json")
     server_id = str(interaction.guild.id)
@@ -2415,139 +2609,214 @@ class LogSelect(discord.ui.Select):
 @bot.tree.command(name="modlogs", description="View moderation logs for a user.")
 async def modlogs(interaction: discord.Interaction, user: discord.User, page: int = 1):
     await interaction.response.defer()
-    if not await check_mod(interaction, "manage_messages"):
-        return
-    embed, total_logs, total_pages = await send_modlog_embed(interaction, user, page)
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
+        embed, total_logs, total_pages = await send_modlog_embed(interaction, user, page)
 
-    if embed is None:
-        return
+        if embed is None:
+            return
 
-    options = [discord.SelectOption(label=f"Page {i + 1}", value=str(i + 1)) for i in range(total_pages)]
+        options = [discord.SelectOption(label=f"Page {i + 1}", value=str(i + 1)) for i in range(total_pages)]
 
-    select_menu = LogSelect(options, interaction, user, page)
-    view = discord.ui.View()
-    view.add_item(select_menu)
+        select_menu = LogSelect(options, interaction, user, page)
+        view = discord.ui.View()
+        view.add_item(select_menu)
 
-    await interaction.followup.send(embed=embed, view=view)
+        await interaction.followup.send(embed=embed, view=view)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="modstats", description="Check the moderation statistics of a moderator")
 @commands.has_permissions(kick_members=True)
 async def modstats(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
+    try:
+        if not await check_mod(interaction, "manage_messages"):
+            return
 
-    if not await check_mod(interaction, "manage_messages"):
-        return
+        member = member or interaction.user
+        server_info = open_file("info/server_info.json")
 
-    member = member or interaction.user
-    server_info = open_file("info/server_info.json")
+        stats = {
+            "kick": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
+            "mute": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
+            "ban": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
+        }
 
-    stats = {
-        "kick": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-        "mute": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-        "ban": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-    }
+        totals = {"last 7 days": 0, "last 30 days": 0, "all time": 0}
+        now = datetime.now(timezone.utc)
+        seven_days_ago = now - timedelta(days=7)
+        thirty_days_ago = now - timedelta(days=30)
 
-    totals = {"last 7 days": 0, "last 30 days": 0, "all time": 0}
-    now = datetime.now(timezone.utc)
-    seven_days_ago = now - timedelta(days=7)
-    thirty_days_ago = now - timedelta(days=30)
+        for server_id, moderators in server_info["modstats"].items():
+            user_stats = moderators.get(str(member.id), {})
 
-    for server_id, moderators in server_info["modstats"].items():
-        user_stats = moderators.get(str(member.id), {})
+            for case_number, action in user_stats.items():
+                action_type = action["type"].lower()
+                action_time = datetime.fromtimestamp(action["timestamp"], timezone.utc)
 
-        for case_number, action in user_stats.items():
-            action_type = action["type"].lower()
-            action_time = datetime.fromtimestamp(action["timestamp"], timezone.utc)
+                if action_type in stats:
+                    if action_time > seven_days_ago:
+                        stats[action_type]["last 7 days"] += 1
+                        totals["last 7 days"] += 1
+                    if action_time > thirty_days_ago:
+                        stats[action_type]["last 30 days"] += 1
+                        totals["last 30 days"] += 1
+                    stats[action_type]["all time"] += 1
+                    totals["all time"] += 1
 
-            if action_type in stats:
-                if action_time > seven_days_ago:
-                    stats[action_type]["last 7 days"] += 1
-                    totals["last 7 days"] += 1
-                if action_time > thirty_days_ago:
-                    stats[action_type]["last 30 days"] += 1
-                    totals["last 30 days"] += 1
-                stats[action_type]["all time"] += 1
-                totals["all time"] += 1
+        embed = discord.Embed(title=f"Moderation Statistics for {member.display_name}", color=0xFFA500)
+        embed.add_field(name="\u200b", value="**Last 7 days**")
+        embed.add_field(name="\u200b", value="**Last 30 days**")
+        embed.add_field(name="\u200b", value="**All Time**")
 
-    embed = discord.Embed(title=f"Moderation Statistics for {member.display_name}", color=0xFFA500)
-    embed.add_field(name="\u200b", value="**Last 7 days**")
-    embed.add_field(name="\u200b", value="**Last 30 days**")
-    embed.add_field(name="\u200b", value="**All Time**")
+        for action_type in stats.keys():
+            embed.add_field(name=f"**{action_type.capitalize()}**", value=str(stats[action_type]["last 7 days"]))
+            embed.add_field(name="\u200b", value=str(stats[action_type]["last 30 days"]))
+            embed.add_field(name="\u200b", value=str(stats[action_type]["all time"]))
 
-    for action_type in stats.keys():
-        embed.add_field(name=f"**{action_type.capitalize()}**", value=str(stats[action_type]["last 7 days"]))
-        embed.add_field(name="\u200b", value=str(stats[action_type]["last 30 days"]))
-        embed.add_field(name="\u200b", value=str(stats[action_type]["all time"]))
+        embed.add_field(name="**Total**", value=str(totals["last 7 days"]))
+        embed.add_field(name="\u200b", value=str(totals["last 30 days"]))
+        embed.add_field(name="\u200b", value=str(totals["all time"]))
 
-    embed.add_field(name="**Total**", value=str(totals["last 7 days"]))
-    embed.add_field(name="\u200b", value=str(totals["last 30 days"]))
-    embed.add_field(name="\u200b", value=str(totals["all time"]))
-
-    await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 """
 MISC COMMANDS
 """
 
-
-
 class AlertGroup(app_commands.Group):
-   def __init__(self):
-       super().__init__(name="alert", description="Used for updates, and allows you to follow along!")
+    def __init__(self):
+        super().__init__(name="alert", description="Used for updates, and allows you to follow along!")
+
+    @app_commands.command(name="follow", description="Subscribe or unsubscribe from updates")
+    async def alert_follow(self, interaction: discord.Interaction):
+        await interaction.response.defer(empheral=True)
+        try:
+            member_info = open_file("info/member_info.json")
+            user = interaction.user.id
+
+            if user not in member_info:
+                member_info[user] = {
+                    "subscribed": 0
+                }
+            
+            if member_info[user]["subscribed"] == 0:
+                member_info[user]["subscribed"] = 1
+                await interaction.followup.send("You are now subscribed to updates!")
+            else:
+                member_info[user]["subscribed"] = 0
+                await interaction.followup.send("You are now unsubscribed from updates!")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    @app_commands.command(name="send", description="Sends an update to all subscribed users")
+    @app_commands.describe(
+        type="The type of alert",
+        description="Provide a brief description of what's going on",
+    )
+    @app_commands.choices(
+        type=[
+            app_commands.Choice(name="Alert", value="alert"),
+            app_commands.Choice(name="Update", value="update"),
+            app_commands.Choice(name="Warning", value="warning")
+        ]
+    )
+    async def alert_send(self, interaction: discord.Interaction, type: str, description: str):
+        await interaction.response.defer()
+        try:
+            if interaction.user.id not in botAdmins:
+                await interaction.followup.send("You do not have permission to use this command.")
+                return
 
 
-   @app_commands.command(name="follow", description="Subscribe or unsubscribe from updates")
-   async def alert_follow(self, interaction: discord.Interaction):
-       await interaction.response.defer(empheral=True)
-       member_info = open_file("info/member_info.json")
-       user = interaction.user.id
+            alertIDs = []
+            member_info = open_file("info/member_info.json")
+            for member in member_info:
+                if member_info[member]["subscribed"] == 1:
+                    alertIDs.append(member)
 
 
-       if user not in member_info:
-           member_info[user] = {
-               "subscribed": 0
-           }
-      
-       if memeber_info[user]["subscribed"] == 0:
-           member_info[user]["subscribed"] = 1
-           await interaction.followup.send("You are now subscribed to updates!")
-       else:
-           member_info[user]["subscribed"] = 0
-           await interaction.followup.send("You are now unsubscribed from updates!")
-
-
-   @app_commands.command(name="send", description="Sends an update to all subscribed users")
-   @app_commands.describe(
-       type="The type of alert",
-       description="Provide a brief description of what's going on",
-   )
-   @app_commands.choices(
-       type=[
-           app_commands.Choice(name="Alert", value="alert"),
-           app_commands.Choice(name="Update", value="update"),
-           app_commands.Choice(name="Warning", value="warning")
-       ]
-   )
-   async def alert_send(self, interaction: discord.Interaction, type: str, description: str):
-       await interaction.response.defer()
-       if interaction.user.id not in botAdmins:
-           await interaction.followup.send("You do not have permission to use this command.")
-           return
-
-
-       alertIDs = []
-       member_info = open_file("info/member_info.json")
-       for member in member_info:
-           if member_info[member]["subscribed"] == 1:
-               alertIDs.append(member)
-
-
-       embed=discord.Embed(
-           title="New update!" if type.value == "alert" else "ALERT" if type.value == "alert" else "WARNING",
-           description=description
-       )
+            embed=discord.Embed(
+                title="New update!" if type.value == "alert" else "ALERT" if type.value == "alert" else "WARNING",
+                description=description
+            )
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(AlertGroup())
+
+
+async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, server_id: str):
+    await asyncio.sleep(10)
+
+    with open("info/server_info.json", "r") as f:
+        server_info = json.load(f)
+
+    if giveaway_id not in server_info.get(server_id, {}).get("giveaways", {}):
+        return
+
+    giveaway = server_info[server_id]["giveaways"][giveaway_id]
+    winner_list = []
+    
+    embed = discord.Embed(
+        title=f"🎉 Giveaway Ended: {giveaway['prize']} 🎉",
+        description=f"**Winners:** {', '.join(winner_list) if winner_list else 'No participants.'}",
+        color=discord.Color.red()
+    )
+    embed.set_footer(text="Thank you for participating!")
+    await interaction.followup.send(embed=embed)
+
+    del server_info[server_id]["giveaways"][giveaway_id]
+    with open("info/server_info.json", "w") as f:
+        json.dump(server_info, f, indent=4)
+
+    await interaction.message.edit(view=None)
+class GiveawayButtonView(discord.ui.View):
+    def __init__(self, giveaway_id: str, server_id: str):
+        super().__init__(timeout=None)
+        self.giveaway_id = giveaway_id
+        self.server_id = server_id
+
+    async def disable_buttons(self, interaction: discord.Interaction):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+        await interaction.message.edit(view=self)
+
+    @discord.ui.button(label="Enter/Leave Giveaway", style=discord.ButtonStyle.blurple)
+    async def enter_leave_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            with open("info/server_info.json", "r") as f:
+                server_info = json.load(f)
+
+            server_info.setdefault(self.server_id, {}).setdefault("giveaways", {})
+
+            if self.giveaway_id not in server_info[self.server_id]["giveaways"]:
+                raise KeyError(f"Giveaway ID {self.giveaway_id} not found in server {self.server_id}.")
+
+            giveaway = server_info[self.server_id]["giveaways"][self.giveaway_id]
+            participants = giveaway["participants"]
+
+            if interaction.user.id in participants:
+                participants.remove(interaction.user.id)
+                message = "You have left the giveaway."
+            else:
+                participants.append(interaction.user.id)
+                message = "You have joined the giveaway."
+
+            with open("info/server_info.json", "w") as f:
+                json.dump(server_info, f, indent=4)
+
+            await interaction.response.send_message(content=message, ephemeral=True)
+
+        except KeyError as ke:
+            await interaction.response.send_message("An error occurred: Giveaway not found.", ephemeral=True)
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 class GiveawayGroup(app_commands.Group):
     def __init__(self):
@@ -2557,42 +2826,61 @@ class GiveawayGroup(app_commands.Group):
     @app_commands.describe(
         prize="The prize of the giveaway",
         duration="Duration of the giveaway. Ex. 1d6h30m15s",
-        description="An option description to add",
+        description="An optional description to add",
         requirement="A role required to join the giveaway",
-        winners="The amount of people will win the giveaway"
+        winners="The number of people who will win the giveaway"
     )
     async def giveaway(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
         await interaction.response.defer()
+        try:
+            with open("info/server_info.json", "r") as f:
+                server_info = json.load(f)
 
-        server_info = open_file("storage/server_info.json")
-        """
-        Store it as
-        {
-            "serverID": { (Add the server ID if it's not there already)
-                "giveaways": {
-                    "giveawayID": {
-                        "host": interaction.user.id,
-                        "prize": 
-                        "startTime": 
-                        "endTime": 
-                        "description":
-                        "winners": 
-                    }
-                }
+            duration_timedelta = parse_duration(duration)
+            if duration_timedelta is None or duration_timedelta.total_seconds() <= 0:
+                raise ValueError("Duration must be greater than 0.")
+
+            start_time = int(time.time())
+            end_time = start_time + int(duration_timedelta.total_seconds())
+
+            giveaway_id = str(int(time.time()))
+
+            server_id = str(interaction.guild.id)
+            if server_id not in server_info:
+                server_info[server_id] = {}
+
+            if "giveaways" not in server_info[server_id]:
+                server_info[server_id]["giveaways"] = {}
+
+            server_info[server_id]["giveaways"][giveaway_id] = {
+                "host": interaction.user.id,
+                "prize": prize,
+                "startTime": start_time,
+                "endTime": end_time,
+                "description": description or "No description provided.",
+                "requirement": requirement.id if requirement else None,
+                "winners": winners,
+                "participants": []
             }
-        }
-        """
+            with open("info/server_info.json", "w") as f:
+                json.dump(server_info, f, indent=4)
 
+            embed = discord.Embed(
+                title=f"🎉 {prize} 🎉",
+                description=(f"{description}\n\n" if description else "") +
+                f"**Ends in**: <t:{end_time}:R>\n" +
+                (f"**Requirement**: {requirement.mention}\n" if requirement else "")
+            )
+            embed.set_footer(text=f"{winners} Winner(s)")
+            embed.set_author(name=f"Hosted by {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
 
-        duration = parse_duration(time)
-        embed = discord.Embed(
-            title=prize,
-            description=f"{description}\n\n"
-                        f"**Ends in**: {round(duration + time.time())}\n"
-                        f"**Requirement**: {requirement.mention}\n")
-        embed.set_footer(text=f"{winners} Winners")
+            view = GiveawayButtonView(giveaway_id, server_id)
 
-        await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, view=view)
+
+            asyncio.create_task(end_giveaway(interaction, giveaway_id, server_id))
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 bot.tree.add_command(GiveawayGroup())
 
@@ -2757,47 +3045,50 @@ class ReportButtons(discord.ui.View):
     other="Any other information needed)",
 )
 async def report(interaction: discord.Interaction, type: str, proof: str, user: str, other: str):
-    await interaction.response.defer()
-    member_info = open_file("info/member_info.json")
-    reporter_id = str(interaction.user.id)
+    await interaction.response.defer(empheral=True)
+    try:
+        member_info = open_file("info/member_info.json")
+        reporter_id = str(interaction.user.id)
 
-    if member_info.get(reporter_id, {}).get("TicketBlacklist"):
-        await interaction.followup.send("You are blacklisted from submitting reports.", ephemeral=True)
-        return
+        if member_info.get(reporter_id, {}).get("TicketBlacklist"):
+            await interaction.followup.send("You are blacklisted from submitting reports.", ephemeral=True)
+            return
 
-    reports_data = open_file("info/reports.json")
-    report_id = get_next_report_id(reports_data)
+        reports_data = open_file("info/reports.json")
+        report_id = get_next_report_id(reports_data)
 
-    timestamp = datetime.now().isoformat()
-    new_report = {
-        "Status": "Open",
-        "Reporter": reporter_id,
-        "User": user,
-        "Proof": proof,
-        "Type": type,
-        "Other": other,
-        "Timestamp": timestamp,
-    }
+        timestamp = datetime.now().isoformat()
+        new_report = {
+            "Status": "Open",
+            "Reporter": reporter_id,
+            "User": user,
+            "Proof": proof,
+            "Type": type,
+            "Other": other,
+            "Timestamp": timestamp,
+        }
 
-    reports_data[str(report_id)] = new_report
-    save_file("reports.json", reports_data)
+        reports_data[str(report_id)] = new_report
+        save_file("reports.json", reports_data)
 
-    report_embed = discord.Embed(
-        title=f"Report ID: {report_id}",
-        description=f"**Type:** {type}\n**Proof:** {proof}\n**Reported User:** {user}\n**Other:** {other}",
-        color=discord.Color.red(),
-        timestamp=datetime.now(),
-    )
+        report_embed = discord.Embed(
+            title=f"Report ID: {report_id}",
+            description=f"**Type:** {type}\n**Proof:** {proof}\n**Reported User:** {user}\n**Other:** {other}",
+            color=discord.Color.red(),
+            timestamp=datetime.now(),
+        )
 
-    report_embed.set_footer(text=f"Reported by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+        report_embed.set_footer(text=f"Reported by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
 
-    guild = interaction.client.get_guild(1279160584662679673)
-    report_channel = guild.get_channel(1292649491203096646)
-    if report_channel:
-        message = await report_channel.send(embed=report_embed, view=None)
-        await message.edit(view=ReportButtons(report_id, reports_data, message))
-        await interaction.followup.send(f"Your report has been submitted for {user}.")
-    else:
-        await interaction.followup.send("Report channel not found.", ephemeral=True)
+        guild = interaction.client.get_guild(1279160584662679673)
+        report_channel = guild.get_channel(1292649491203096646)
+        if report_channel:
+            message = await report_channel.send(embed=report_embed, view=None)
+            await message.edit(view=ReportButtons(report_id, reports_data, message))
+            await interaction.followup.send(f"Your report has been submitted for {user}.")
+        else:
+            await interaction.followup.send("Report channel not found.", ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 bot.run(token)
