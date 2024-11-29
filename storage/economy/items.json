@@ -1,0 +1,26 @@
+{
+    "testing": {
+        "price": 5000,
+        "appearInShop": {
+            "buyPrice": 5000,
+            "amount": -1
+        },
+        "description": "Example description"
+    },
+    "example": {
+        "price": 2500,
+        "appearInShop": {
+            "buyPrice": 2500,
+            "amount": 5
+        },
+        "description": "Example description"
+    },
+    "another_item": {
+        "price": 1500,
+        "appearInShop": {
+            "buyPrice": 1500,
+            "amount": 20
+        },
+        "description": "Example description"
+    }
+}
