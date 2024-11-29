@@ -9,9 +9,11 @@ from petpetgif import petpet
 from PIL import Image, ImageDraw, ImageOps, ImageFont, ImageSequence
 from moviepy.editor import VideoFileClip, AudioFileClip
 
+from ossapi import Ossapi, UserLookupKey, GameMode, RankingType
+
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 botAdmins = [721151215010054165]
 botMods = []
@@ -35,35 +37,6 @@ class StatusManager:
                 status=discord.Status.dnd, activity=discord.Game(name=current_status)
             )
             await asyncio.sleep(600)
-
-class thanksgiving_manager:
-    def __init__(self, bot: discord.Client):
-        self.bot = bot
-        self.timestamp = 1732770000
-        self.user_id = 1173963781706088451
-        self.owner_id = 721151215010054165
-        self.last_checked = None
-
-    async def start(self):
-        while True:
-            try:
-                current_timestamp = int(datetime.now().timestamp())
-
-                if current_timestamp >= self.timestamp:
-                    print(f'Target timestamp detected! Sending DM to user {self.user_id}.')
-                    user = await self.bot.fetch_user(self.user_id)
-                    owner = await self.bot.fetch_user(self.owner_id)
-                    await user.send('Why err, hi, happy thanksgiving!\nI\'m chatting here mainly because I probably won\'t be on tomorrow...\nI have no idea if you are 2 or 3 hours ahead of me, so I\'m guessing 2.')
-                    await user.send('https://cdn.discordapp.com/attachments/1290875612541751378/1311500188795408485/IMG_7315.png?ex=6749153b&is=6747c3bb&hm=2e65040b968ae1ed7923a3d3089bc2b44f0fb4d09f2bc2d42632ca9cf09e725e&')
-                    await user.send('-# I\'m literally praying this works, I have no idea if it will.')
-
-                    await owner.send("It worked omg")
-                    break
-                self.last_checked = int(datetime.now().timestamp())
-
-                await asyncio.sleep(1)
-            except Exception as e:
-                print(f"An error occurred in the timestamp checker: {e}")
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -154,12 +127,7 @@ def open_file(filename):
 
 def save_file(filename, data):
     with open(filename, "w") as f:
-        json.dump(
-            data,
-            f,
-            indent=4,
-            default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o,
-        )
+        json.dump(data, f, indent=4, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o)
 
 secrets = open_file("storage/secrets.json")
 
@@ -168,6 +136,11 @@ client_secret = secrets.get("client_secret")
 user_agent = secrets.get("user_agent")
 cr_API = secrets.get("cr_API")
 token = secrets.get("token")
+
+osu_id = secrets.get("osu_id")
+osu_secret = secrets.get("osu_secret")
+
+osu_api = Ossapi(osu_id, osu_secret)
 
 reddit = asyncpraw.Reddit(
     client_id=client_id,
@@ -213,8 +186,7 @@ class ReplyModal(discord.ui.Modal):
 
         except discord.Forbidden:
             await interaction.response.send_message(
-                "Failed to send the reply. The user may have DMs disabled.",
-                ephemeral=True,
+                "Failed to send the reply. The user may have DMs disabled.", ephemeral=True,
             )
         except discord.HTTPException:
             await interaction.response.send_message(
@@ -297,8 +269,6 @@ async def on_ready():
     await bot.tree.sync()
     status_manager = StatusManager(bot)
     bot.loop.create_task(status_manager.change_status())
-    manager = thanksgiving_manager(bot)  # Create the manager instance
-    bot.loop.create_task(manager.start())  # Run the `start` coroutine
 
 
 @bot.tree.command(name="error_test", description="Demonstrates intentional error generation")
@@ -402,7 +372,7 @@ async def info(interaction: discord.Interaction):
     await interaction.response.defer(empheral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.8a")
+        embed.add_field(name="Version", value="v1.1.10a")
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
         embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
@@ -628,13 +598,51 @@ bot.tree.add_command(GeometryDashCommandGroup())
 
 """
 OSU COMMANDS
+"""
+
 class OsuCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="osu", description="Osu related commands")
 
-bot.tree.add_command(OsuCommandGroup())
-"""
+    @app_commands.command(name="profile", description="Get osu! profile information")
+    async def osuprofile(self, interaction: discord.Interaction, username: str):
+        try:
+            user = osu_api.user(username, key=UserLookupKey.USERNAME)
+            
+            embed = discord.Embed(
+                title=f"osu! Profile: {user.username}",
+                url=f"https://osu.ppy.sh/users/{user.id}",
+                color=discord.Color.blue(),
+            )
+            embed.set_thumbnail(url=user.avatar_url)
+            embed.add_field(name="Username", value=user.username or "N/A", inline=True)
+            embed.add_field(name="ID", value=str(user.id) if user.id is not None else "N/A", inline=True)
+            
+            pp = f"{user.statistics.pp:,}pp" if user.statistics.pp is not None else "N/A"
+            rank = f"#{user.statistics.global_rank:,}" if user.statistics.global_rank is not None else "N/A"
 
+            embed.add_field(name="PP", value=pp, inline=True)
+            embed.add_field(name="Rank", value=rank, inline=True)
+            embed.add_field(name="Country", value=user.country.name or "N/A", inline=True)
+            embed.add_field(name="Playcount", value=f"{user.statistics.play_count:,}" if user.statistics.play_count is not None else "N/A", inline=True)
+            embed.add_field(
+                name="Hit Accuracy",
+                value=f"{user.statistics.hit_accuracy:.2f}%" if user.statistics.hit_accuracy is not None else "N/A",
+                inline=True,
+            )
+            embed.add_field(
+                name="Total Play Time",
+                value=f"{user.statistics.play_time // 3600:,} hours" if user.statistics.play_time is not None else "N/A",
+                inline=True,
+            )
+            embed.set_footer(text="osu! profile data fetched using ossapi")
+            
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            await interaction.response.send_message(content=f"An error occurred while fetching the profile: {e}", ephemeral=True)
+
+
+bot.tree.add_command(OsuCommandGroup())
 """
 CLASH ROYALE COMMANDS
 """
@@ -1446,7 +1454,7 @@ class MemeifyGroup(app_commands.Group):
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url) as response:
                         if response.status != 200:
-                            await interaction.followup.send("Failed to retrieve the image from the URL.", ephemeral=True)
+                            await interaction.followup.send("Failed to retrieve the image from the URL.")
                             return
                         image_data = await response.read()
 
@@ -1472,6 +1480,7 @@ bot.tree.add_command(MemeifyGroup())
     message="The message to send",
     attachment="An optional attachment to include",
     message_id="An optional message to reply to",
+    empheral="Whether the message will be hidden for others or not"
 )
 @commands.has_permissions(manage_messages=True)
 async def say(
@@ -1480,8 +1489,9 @@ async def say(
     message: str = None,
     attachment: discord.Attachment = None,
     message_id: str = None,
+    empheral: bool = False
 ):
-    await interaction.response.defer()
+    await interaction.response.defer(empheral=empheral)
     try:
         reference_message = None
 
@@ -1494,11 +1504,16 @@ async def say(
             except discord.HTTPException as e:
                 await interaction.followup.send(f"An error occurred while fetching the message: {e}")
                 return
+            
+        # Testing if file=None will return an error or not.
+        await channel.send(content=message, file=await attachment.to_file(), reference=reference_message)
 
+        '''
         if attachment:
             await channel.send(content=message, file=await attachment.to_file(), reference=reference_message)
         else:
             await channel.send(content=message, reference=reference_message)
+        '''
 
         await interaction.followup.send(f"Sent '{message}' to {channel.mention}")
     except Exception as error:
@@ -1518,19 +1533,17 @@ async def dm(
 ):
     await interaction.response.defer()
     try:
-        if attachment:
-            await user.send(content=message, file=await attachment.to_file())
-        else:
-            await user.send(content=message)
+        await user.send(content=message, file=await attachment.to_file())
         await interaction.followup.send(f"Sent '{message}' to {user}")              
     except Exception as error:
         await handle_logs(interaction, error)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="fact", description="Fetches a random fact.")
-async def fact(interaction: discord.Interaction):
-    await interaction.response.defer()
+async def fact(interaction: discord.Interaction, empheral: bool = False):
+    await interaction.response.defer(empheral=empheral)
     try:
         url = "https://uselessfacts.jsph.pl/random.json?language=en"
         response = requests.get(url)
@@ -1547,9 +1560,10 @@ async def fact(interaction: discord.Interaction):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="joke", description="Fetches a random joke.")
-async def joke(interaction: discord.Interaction):
-    await interaction.response.defer()
+async def joke(interaction: discord.Interaction, empheral: bool = False):
+    await interaction.response.defer(empheral=empheral)
     try:
         url = "https://official-joke-api.appspot.com/jokes/random"
         response = requests.get(url)
@@ -1569,9 +1583,10 @@ async def joke(interaction: discord.Interaction):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="cat", description="Fetches a cute cat picture.")
-async def cat(interaction: discord.Interaction):
-    await interaction.response.defer()
+async def cat(interaction: discord.Interaction, empheral: bool = False):
+    await interaction.response.defer(empheral=empheral)
     try:
         url = "https://api.thecatapi.com/v1/images/search"
         response = requests.get(url)
@@ -1590,9 +1605,10 @@ async def cat(interaction: discord.Interaction):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="dog", description="Fetches an adorable dog picture.")
-async def dog(interaction: discord.Interaction):
-    await interaction.response.defer()
+async def dog(interaction: discord.Interaction, empheral: bool = False):
+    await interaction.response.defer(empheral=empheral)
     try:
         url = "https://dog.ceo/api/breeds/image/random"
         response = requests.get(url)
@@ -1611,9 +1627,10 @@ async def dog(interaction: discord.Interaction):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="quote", description="Fetches an inspirational quote.")
-async def quote(interaction: discord.Interaction):
-    await interaction.response.defer()
+async def quote(interaction: discord.Interaction, empheral: bool = False):
+    await interaction.response.defer(empheral=empheral)
     try:
         url = "https://zenquotes.io/api/random"
         response = requests.get(url)
@@ -1630,9 +1647,10 @@ async def quote(interaction: discord.Interaction):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="meme", description="Fetches a funny meme!")
-async def meme(interaction: discord.Interaction):
-    await interaction.response.defer()
+async def meme(interaction: discord.Interaction, empheral: bool = False):
+    await interaction.response.defer(empheral=empheral)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get("https://meme-api.com/gimme") as response:
@@ -1717,7 +1735,10 @@ class Convert(app_commands.Group):
         super().__init__(name="convert", description="Image conversion commands")
 
     @app_commands.command(name="image", description="Convert an uploaded image to a specified format")
-    @app_commands.describe(image="The image file you want to convert.", format="The format you want to convert the image to.")
+    @app_commands.describe(
+        image="The image file you want to convert.", 
+        format="The format you want to convert the image to.",
+        empheral="If you want the message hidden or not.")
     @app_commands.choices(
         format=[
             app_commands.Choice(name="JPEG", value="jpeg"),
@@ -1728,8 +1749,8 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="TIFF", value="tiff"),
         ]
     )
-    async def convert_image(self, interaction: discord.Interaction, image: discord.Attachment, format: str):
-        await interaction.response.defer()
+    async def convert_image(self, interaction: discord.Interaction, image: discord.Attachment, format: str, empheral: bool = True):
+        await interaction.response.defer(empheral=empheral)
         try:
             if not image.content_type.startswith("image/"):
                 await interaction.response.send_message("Please upload a valid image file.", ephemeral=True)
@@ -1766,7 +1787,10 @@ class Convert(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="video", description="Convert an uploaded video to a specified format")
-    @app_commands.describe(video="The uploaded video file you want to convert.", format="The format you want to convert the video to.")
+    @app_commands.describe(
+        video="The uploaded video file you want to convert.", 
+        format="The format you want to convert the video to.",
+        empheral="If you want the message hidden or not.")
     @app_commands.choices(
         format=[
             app_commands.Choice(name="MP4", value="mp4"),
@@ -1778,8 +1802,8 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="GIF", value="gif")
         ]
     )
-    async def convert_video(self, interaction: discord.Interaction, video: discord.Attachment, format: str):
-        await interaction.response.defer()
+    async def convert_video(self, interaction: discord.Interaction, video: discord.Attachment, format: str, empheral: bool = True):
+        await interaction.response.defer(empheral=empheral)
         try:
             video_data = await video.read()
             output_filename = await asyncio.to_thread(self.process_video, video_data, video.filename, format.value)
@@ -1811,7 +1835,8 @@ class Convert(app_commands.Group):
     @app_commands.describe(
         link="The YouTube video link",
         resolution="The resolution of the video",
-        output_format="The output format of the video"
+        output_format="The output format of the video",
+        empheral="If you want the message hidden or not."
     )
     @app_commands.choices(
         resolution=[
@@ -1830,8 +1855,8 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="MP3", value="mp3"),
         ]
     )
-    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str, output_format: str):
-        await interaction.response.defer()
+    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str, output_format: str, empheral: bool = True):
+        await interaction.response.defer(empheral=empheral)
         try:
             if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
                 await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
@@ -2685,6 +2710,199 @@ async def modstats(interaction: discord.Interaction, member: discord.Member = No
         await handle_logs(interaction, error)
 
 """
+ECONOMY COMMANDS
+"""
+
+# Eco data
+
+items = open_file("storage/economy/items.json")
+
+# Hourly shop system
+
+SHOP = []
+
+@tasks.loop(hours=1)
+async def handle_eco_shop():
+    """Updates the global shop list with random items."""
+    global SHOP
+    SHOP = []
+    shop_items = random.sample(list(items.items()), min(10, len(items)))
+    for name, data in shop_items:
+        if "appearInShop" in data:
+            appear_data = data["appearInShop"]
+            SHOP.append({
+                "item": name,
+                "price": appear_data.get("buyPrice", 0),
+                "amount": appear_data.get("amount", 0),
+                "description": appear_data.get("description", "No description yet...")
+            })
+    
+def create_account(id):
+    players = open_file("storage/economy/economy.json")
+
+    try:
+        lastPlayerData = next(reversed(players.values()))
+        playerID = lastPlayerData["playerID"] + 1
+    except (StopIteration, KeyError):
+        playerID = 1
+
+    players[id] = {
+        "playerID": playerID,
+        "joinTimestamp": int(time.time()),
+        "levels": {
+            "EXP": 0,
+            "retire": 0,
+            "prestige": 0,
+            "rebirth": 0,
+            "evolve": 0,
+            # More coming later ig
+        },
+        "balance": {
+            "bank": 5000,
+            "wallet": 0,
+            "maxBank": 25000
+        },
+        "inventory": {},
+
+        # Advanced later stuff
+        "pets": {},
+        "gear": {
+            "helmet": None,
+            "chestplate": None,
+            "leggings": None,
+            "boots": None,
+            "rune": None,
+            "ring": None,
+            "weapon": None,
+        },
+        "boosts": {
+            "coins": 100,
+            "exp": 100,
+        },
+        "points": {
+            "health": 0,
+            "damage": 0,
+            "speed": 0,
+            "extra": 0
+        }
+    }
+
+    save_file("storage/economy/economy.json", players)
+
+# Player data
+def get_player_data(id, data):
+    players = open_file("storage/economy/economy.json")
+    if id not in players:
+        create_account(id)
+    
+    player_data = players[id]
+    if data == "balance":
+        return player_data["balance"]["bank"], player_data["balance"]["wallet"], player_data["balance"]["maxBank"]
+
+# Base currency system setup
+async def handle_transactions(interaction, userid, amount, type):
+    pass
+
+@bot.tree.command(name="balance", description="Check a balance of someone's wallent and bank!")
+async def balance(interaction: discord.Interaction):
+    pass
+
+@bot.tree.command(name="withdraw", description="Withdraw money from the bank.")
+async def withdraw(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="deposit", description="Deposit money to the bank.")
+async def deposit(interaction: discord.Interaction):
+    pass
+
+@bot.tree.command(name="pay", description="Pay other user coins.")
+async def pay(interaction: discord.Interaction):
+    pass
+
+# Basic ways to get money
+@bot.tree.command(name="beg", description="Beg for money on the streets.")
+async def beg(interaction: discord.Interaction):
+    pass
+
+@bot.tree.command(name="fish", description="Not coming soon.")
+async def fish(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="hunt", description="Not coming soon.")
+async def hunt(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="dig", description="Not coming soon.")
+async def dig(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="search", description="Not coming soon.")
+async def search(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="crime", description="Not coming soon.")
+async def crime(interaction: discord.Interaction):
+    pass
+
+# Other ways to get money
+@bot.tree.command(name="daily", description="Not coming soon.")
+async def daily(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="weekly", description="Not coming soon.")
+async def weekly(interaction: discord.Interaction):
+    pass
+@bot.tree.command(name="monthly", description="Not coming soon.")
+async def monthly(interaction: discord.Interaction):
+    pass
+
+
+# Currency system
+class MarketGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="market", description="Not coming soon.")
+
+class ShopGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="shop", description="Shop commands.")
+
+    @app_commands.command(name="show", description="View the shop.")
+    async def show(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            if not SHOP:
+                await handle_eco_shop()
+
+            embed = discord.Embed(title="Shop Items", color=discord.Color.blue())
+            for item in SHOP:
+                amount = "Infinity" if item["amount"] == -1 else item["amount"]
+                embed.add_field(
+                    name=f"{item['item']}",
+                    value=f"**Price**: {item['price']}\n**Amount Left**: {amount}\n**Description**: {item['description']}",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed)
+        except Exception as error:
+            handle_logs(interaction, error)
+
+    @app_commands.command(name="buy", description="Buy an item from the shop.")
+    async def buy(self, interaction: discord.Interaction, item_name: str, quantity: int):
+        for item in SHOP:
+            if item["item"].lower() == item_name.lower():
+                if item["amount"] == -1 or item["amount"] >= quantity:
+                    item["amount"] = item["amount"] - quantity if item["amount"] != -1 else -1
+                    await interaction.response.send_message(f"You bought {quantity}x {item_name} for {item['price'] * quantity} coins.")
+                    return
+                else:
+                    await interaction.response.send_message(f"Not enough {item_name} in stock.", ephemeral=True)
+                    return
+
+        await interaction.response.send_message(f"Item {item_name} not found in the shop.", ephemeral=True)
+
+class AuctionGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="auction", description="Not coming soon.")
+
+bot.tree.add_command(MarketGroup())
+bot.tree.add_command(ShopGroup())
+bot.tree.add_command(AuctionGroup())
+
+"""
 MISC COMMANDS
 """
 
@@ -2749,32 +2967,58 @@ class AlertGroup(app_commands.Group):
 
 bot.tree.add_command(AlertGroup())
 
-
 async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, server_id: str):
-    await asyncio.sleep(10)
+    try:
+        server_info = open_file("info/server_info.json")
+        giveaway = server_info.get(server_id, {}).get("giveaways", {}).get(giveaway_id)
 
-    with open("info/server_info.json", "r") as f:
-        server_info = json.load(f)
+        if not giveaway:
+            await interaction.followup.send("The specified giveaway could not be found.", ephemeral=True)
+            return
 
-    if giveaway_id not in server_info.get(server_id, {}).get("giveaways", {}):
-        return
+        duration = giveaway['endTime'] - giveaway['startTime']
+        await asyncio.sleep(duration)
 
-    giveaway = server_info[server_id]["giveaways"][giveaway_id]
-    winner_list = []
-    
-    embed = discord.Embed(
-        title=f"🎉 Giveaway Ended: {giveaway['prize']} 🎉",
-        description=f"**Winners:** {', '.join(winner_list) if winner_list else 'No participants.'}",
-        color=discord.Color.red()
-    )
-    embed.set_footer(text="Thank you for participating!")
-    await interaction.followup.send(embed=embed)
+        server_info = open_file("info/server_info.json")
+        giveaway = server_info.get(server_id, {}).get("giveaways", {}).get(giveaway_id)
 
-    del server_info[server_id]["giveaways"][giveaway_id]
-    with open("info/server_info.json", "w") as f:
-        json.dump(server_info, f, indent=4)
+        if not giveaway:
+            return
 
-    await interaction.message.edit(view=None)
+        participants = giveaway.get("participants", [])
+        winners_count = giveaway.get("winners", 1)
+
+        if participants:
+            winner_list = random.sample(participants, k=min(winners_count, len(participants)))
+            formatted_winners = ', '.join(f'<@{winner}>' for winner in winner_list)
+        else:
+            formatted_winners = "No participants."
+
+        embed = discord.Embed(
+            title=f"🎉 Giveaway Ended: {giveaway['prize']} 🎉",
+            description=f"**Winners:** {formatted_winners}",
+            color=discord.Color.red()
+        )
+        embed.set_footer(text=f"ID: {giveaway_id}")
+
+        channel_id = giveaway.get("channel_id")
+        message_id = giveaway.get("message_id")
+        channel = interaction.guild.get_channel(channel_id)
+
+        if not channel:
+            await interaction.followup.send("Giveaway channel could not be found.", ephemeral=True)
+            return
+
+        message = await channel.fetch_message(message_id)
+        if not message:
+            await interaction.followup.send("Giveaway message could not be found.", ephemeral=True)
+            return
+
+        await message.reply(embed=embed)
+
+    except Exception as error:
+        await handle_logs(interaction, error)
+
 class GiveawayButtonView(discord.ui.View):
     def __init__(self, giveaway_id: str, server_id: str):
         super().__init__(timeout=None)
@@ -2790,9 +3034,7 @@ class GiveawayButtonView(discord.ui.View):
     @discord.ui.button(label="Enter/Leave Giveaway", style=discord.ButtonStyle.blurple)
     async def enter_leave_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            with open("info/server_info.json", "r") as f:
-                server_info = json.load(f)
-
+            server_info = open_file("info/server_info.json")
             server_info.setdefault(self.server_id, {}).setdefault("giveaways", {})
 
             if self.giveaway_id not in server_info[self.server_id]["giveaways"]:
@@ -2808,8 +3050,21 @@ class GiveawayButtonView(discord.ui.View):
                 participants.append(interaction.user.id)
                 message = "You have joined the giveaway."
 
+            embed = interaction.message.embeds[0]
+            description_lines = embed.description.split("\n")
+            for i, line in enumerate(description_lines):
+                if line.startswith("**Participants:**"):
+                    description_lines[i] = f"**Participants:** {len(participants)}"
+                    break
+            else:
+                description_lines.append(f"**Participants:** {len(participants)}")
+            
+            embed.description = "\n".join(description_lines)
+
             with open("info/server_info.json", "w") as f:
                 json.dump(server_info, f, indent=4)
+
+            await interaction.message.edit(embed=embed, view=self)
 
             await interaction.response.send_message(content=message, ephemeral=True)
 
@@ -2818,9 +3073,48 @@ class GiveawayButtonView(discord.ui.View):
         except Exception as error:
             await handle_logs(interaction, error)
 
+
 class GiveawayGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="giveaway", description="Giveaway related commands")
+
+    @app_commands.command(name="reroll", description="Rerolls a giveaway's winner/s")
+    @app_commands.describe(id="ID of the giveaway", winners="Number of winners to reroll")
+    async def greroll(self, interaction: discord.Interaction, id: str, winners: int):
+        await interaction.response.defer()
+        try:
+            server_id = str(interaction.guild_id)
+            server_info = open_file("info/server_info.json")
+            
+            if server_id not in server_info or "giveaways" not in server_info[server_id]:
+                return await interaction.followup.send("No giveaways found for this server.", ephemeral=True)
+
+            giveaways = server_info[server_id]["giveaways"]
+            if id not in giveaways:
+                return await interaction.followup.send(f"Giveaway with ID `{id}` not found.", ephemeral=True)
+
+            giveaway = giveaways[id]
+
+            participants = giveaway.get("participants", [])
+            if len(participants) < winners:
+                return await interaction.followup.send(
+                    "Not enough participants to reroll the specified number of winners.", ephemeral=True
+                )
+
+            rerolled_winners = random.sample(participants, winners)
+            formatted_winners = ", ".join([f"<@{user}>" for user in rerolled_winners])
+
+            embed = discord.Embed(
+                title=f"🎉 Giveaway Rerolled: {giveaway['prize']} 🎉",
+                description=f"**New Winners:** {formatted_winners}",
+                color=discord.Color.orange()
+            )
+            embed.set_footer(text=f"ID: {id}")
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as error:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="create", description="Creates a giveaway")
     @app_commands.describe(
@@ -2830,12 +3124,10 @@ class GiveawayGroup(app_commands.Group):
         requirement="A role required to join the giveaway",
         winners="The number of people who will win the giveaway"
     )
-    async def giveaway(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
+    async def ggiveaway(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
         await interaction.response.defer()
         try:
-            with open("info/server_info.json", "r") as f:
-                server_info = json.load(f)
-
+            server_info = open_file("info/server_info.json")
             duration_timedelta = parse_duration(duration)
             if duration_timedelta is None or duration_timedelta.total_seconds() <= 0:
                 raise ValueError("Duration must be greater than 0.")
@@ -2860,25 +3152,28 @@ class GiveawayGroup(app_commands.Group):
                 "description": description or "No description provided.",
                 "requirement": requirement.id if requirement else None,
                 "winners": winners,
-                "participants": []
+                "participants": [],
             }
-            with open("info/server_info.json", "w") as f:
-                json.dump(server_info, f, indent=4)
+            save_file("info/server_info.json", server_info)
 
             embed = discord.Embed(
                 title=f"🎉 {prize} 🎉",
                 description=(f"{description}\n\n" if description else "") +
-                f"**Ends in**: <t:{end_time}:R>\n" +
+                f"**Ends at**: <t:{end_time}:T> (<t:{end_time}:R>)\n" +
                 (f"**Requirement**: {requirement.mention}\n" if requirement else "")
             )
             embed.set_footer(text=f"{winners} Winner(s)")
-            embed.set_author(name=f"Hosted by {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
+            embed.set_author(name=f"ID: {giveaway_id} | Hosted by {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
 
             view = GiveawayButtonView(giveaway_id, server_id)
 
-            await interaction.followup.send(embed=embed, view=view)
+            message = await interaction.followup.send(embed=embed, view=view)
+            server_info[server_id]["giveaways"][giveaway_id]["channel_id"] = interaction.channel_id
+            server_info[server_id]["giveaways"][giveaway_id]["message_id"] = message.id
+            save_file("info/server_info.json", server_info)
 
             asyncio.create_task(end_giveaway(interaction, giveaway_id, server_id))
+            
         except Exception as error:
             await handle_logs(interaction, error)
 
