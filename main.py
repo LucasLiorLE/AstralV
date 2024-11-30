@@ -647,10 +647,9 @@ class BloonsTD6CommandGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-
     @app_commands.command(name="racelb", description="Displays the leaderboard for a specific BTD6 race")
     @app_commands.describe(race_id="ID of the race you want to view the leaderboard for.")
-    async def btd6racelb(interaction: discord.Interaction, race_id: str):
+    async def btd6racelb(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
             url = f"https://data.ninjakiwi.com/btd6/races/{race_id}/leaderboard"
