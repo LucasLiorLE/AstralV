@@ -619,7 +619,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
     async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
-            url = f"https://api.example.com/btd6/races/{race_id}/metadata"
+            url = f"https://data.ninjakiwi.com/btd6/races/{race_id}/metadata"
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     if response.status == 200:
