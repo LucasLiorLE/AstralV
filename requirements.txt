@@ -10,4 +10,4 @@ Pillow==11.0.0
 moviepy==1.0.3
 yt-dlp==2024.10.22
 pet-pet-gif==1.0.2
-ossapi==5.0.0
+ossapi==5.0.1
