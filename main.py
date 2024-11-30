@@ -120,6 +120,17 @@ def parse_duration(duration_str):
 def check_user(interaction: discord.Interaction, original_user: discord.User) -> bool:
     return interaction.user.id == original_user.id
 
+class RestrictedView(discord.ui.View):
+    def __init__(self, original_user: discord.User):
+        super().__init__()
+        self.original_user = original_user
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.original_user.id:
+            await interaction.response.send_message("You can't interact with this.", ephemeral=True)
+            return False
+        return True
+
 def open_file(filename):
     with open(filename, "r") as f:
         file_data = json.load(f)
@@ -158,7 +169,6 @@ class ReplyModal(discord.ui.Modal):
             discord.ui.TextInput(
                 label="Your reply",
                 placeholder="Type your reply here...",
-                style=discord.TextStyle.long,
             )
         )
 
@@ -343,7 +353,7 @@ async def ccp(interaction: discord.Interaction, choice: str, user_id: str):
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="ping", description="Shows your latency and the bot's latency.")
 async def ping(interaction: discord.Interaction):
-    await interaction.response.defer(empheral=True)
+    await interaction.response.defer(ephemeral=True)
     try:
         start_time = time.time()
         processing_start_time = time.time()
@@ -369,10 +379,10 @@ async def ping(interaction: discord.Interaction):
 
 @bot.tree.command(name="info", description="Displays information about the bot.")
 async def info(interaction: discord.Interaction):
-    await interaction.response.defer(empheral=True)
+    await interaction.response.defer(ephemeral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.10a")
+        embed.add_field(name="Version", value="v1.1.14a")
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
         embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
@@ -437,7 +447,7 @@ async def roleinfo(interaction: discord.Interaction, role: discord.Role):
 @bot.tree.command(name="userinfo", description="Provides information about a user.")
 @app_commands.describe(member="The member to get the info for",)
 async def userinfo(interaction: discord.Interaction, member: discord.Member = None):
-    await interaction.response.defer(empheral=True)
+    await interaction.response.defer(ephemeral=True)
     try:
         member = member or interaction.user
         embed = discord.Embed(title="User Info", color=0x808080)
@@ -595,6 +605,211 @@ class GeometryDashCommandGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
 bot.tree.add_command(GeometryDashCommandGroup())
+
+"""
+BTD6 COMMANDS
+"""
+
+class BloonsTD6CommandGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands")
+        
+    @app_commands.command(name="racedata", description="Get race data for a specific BT6 race ID.")
+    @app_commands.describe(race_id="ID of the race you want to view the data for.")
+    async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
+        await interaction.response.defer()
+        try:
+            url = f"https://api.example.com/btd6/races/{race_id}/metadata"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+
+                        if data.get("success"):
+                            race_info = data["body"]
+
+                            embed = discord.Embed(
+                                title=f"BTD6 Race: {race_info['name']}",
+                                description=f"Map: {race_info['map']}\nMode: {race_info['mode']}\nDifficulty: {race_info['difficulty']}",
+                                color=discord.Color.blue()
+                            )
+                            embed.set_thumbnail(url=race_info['mapURL'])
+                            embed.add_field(name="Starting Cash", value=f"${race_info['startingCash']}", inline=False)
+                            embed.add_field(name="Lives", value=f"{race_info['lives']} / {race_info['maxLives']}", inline=False)
+                            embed.add_field(name="Rounds", value=f"Start: {race_info['startRound']} - End: {race_info['endRound']}", inline=False)
+                            embed.add_field(name="Power Restrictions", value=f"Powers Disabled: {race_info['disablePowers']}", inline=False)
+
+                            await interaction.followup.send(embed=embed)
+                        else:
+                            await interaction.followup.send("Failed to retrieve race data. Please check the race ID and try again.", ephemeral=True)
+                    else:
+                        await interaction.followup.send("Error occurred while fetching the race data. Please try again later.", ephemeral=True)
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+
+    @app_commands.command(name="racelb", description="Displays the leaderboard for a specific BTD6 race")
+    @app_commands.describe(race_id="ID of the race you want to view the leaderboard for.")
+    async def btd6racelb(interaction: discord.Interaction, race_id: str):
+        await interaction.response.defer()
+        try:
+            url = f"https://data.ninjakiwi.com/btd6/races/{race_id}/leaderboard"
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                data = response.json()
+
+                if 'body' in data:
+                    leaderboard = data['body']
+                    embed = discord.Embed(
+                        title=f"BTD6 Race Leaderboard: {race_id}",
+                        color=discord.Color.green(),
+                        description="Here's the leaderboard for the specified race."
+                    )
+
+                    for i, player in enumerate(leaderboard[:10]):
+                        display_name = player['displayName']
+                        score = f"{player['score']:,}"
+                        profile_url = player['profile']
+
+                        embed.add_field(
+                            name=f"{i + 1}. {display_name}",
+                            value=f"**Score**: {score}\n[Profile]({profile_url})",
+                            inline=False
+                        )
+
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send("Unexpected response structure.")
+            else:
+                await interaction.followup.send("Failed to fetch data. Please try again later.")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    @app_commands.command(name="races", description="Displays the latest BTD6 race events.")
+    async def btd6races(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        try:
+            url = "https://data.ninjakiwi.com/btd6/races"
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                data = response.json()
+
+                if 'body' in data:
+                    body = data['body']
+                    embed = discord.Embed(
+                        title="BTD6 Race Events",
+                        color=discord.Color.blue(),
+                        description="Here's a list of the latest BTD6 race events."
+                    )
+
+                    for i, race in enumerate(body):
+                        race_name = race['name']
+                        race_id = race['id']
+                        race_start = f"<t:{int(race['start'] / 1000)}:F>"
+                        race_end = f"<t:{int(race['end'] / 1000)}:F>"
+                        total_scores = f"{race['totalScores']:,}"
+
+                        embed.add_field(
+                            name=f"Race: {race_name} (ID: {race_id})",
+                            value=(
+                                f"**Start Time**: {race_start}\n"
+                                f"**End Time**: {race_end}\n"
+                                f"**Total Scores Submitted**: {total_scores}\n"
+                            ),
+                            inline=False
+                        )
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send("Unexpected response structure.")
+            else:
+                await interaction.followup.send("Failed to fetch data. Please try again later.")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+
+    @app_commands.command(name="profile", description="Displays info about a BTD6 player!")
+    @app_commands.describe(oak_key="https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API")
+    async def btd6profile(self, interaction: discord.Interaction, oak_key: str):
+        await interaction.response.defer()
+
+        try:
+            url = f"https://data.ninjakiwi.com/btd6/users/{oak_key}"
+            response = requests.get(url)
+
+            if response.status_code == 200:
+                data = response.json()
+
+                if 'body' in data:
+                    body = data['body']
+
+                    display_name = body.get("displayName", "N/A")
+                    rank = body.get("rank", "N/A")
+                    veteran_rank = body.get("veteranRank", "N/A")
+                    achievements = body.get("achievements", "N/A")
+                    most_experienced_monkey = body.get("mostExperiencedMonkey", "N/A")
+                    avatar_url = body.get("avatarURL", "https://example.com/default-avatar.png")
+                    followers = body.get("followers", "N/A")
+
+                    embed = discord.Embed(
+                        title=f"{display_name}'s Profile",
+                        color=discord.Color.green()
+                    )
+                    embed.set_thumbnail(url=avatar_url)
+                    embed.add_field(name="Rank", value=str(rank), inline=True)
+                    embed.add_field(name="Veteran Rank", value=str(veteran_rank), inline=True)
+                    embed.add_field(name="Achievements", value=f"{str(achievements)}/150", inline=True)
+                    embed.add_field(name="Most Experienced Monkey", value=most_experienced_monkey, inline=True)
+                    embed.add_field(name="Followers", value=str(followers), inline=True)
+
+                    # Display gameplay stats
+                    gameplay = body.get("gameplay", {})
+                    total_cash_earned = gameplay.get("cashEarned", "N/A")
+                    highest_round = gameplay.get("highestRound", "N/A")
+                    total_games_won = gameplay.get("gamesWon", "N/A")
+                    total_monkeys_placed = gameplay.get("monkeysPlaced", "N/A")
+
+                    # Format numbers with commas
+                    def format_number(num):
+                        if isinstance(num, int):
+                            return f"{num:,}"
+                        return num
+
+                    embed.add_field(name="Total Cash Earned", value=format_number(total_cash_earned), inline=True)
+                    embed.add_field(name="Highest Round", value=str(highest_round), inline=True)
+                    embed.add_field(name="Total Games Won", value=str(total_games_won), inline=True)
+                    embed.add_field(name="Total Monkeys Placed", value=format_number(total_monkeys_placed), inline=True)
+
+                    # Display tower placement stats and percentage usage
+                    towers_placed = body.get("towersPlaced", {})
+                    tower_lines = ""
+                    if total_monkeys_placed != "N/A" and isinstance(total_monkeys_placed, int):
+                        for tower, count in towers_placed.items():
+                            if isinstance(count, int):
+                                percentage = (count / total_monkeys_placed) * 100
+                                tower_lines += f"{re.sub(r'([A-Z])', r' \1', tower).strip().title()}: {format_number(count)} ({percentage:.2f}%)\n"
+
+                    embed.add_field(name="Monkeys Placed by Type", value=tower_lines if tower_lines else "N/A", inline=False)
+
+                    # Display bloons popped stats
+                    bloons_popped = body.get("bloonsPopped", {})
+                    bloon_lines = "\n".join([f"{re.sub(r'([A-Z])', r' \1', bloon_type.replace('Popped', '').replace('Leaked', ' Leaks')).strip().title()}: {format_number(count)}" for bloon_type, count in bloons_popped.items()])
+                    embed.add_field(name="Bloons Popped Stats", value=bloon_lines if bloon_lines else "N/A", inline=False)
+
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.followup.send("Unexpected response structure.")
+            else:
+                await interaction.followup.send("Failed to fetch data. Please check the user ID or try again later.")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+# Add the command group to the bot's command tree
+bot.tree.add_command(BloonsTD6CommandGroup())
+
+
 
 """
 OSU COMMANDS
@@ -927,7 +1142,7 @@ class RobloxGroup(app_commands.Group):
     @app_commands.describe(username="The username to connect to")
     @app_commands.checks.cooldown(1, 60)
     async def rbxconnect(self, interaction: discord.Interaction, username: str):
-        await interaction.response.defer(empheral=True)
+        await interaction.response.defer(ephemeral=True)
         try:
             color_sequence = " ".join(
                 random.choices(
@@ -1167,6 +1382,7 @@ class GloveView(discord.ui.View):
         if not check_user(interaction, interaction.message.interaction.user):
             await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
             return
+        
         self.current_page = "glove_data"
         self.update_buttons()
         await interaction.response.edit_message(embeds=[self.glove_embed], view=self)
@@ -1223,8 +1439,8 @@ class GloveView(discord.ui.View):
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="cgloves", description="Check all the user's gloves in slap battles.")
 @app_commands.describe(username="The user to check gloves for (leave empty to check your own)",)
-async def cgloves(interaction: discord.Interaction, username: str = None):
-    await interaction.response.defer(empheral=True)
+async def cgloves(interaction: discord.Interaction, username: str = None, empheral: bool = True):
+    await interaction.response.defer(ephemeral=empheral)
     try:
         discord_user_id = str(interaction.user.id)
 
@@ -1410,7 +1626,7 @@ class MemeifyGroup(app_commands.Group):
     @app_commands.command(name="spongebob", description="Generates a Spongebob meme")
     @app_commands.describe(text="The text you want to show on the paper")
     async def spongebob(self, interaction: discord.Interaction, text: str):
-        await interaction.response.defer(empheral=True)
+        await interaction.response.defer(ephemeral=True)
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(f"https://memeado.vercel.app/api/spongebob?text={text}") as response:
@@ -1425,7 +1641,7 @@ class MemeifyGroup(app_commands.Group):
     @app_commands.command(name="drakelikehate", description="Generates a Drake Like Hate meme")
     @app_commands.describe(text1="The text for the 'Like' part", text2="The text for the 'Hate' part")
     async def drakelikehate(self, interaction: discord.Interaction, text1: str, text2: str):
-        await interaction.response.defer(empheral=True)
+        await interaction.response.defer(ephemeral=True)
         try:
             async with aiohttp.ClientSession() as session:
                 url = f"https://memeado.vercel.app/api/drakelikehate?text1={text1}&text2={text2}"
@@ -1445,7 +1661,7 @@ class MemeifyGroup(app_commands.Group):
         attachment="File attachment to use for the pet-pet gif (optional)"
     )
     async def petpet(self, interaction: discord.Interaction, user: discord.Member = None, url: str = None, attachment: discord.Attachment = None):
-        await interaction.response.defer(empheral=True)
+        await interaction.response.defer(ephemeral=True)
         try:
             if attachment:
                 image_data = await attachment.read()
@@ -1480,7 +1696,7 @@ bot.tree.add_command(MemeifyGroup())
     message="The message to send",
     attachment="An optional attachment to include",
     message_id="An optional message to reply to",
-    empheral="Whether the message will be hidden for others or not"
+    ephemeral="Whether the message will be ephemeral for others or not"
 )
 @commands.has_permissions(manage_messages=True)
 async def say(
@@ -1489,9 +1705,9 @@ async def say(
     message: str = None,
     attachment: discord.Attachment = None,
     message_id: str = None,
-    empheral: bool = False
+    ephemeral: bool = False
 ):
-    await interaction.response.defer(empheral=empheral)
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         reference_message = None
 
@@ -1540,10 +1756,10 @@ async def dm(
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
+@app_commands.describe(ephemeral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="fact", description="Fetches a random fact.")
-async def fact(interaction: discord.Interaction, empheral: bool = False):
-    await interaction.response.defer(empheral=empheral)
+async def fact(interaction: discord.Interaction, ephemeral: bool = False):
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         url = "https://uselessfacts.jsph.pl/random.json?language=en"
         response = requests.get(url)
@@ -1560,10 +1776,10 @@ async def fact(interaction: discord.Interaction, empheral: bool = False):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
+@app_commands.describe(ephemeral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="joke", description="Fetches a random joke.")
-async def joke(interaction: discord.Interaction, empheral: bool = False):
-    await interaction.response.defer(empheral=empheral)
+async def joke(interaction: discord.Interaction, ephemeral: bool = False):
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         url = "https://official-joke-api.appspot.com/jokes/random"
         response = requests.get(url)
@@ -1583,10 +1799,10 @@ async def joke(interaction: discord.Interaction, empheral: bool = False):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
+@app_commands.describe(ephemeral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="cat", description="Fetches a cute cat picture.")
-async def cat(interaction: discord.Interaction, empheral: bool = False):
-    await interaction.response.defer(empheral=empheral)
+async def cat(interaction: discord.Interaction, ephemeral: bool = False):
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         url = "https://api.thecatapi.com/v1/images/search"
         response = requests.get(url)
@@ -1605,10 +1821,10 @@ async def cat(interaction: discord.Interaction, empheral: bool = False):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
+@app_commands.describe(ephemeral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="dog", description="Fetches an adorable dog picture.")
-async def dog(interaction: discord.Interaction, empheral: bool = False):
-    await interaction.response.defer(empheral=empheral)
+async def dog(interaction: discord.Interaction, ephemeral: bool = False):
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         url = "https://dog.ceo/api/breeds/image/random"
         response = requests.get(url)
@@ -1627,10 +1843,10 @@ async def dog(interaction: discord.Interaction, empheral: bool = False):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
+@app_commands.describe(ephemeral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="quote", description="Fetches an inspirational quote.")
-async def quote(interaction: discord.Interaction, empheral: bool = False):
-    await interaction.response.defer(empheral=empheral)
+async def quote(interaction: discord.Interaction, ephemeral: bool = False):
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         url = "https://zenquotes.io/api/random"
         response = requests.get(url)
@@ -1647,10 +1863,10 @@ async def quote(interaction: discord.Interaction, empheral: bool = False):
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-@app_commands.describe(empheral="Whether the message will be client sided or not (Useful when the bot has no perms).")
+@app_commands.describe(ephemeral="Whether the message will be client sided or not (Useful when the bot has no perms).")
 @bot.tree.command(name="meme", description="Fetches a funny meme!")
-async def meme(interaction: discord.Interaction, empheral: bool = False):
-    await interaction.response.defer(empheral=empheral)
+async def meme(interaction: discord.Interaction, ephemeral: bool = False):
+    await interaction.response.defer(ephemeral=ephemeral)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get("https://meme-api.com/gimme") as response:
@@ -1674,7 +1890,7 @@ INFORMATIVE COMMANDS
 @bot.tree.command(name="define", description="Define a word")
 @app_commands.describe(word="The word you want to define")
 async def define(interaction: discord.Interaction, word: str):
-    await interaction.response.defer(empheral=True)
+    await interaction.response.defer(ephemeral=True)
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}") as response:
@@ -1738,7 +1954,7 @@ class Convert(app_commands.Group):
     @app_commands.describe(
         image="The image file you want to convert.", 
         format="The format you want to convert the image to.",
-        empheral="If you want the message hidden or not.")
+        ephemeral="If you want the message ephemeral or not.")
     @app_commands.choices(
         format=[
             app_commands.Choice(name="JPEG", value="jpeg"),
@@ -1749,8 +1965,8 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="TIFF", value="tiff"),
         ]
     )
-    async def convert_image(self, interaction: discord.Interaction, image: discord.Attachment, format: str, empheral: bool = True):
-        await interaction.response.defer(empheral=empheral)
+    async def convert_image(self, interaction: discord.Interaction, image: discord.Attachment, format: str, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
         try:
             if not image.content_type.startswith("image/"):
                 await interaction.response.send_message("Please upload a valid image file.", ephemeral=True)
@@ -1790,7 +2006,7 @@ class Convert(app_commands.Group):
     @app_commands.describe(
         video="The uploaded video file you want to convert.", 
         format="The format you want to convert the video to.",
-        empheral="If you want the message hidden or not.")
+        ephemeral="If you want the message ephemeral or not.")
     @app_commands.choices(
         format=[
             app_commands.Choice(name="MP4", value="mp4"),
@@ -1802,8 +2018,8 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="GIF", value="gif")
         ]
     )
-    async def convert_video(self, interaction: discord.Interaction, video: discord.Attachment, format: str, empheral: bool = True):
-        await interaction.response.defer(empheral=empheral)
+    async def convert_video(self, interaction: discord.Interaction, video: discord.Attachment, format: str, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
         try:
             video_data = await video.read()
             output_filename = await asyncio.to_thread(self.process_video, video_data, video.filename, format.value)
@@ -1836,7 +2052,7 @@ class Convert(app_commands.Group):
         link="The YouTube video link",
         resolution="The resolution of the video",
         output_format="The output format of the video",
-        empheral="If you want the message hidden or not."
+        ephemeral="If you want the message ephemeral or not."
     )
     @app_commands.choices(
         resolution=[
@@ -1855,8 +2071,8 @@ class Convert(app_commands.Group):
             app_commands.Choice(name="MP3", value="mp3"),
         ]
     )
-    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str, output_format: str, empheral: bool = True):
-        await interaction.response.defer(empheral=empheral)
+    async def convert_youtube(self, interaction: discord.Interaction, link: str, resolution: str, output_format: str, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
         try:
             if not link.startswith(("https://youtube.com", "https://www.youtube.com", "https://youtu.be", "https://www.youtu.be")):
                 await interaction.followup.send("Please provide a valid YouTube link.", ephemeral=True)
@@ -2716,6 +2932,7 @@ ECONOMY COMMANDS
 # Eco data
 
 items = open_file("storage/economy/items.json")
+eco_path = "storage/economy/economy.json"
 
 # Hourly shop system
 
@@ -2723,7 +2940,6 @@ SHOP = []
 
 @tasks.loop(hours=1)
 async def handle_eco_shop():
-    """Updates the global shop list with random items."""
     global SHOP
     SHOP = []
     shop_items = random.sample(list(items.items()), min(10, len(items)))
@@ -2738,7 +2954,7 @@ async def handle_eco_shop():
             })
     
 def create_account(id):
-    players = open_file("storage/economy/economy.json")
+    players = open_file(eco_path)
 
     try:
         lastPlayerData = next(reversed(players.values()))
@@ -2787,32 +3003,178 @@ def create_account(id):
         }
     }
 
-    save_file("storage/economy/economy.json", players)
+    save_file(eco_path, players)
 
-# Player data
+'''
+
+Maybe I'll use this, not sure yet
+
 def get_player_data(id, data):
-    players = open_file("storage/economy/economy.json")
+    players = open_file(eco_path)
     if id not in players:
         create_account(id)
     
     player_data = players[id]
     if data == "balance":
         return player_data["balance"]["bank"], player_data["balance"]["wallet"], player_data["balance"]["maxBank"]
-
+'''
 # Base currency system setup
-async def handle_transactions(interaction, userid, amount, type):
-    pass
 
-@bot.tree.command(name="balance", description="Check a balance of someone's wallent and bank!")
-async def balance(interaction: discord.Interaction):
-    pass
+async def process_transaction(user_id, transaction_type, amount):
+    eco = open_file(eco_path)
+
+    player_data = eco[str(user_id)]
+    purse_balance = int(player_data["balance"]["wallet"])
+    bank_balance = int(player_data["balance"]["bank"])
+    max_bank = int(player_data["balance"]["maxBank"])
+
+    if int(amount) <= 0:
+        return "The amount must be a positive number."
+
+    if transaction_type == "deposit":
+        if purse_balance < int(amount):
+            return False, "Insufficient funds in purse."
+        if bank_balance + int(amount) > max_bank:
+            return False, "This exceeds your bank capacity."
+        player_data["balance"]["wallet"] -= int(amount)
+        player_data["balance"]["bank"] += int(amount)
+    elif transaction_type == "withdraw":
+        if bank_balance < int(amount):
+            return False, "Insufficient funds in bank."
+        player_data["balance"]["wallet"] += int(amount)
+        player_data["balance"]["bank"] -= int(amount)
+    else:
+        return False, "Invalid transaction type."
+
+    save_file(eco_path, eco)
+    
+    return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
+@bot.tree.command(name="balance", description="Check a user's wallet and bank balance!")
+@app_commands.describe(user="The user whose balance you want to check.")
+async def balance(interaction: discord.Interaction, user: discord.User = None):
+    await interaction.response.defer()
+    try:
+        user = user or interaction.user
+        user_id = str(user.id)
+
+        eco = open_file(eco_path)
+
+        if user_id not in eco:
+            create_account(user_id)
+
+        player_data = eco[user_id]
+        purse_balance = int(player_data["balance"]["wallet"])
+        bank_balance = int(player_data["balance"]["bank"])
+        max_bank = int(player_data["balance"]["maxBank"])
+
+        embed = discord.Embed(
+            title=f"{user.display_name}'s Balance",
+            description=(
+                f"**Wallet:** {purse_balance}\n"
+                f"**Bank:** {bank_balance} / {max_bank} ({(bank_balance / max_bank) * 100:.2f}%)"
+            ),
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+
+        async def update_embed():
+            updated_embed = discord.Embed(
+                title=f"{user.display_name}'s Balance",
+                description=(
+                    f"**Wallet:** {eco[user_id]['balance']['wallet']}\n"
+                    f"**Bank:** {eco[user_id]['balance']['bank']} / {eco[user_id]['balance']['maxBank']} "
+                    f"({(eco[user_id]['balance']['bank'] / eco[user_id]['balance']['maxBank']) * 100:.2f}%)"
+                ),
+                color=discord.Color.green()
+            )
+            updated_embed.set_footer(text=f"Requested by {interaction.user.display_name}")
+            return updated_embed
+
+        view = RestrictedView(interaction.user)
+
+        withdraw_button = discord.ui.Button(label="Withdraw", style=discord.ButtonStyle.red)
+        async def withdraw_callback(interaction: discord.Interaction):
+            if interaction.user.id != user.id:
+                return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+
+            modal = discord.ui.Modal(title="Withdraw")
+            amount_input = discord.ui.TextInput(label="Amount to withdraw")
+            modal.add_item(amount_input)
+
+            async def modal_callback(modal_interaction: discord.Interaction):
+                amount = int(amount_input.value)
+                success, transaction_result = await process_transaction(modal_interaction.user.id, "withdraw", amount)
+                if success:
+                    eco[user_id]['balance']['wallet'] += amount
+                    eco[user_id]['balance']['bank'] -= amount
+                    save_file(eco_path, eco)
+
+                    updated_embed = await update_embed()
+                    await interaction.message.edit(embed=updated_embed, view=view)
+                await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+
+            modal.on_submit = modal_callback
+            await interaction.response.send_modal(modal)
+        withdraw_button.callback = withdraw_callback
+        view.add_item(withdraw_button)
+
+        deposit_button = discord.ui.Button(label="Deposit", style=discord.ButtonStyle.green)
+        async def deposit_callback(interaction: discord.Interaction):
+            if interaction.user.id != user.id:
+                return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+
+            modal = discord.ui.Modal(title="Deposit")
+            amount_input = discord.ui.TextInput(label="Amount to deposit")
+            modal.add_item(amount_input)
+
+            async def modal_callback(modal_interaction: discord.Interaction):
+                amount = int(amount_input.value)
+                success, transaction_result = await process_transaction(modal_interaction.user.id, "deposit", amount)
+                if success:
+                    eco[user_id]['balance']['wallet'] -= amount
+                    eco[user_id]['balance']['bank'] += amount
+                    save_file(eco_path, eco)
+
+                    updated_embed = await update_embed()
+                    await interaction.message.edit(embed=updated_embed, view=view)
+                await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+
+            modal.on_submit = modal_callback
+            await interaction.response.send_modal(modal)
+        deposit_button.callback = deposit_callback
+        view.add_item(deposit_button)
+
+        await interaction.followup.send(embed=embed, view=view)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="withdraw", description="Withdraw money from the bank.")
-async def withdraw(interaction: discord.Interaction):
-    pass
+async def withdraw(interaction: discord.Interaction, amount: int):
+    await interaction.response.defer()
+    try:
+        user_id = str(interaction.user.id)
+        result = await process_transaction(user_id, "withdraw", amount)
+        
+        if result[0] == True:
+            await interaction.followup.send(result[1], ephemeral=True)
+        else:
+            await interaction.followup.send(result[1], ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
+
 @bot.tree.command(name="deposit", description="Deposit money to the bank.")
-async def deposit(interaction: discord.Interaction):
-    pass
+async def deposit(interaction: discord.Interaction, amount: int):
+    await interaction.response.defer()
+    try:
+        user_id = str(interaction.user.id)
+        result = await process_transaction(user_id, "deposit", amount)
+        
+        if result[0] == True:
+            await interaction.followup.send(result[1], ephemeral=True)
+        else:
+            await interaction.followup.send(result[1], ephemeral=True)
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 @bot.tree.command(name="pay", description="Pay other user coins.")
 async def pay(interaction: discord.Interaction):
@@ -2912,7 +3274,7 @@ class AlertGroup(app_commands.Group):
 
     @app_commands.command(name="follow", description="Subscribe or unsubscribe from updates")
     async def alert_follow(self, interaction: discord.Interaction):
-        await interaction.response.defer(empheral=True)
+        await interaction.response.defer(ephemeral=True)
         try:
             member_info = open_file("info/member_info.json")
             user = interaction.user.id
@@ -3340,7 +3702,7 @@ class ReportButtons(discord.ui.View):
     other="Any other information needed)",
 )
 async def report(interaction: discord.Interaction, type: str, proof: str, user: str, other: str):
-    await interaction.response.defer(empheral=True)
+    await interaction.response.defer(ephemeral=True)
     try:
         member_info = open_file("info/member_info.json")
         reporter_id = str(interaction.user.id)
