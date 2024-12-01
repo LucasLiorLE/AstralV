@@ -33,9 +33,7 @@ class StatusManager:
             await self.bot.wait_until_ready()
             current_status = random.choice(self.status_messages)
 
-            await self.bot.change_presence(
-                status=discord.Status.dnd, activity=discord.Game(name=current_status)
-            )
+            await self.bot.change_presence(status=discord.Status.dnd, activity=discord.Game(name=current_status))
             await asyncio.sleep(600)
 
 intents = discord.Intents.default()
@@ -74,6 +72,7 @@ def store_log(log_type: str, message: str) -> int:
 
     return current_id
 
+
 async def handle_logs(interaction: discord.Interaction, error: Exception, log_type: str = "error"):
     global log_id_counter
     log_type = log_type.title()
@@ -81,7 +80,7 @@ async def handle_logs(interaction: discord.Interaction, error: Exception, log_ty
     if log_type == "Error" and isinstance(error, Exception):
         embed = discord.Embed(title="An error occurred", color=discord.Color.red())
         embed.add_field(name="Error", value=str(error), inline=False)
-        embed.add_field(name="ID", value=log_id_counter - 1)
+        embed.add_field(name="ID", value=log_id_counter)
 
         if interaction.response.is_done():
             await interaction.followup.send(embed=embed, ephemeral=True)
@@ -90,10 +89,10 @@ async def handle_logs(interaction: discord.Interaction, error: Exception, log_ty
 
         full_error = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
         log_id = store_log(log_type, full_error)
-        print(f"Logged error with ID: {log_id - 1}")
+        print(f"Logged error with ID: {log_id}")
     else:
         log_id = store_log(log_type, str(error))
-        print(f"Logged '{log_type}' with ID: {log_id - 1}")
+        print(f"Logged '{log_type}' with ID: {log_id}")
 
 def parse_duration(duration_str):
     duration_regex = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
@@ -294,20 +293,16 @@ async def error_test(interaction: discord.Interaction):
 async def view_error(interaction: discord.Interaction, error_id: int):
     await interaction.response.defer()
 
-    # Check if the user is an admin
     if interaction.user.id not in botAdmins:
         await interaction.followup.send("You do not have permission to view this error.", ephemeral=True)
         return
 
-    # Search for the error ID in logs
     for log_type, log_entries in logs.items():
         for entry in log_entries:
             if entry["ID"] == error_id:
-                # Extract log details
                 timestamp = entry["Time"]
                 error_message = entry.get("Message", "No error message available.")  # Use 'Message' key
                 
-                # Create the embed
                 embed = discord.Embed(
                     title=f"Error ID: {error_id}",
                     color=discord.Color.red()
@@ -319,9 +314,7 @@ async def view_error(interaction: discord.Interaction, error_id: int):
                 await interaction.followup.send(embed=embed)
                 return
 
-    # If no matching error ID is found
     await interaction.followup.send(f"No error found with ID {error_id}", ephemeral=True)
-
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -382,7 +375,7 @@ async def info(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.14a")
+        embed.add_field(name="Version", value="v1.1.15a")
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
         embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
@@ -613,13 +606,45 @@ BTD6 COMMANDS
 class BloonsTD6CommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands")
+
+    @app_commands.command(name="connect", description="Connect your BTD6 account!")
+    async def btd6connect(self, interaction: discord.Interaction, oak_id: str = None):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            if not oak_id:
+                embed = discord.Embed(
+                    title="How to obtain your Open Access Key (OAK)",
+                    description="1. Go in game\n"
+                                "2. Go to settings\n"
+                                "3. At the bottom, click \"Open Data API\"\n"
+                                "4. Generate a new API and click copy\n\n"
+                                "[Click this for more information](https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API)",
+                    color=discord.Color.dark_gold)
+                embed.set_footer("Please keep in mind you need to renew this once every 90 days.")
+
+                await interaction.followup.send(embed=embed)
+
+            if oak_id:
+                member_info = open_file("info/member_info.json")
+                discord_user_id = str(interaction.user.id)
+
+                if discord_user_id not in member_info:
+                    member_info[discord_user_id] = {}
+
+                member_info[discord_user_id]["btd6oakkey"] = oak_id
+                save_file("info/member_info.json", member_info)
+                
+                await interaction.followup.send("Success! Your BTD6 (Maybe someone else's) was successfully linked.")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
         
     @app_commands.command(name="racedata", description="Get race data for a specific BT6 race ID.")
     @app_commands.describe(race_id="ID of the race you want to view the data for.")
     async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
-            url = f"https://data.ninjakiwi.com/btd6/races/{race_id}/metadata"
+            url = f"https://data.ninjakiwi.com/btd6/races/{race_id}/leaderboard"
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     if response.status == 200:
@@ -631,7 +656,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
                             embed = discord.Embed(
                                 title=f"BTD6 Race: {race_info['name']}",
                                 description=f"Map: {race_info['map']}\nMode: {race_info['mode']}\nDifficulty: {race_info['difficulty']}",
-                                color=discord.Color.blue()
+                                color=discord.Color.red()
                             )
                             embed.set_thumbnail(url=race_info['mapURL'])
                             embed.add_field(name="Starting Cash", value=f"${race_info['startingCash']}", inline=False)
@@ -662,8 +687,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
                     leaderboard = data['body']
                     embed = discord.Embed(
                         title=f"BTD6 Race Leaderboard: {race_id}",
-                        color=discord.Color.green(),
-                        description="Here's the leaderboard for the specified race."
+                        color=discord.Color.orange(),
                     )
 
                     for i, player in enumerate(leaderboard[:10]):
@@ -701,7 +725,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
                     embed = discord.Embed(
                         title="BTD6 Race Events",
                         color=discord.Color.blue(),
-                        description="Here's a list of the latest BTD6 race events."
                     )
 
                     for i, race in enumerate(body):
@@ -728,13 +751,19 @@ class BloonsTD6CommandGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-
     @app_commands.command(name="profile", description="Displays info about a BTD6 player!")
     @app_commands.describe(oak_key="https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API")
-    async def btd6profile(self, interaction: discord.Interaction, oak_key: str):
+    async def btd6profile(self, interaction: discord.Interaction, oak_key: str = None):
         await interaction.response.defer()
-
         try:
+            member_info = open_file("info/member_info.json")
+            discord_user_id = str(interaction.user.id)
+            if (discord_user_id not in member_info or "btd6oakkey" not in member_info[discord_user_id]):
+                await interaction.followup.send("You do not have a linked BTD6 account.")
+                return
+            else:
+                oak_key = member_info[discord_user_id]["btd6oakkey"]
+
             url = f"https://data.ninjakiwi.com/btd6/users/{oak_key}"
             response = requests.get(url)
 
@@ -758,30 +787,29 @@ class BloonsTD6CommandGroup(app_commands.Group):
                     )
                     embed.set_thumbnail(url=avatar_url)
                     embed.add_field(name="Rank", value=str(rank), inline=True)
-                    embed.add_field(name="Veteran Rank", value=str(veteran_rank), inline=True)
+                    if int(rank) > 155:
+                        embed.add_field(name="Veteran Rank", value=str(veteran_rank), inline=True)
                     embed.add_field(name="Achievements", value=f"{str(achievements)}/150", inline=True)
                     embed.add_field(name="Most Experienced Monkey", value=most_experienced_monkey, inline=True)
                     embed.add_field(name="Followers", value=str(followers), inline=True)
 
-                    # Display gameplay stats
                     gameplay = body.get("gameplay", {})
                     total_cash_earned = gameplay.get("cashEarned", "N/A")
                     highest_round = gameplay.get("highestRound", "N/A")
                     total_games_won = gameplay.get("gamesWon", "N/A")
+                    total_games_played = gameplay.get("gameCount", "N/A")
                     total_monkeys_placed = gameplay.get("monkeysPlaced", "N/A")
 
-                    # Format numbers with commas
                     def format_number(num):
                         if isinstance(num, int):
                             return f"{num:,}"
                         return num
 
-                    embed.add_field(name="Total Cash Earned", value=format_number(total_cash_earned), inline=True)
+                    embed.add_field(name="Total Cash Earned", value=f"${format_number(total_cash_earned)}", inline=True)
                     embed.add_field(name="Highest Round", value=str(highest_round), inline=True)
-                    embed.add_field(name="Total Games Won", value=str(total_games_won), inline=True)
+                    embed.add_field(name="Total Games Won", value=f"{str(total_games_won)}/{str(total_games_played)}", inline=True)
                     embed.add_field(name="Total Monkeys Placed", value=format_number(total_monkeys_placed), inline=True)
 
-                    # Display tower placement stats and percentage usage
                     towers_placed = body.get("towersPlaced", {})
                     tower_lines = ""
                     if total_monkeys_placed != "N/A" and isinstance(total_monkeys_placed, int):
@@ -792,7 +820,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
 
                     embed.add_field(name="Monkeys Placed by Type", value=tower_lines if tower_lines else "N/A", inline=False)
 
-                    # Display bloons popped stats
                     bloons_popped = body.get("bloonsPopped", {})
                     bloon_lines = "\n".join([f"{re.sub(r'([A-Z])', r' \1', bloon_type.replace('Popped', '').replace('Leaked', ' Leaks')).strip().title()}: {format_number(count)}" for bloon_type, count in bloons_popped.items()])
                     embed.add_field(name="Bloons Popped Stats", value=bloon_lines if bloon_lines else "N/A", inline=False)
@@ -805,10 +832,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-# Add the command group to the bot's command tree
 bot.tree.add_command(BloonsTD6CommandGroup())
-
-
 
 """
 OSU COMMANDS
@@ -2974,7 +2998,7 @@ def create_account(id):
         },
         "balance": {
             "bank": 5000,
-            "wallet": 0,
+            "purse": 0,
             "maxBank": 25000
         },
         "inventory": {},
@@ -3015,15 +3039,18 @@ def get_player_data(id, data):
     
     player_data = players[id]
     if data == "balance":
-        return player_data["balance"]["bank"], player_data["balance"]["wallet"], player_data["balance"]["maxBank"]
+        return player_data["balance"]["bank"], player_data["balance"]["purse"], player_data["balance"]["maxBank"]
 '''
 # Base currency system setup
 
 async def process_transaction(user_id, transaction_type, amount):
     eco = open_file(eco_path)
 
+    if user_id not in eco:
+        create_account(user_id)
+
     player_data = eco[str(user_id)]
-    purse_balance = int(player_data["balance"]["wallet"])
+    purse_balance = int(player_data["balance"]["purse"])
     bank_balance = int(player_data["balance"]["bank"])
     max_bank = int(player_data["balance"]["maxBank"])
 
@@ -3035,12 +3062,12 @@ async def process_transaction(user_id, transaction_type, amount):
             return False, "Insufficient funds in purse."
         if bank_balance + int(amount) > max_bank:
             return False, "This exceeds your bank capacity."
-        player_data["balance"]["wallet"] -= int(amount)
+        player_data["balance"]["purse"] -= int(amount)
         player_data["balance"]["bank"] += int(amount)
     elif transaction_type == "withdraw":
         if bank_balance < int(amount):
             return False, "Insufficient funds in bank."
-        player_data["balance"]["wallet"] += int(amount)
+        player_data["balance"]["purse"] += int(amount)
         player_data["balance"]["bank"] -= int(amount)
     else:
         return False, "Invalid transaction type."
@@ -3048,7 +3075,8 @@ async def process_transaction(user_id, transaction_type, amount):
     save_file(eco_path, eco)
     
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
-@bot.tree.command(name="balance", description="Check a user's wallet and bank balance!")
+
+@bot.tree.command(name="balance", description="Check a user's purse and bank balance!")
 @app_commands.describe(user="The user whose balance you want to check.")
 async def balance(interaction: discord.Interaction, user: discord.User = None):
     await interaction.response.defer()
@@ -3059,10 +3087,16 @@ async def balance(interaction: discord.Interaction, user: discord.User = None):
         eco = open_file(eco_path)
 
         if user_id not in eco:
-            create_account(user_id)
+            if user_id == str(interaction.user.id):
+                create_account(user_id)
+            else:
+                await interaction.followup.send("The user does not have an account.")
+                return
+            
+            eco = open_file(eco_path)
 
         player_data = eco[user_id]
-        purse_balance = int(player_data["balance"]["wallet"])
+        purse_balance = int(player_data["balance"]["purse"])
         bank_balance = int(player_data["balance"]["bank"])
         max_bank = int(player_data["balance"]["maxBank"])
 
@@ -3080,7 +3114,7 @@ async def balance(interaction: discord.Interaction, user: discord.User = None):
             updated_embed = discord.Embed(
                 title=f"{user.display_name}'s Balance",
                 description=(
-                    f"**Wallet:** {eco[user_id]['balance']['wallet']}\n"
+                    f"**Wallet:** {eco[user_id]['balance']['purse']}\n"
                     f"**Bank:** {eco[user_id]['balance']['bank']} / {eco[user_id]['balance']['maxBank']} "
                     f"({(eco[user_id]['balance']['bank'] / eco[user_id]['balance']['maxBank']) * 100:.2f}%)"
                 ),
@@ -3104,7 +3138,7 @@ async def balance(interaction: discord.Interaction, user: discord.User = None):
                 amount = int(amount_input.value)
                 success, transaction_result = await process_transaction(modal_interaction.user.id, "withdraw", amount)
                 if success:
-                    eco[user_id]['balance']['wallet'] += amount
+                    eco[user_id]['balance']['purse'] += amount
                     eco[user_id]['balance']['bank'] -= amount
                     save_file(eco_path, eco)
 
@@ -3130,7 +3164,7 @@ async def balance(interaction: discord.Interaction, user: discord.User = None):
                 amount = int(amount_input.value)
                 success, transaction_result = await process_transaction(modal_interaction.user.id, "deposit", amount)
                 if success:
-                    eco[user_id]['balance']['wallet'] -= amount
+                    eco[user_id]['balance']['purse'] -= amount
                     eco[user_id]['balance']['bank'] += amount
                     save_file(eco_path, eco)
 
@@ -3211,6 +3245,273 @@ async def weekly(interaction: discord.Interaction):
 async def monthly(interaction: discord.Interaction):
     pass
 
+"""
+GAME COMMANDS (PART OF ECO)
+"""
+def gambling_stats(user_id, game):
+    eco = open_file(eco_path)
+    if user_id not in eco:
+        create_account(user_id)
+    eco = open_file(eco_path)
+
+    user_info = eco[user_id]
+
+    if game not in user_info:
+        user_info[game] = {
+            "wins": 0,
+            "losses": 0,
+            "draws": 0,
+            "coinsWon": 0,
+            "coinsLost": 0
+        }
+
+        save_file(eco_path, eco)
+    return user_info[game]
+
+def update_stats(user_id, game, result, amount=0):
+    eco = open_file(eco_path)
+    stats = gambling_stats(user_id, game)
+    eco = open_file(eco_path)
+
+    if result == "win":
+        stats["wins"] += 1
+        stats["coinsWon"] += amount
+    elif result == "loss":
+        stats["losses"] += 1
+        stats["coinsLost"] += amount
+    elif result == "draw":
+        stats["draws"] += 1
+
+    eco[user_id][game] = stats
+    save_file(eco_path, eco)
+
+class BlackjackView(discord.ui.View):
+    def __init__(self, player, deck, player_hand, dealer_hand, bot, amount=0):
+        super().__init__(timeout=30 if not bot else None)
+        self.player = player
+        self.deck = deck
+        self.player_hand = player_hand
+        self.dealer_hand = dealer_hand
+        self.bot = bot
+        self.result = None
+        self.amount = amount
+
+    def get_game_state(self):
+        embed = discord.Embed(title="Blackjack Game")
+        embed.add_field(name="Your Hand", value=f"{self.player_hand} (Total: {sum(self.player_hand)})")
+        
+        if self.result is None:
+            embed.add_field(name="Dealer's Hand", value=f"{self.dealer_hand[0]}, ?")
+        else:
+            embed.add_field(name="Dealer's Hand", value=f"{self.dealer_hand} (Total: {sum(self.dealer_hand)})")
+            embed.add_field(name="Result", value=self.result, inline=False)
+        
+        return embed
+
+    @discord.ui.button(label="Hit", style=discord.ButtonStyle.green)
+    async def hit(self, interaction, button):
+        if interaction.user != self.player:
+            await interaction.response.send_message("It's not your turn!", ephemeral=True)
+            return
+
+        self.player_hand.append(self.deck.pop())
+        if sum(self.player_hand) > 21:
+            self.result = "You busted! Dealer wins."
+            update_stats(str(self.player.id), "blackjack", "loss", self.amount)
+            await interaction.response.edit_message(embed=self.get_game_state(), view=None)
+            self.stop()
+            return
+
+        await interaction.response.edit_message(embed=self.get_game_state())
+
+    @discord.ui.button(label="Stand", style=discord.ButtonStyle.red)
+    async def stand(self, interaction, button):
+        if interaction.user != self.player:
+            await interaction.response.send_message("It's not your turn!", ephemeral=True)
+            return
+
+        while sum(self.dealer_hand) < 17:
+            self.dealer_hand.append(self.deck.pop())
+
+        dealer_total = sum(self.dealer_hand)
+        player_total = sum(self.player_hand)
+
+        if dealer_total > 21 or player_total > dealer_total:
+            self.result = "You win!"
+            update_stats(str(self.player.id), "blackjack", "win", self.amount)
+        elif player_total < dealer_total:
+            self.result = "Dealer wins!"
+            update_stats(str(self.player.id), "blackjack", "loss", self.amount)
+        else:
+            self.result = "It's a tie!"
+            update_stats(str(self.player.id), "blackjack", "draw")
+
+        await interaction.response.edit_message(embed=self.get_game_state(), view=None)
+        self.stop()
+
+class ChallengeView(discord.ui.View):
+    def __init__(self, challenger, opponent, amount):
+        super().__init__(timeout=30)
+        self.challenger = challenger
+        self.opponent = opponent
+        self.amount = amount
+        self.response = None
+
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.green)
+    async def accept(self, interaction, button):
+        if interaction.user != self.opponent:
+            await interaction.response.send_message("You are not the challenged user!", ephemeral=True)
+            return
+
+        self.response = True
+        self.stop()
+
+    @discord.ui.button(label="Decline", style=discord.ButtonStyle.red)
+    async def decline(self, interaction, button):
+        if interaction.user != self.opponent:
+            await interaction.response.send_message("You are not the challenged user!", ephemeral=True)
+            return
+
+        self.response = False
+        self.stop()
+
+    async def on_timeout(self):
+        self.response = False
+
+class BlackjackGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="blackjack", description="Not coming soon")
+
+    @app_commands.command(name="wager", description="Wager in a blackjack game")
+    @app_commands.describe(amount="The amount you want to wager", user="User you want to wager against (Or bot if none)")
+    async def bjwager(self, interaction: discord.Interaction, amount: int, user: discord.User = None):
+        try:
+            if user == interaction.user:
+                await interaction.response.send_message("You can't go against yourself!", ephemeral=True)
+                return
+            if user is None:
+                await self.start_game(interaction, amount, bot=True)
+            else:
+                await self.challenge_user(interaction, amount, user=user)
+        except Exception as error:
+            await handle_logs(interaction, error)
+    @app_commands.command(name="casual", description="Play a casual game of blackjack")
+    @app_commands.describe(user="The user you want to play against")
+    async def bjcasual(self, interaction: discord.Interaction, user: discord.User = None):
+        try:
+            if user == interaction.user:
+                await interaction.response.send_message("You can't go against yourself!!", ephemeral=True)
+                return
+            if user is None:
+                await self.start_game(interaction, amount=0, bot=True)
+            else:
+                await self.challenge_user(interaction, amount=0, user=user)
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    async def challenge_user(self, interaction, amount, user):
+        view = ChallengeView(interaction.user, user, amount)
+        await interaction.response.send_message(
+            f"{user.mention}, you have been challenged by {interaction.user.mention} to a blackjack game! Do you accept?",
+            view=view
+        )
+        # Wait for the response or timeout
+        await view.wait()
+        if view.response is None:  # Timeout
+            await interaction.followup.send("The challenge timed out!", ephemeral=True)
+        elif view.response:  # Accepted
+            await self.start_game(interaction, amount=amount, bot=False)
+        else:  # Declined
+            await interaction.followup.send(f"{user.mention} declined the challenge.", ephemeral=True)
+
+    async def start_game(self, interaction, amount, bot):
+        deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11] * 4
+        random.shuffle(deck)
+
+        player_hand = [deck.pop(), deck.pop()]
+        dealer_hand = [deck.pop(), deck.pop()]
+
+        view = BlackjackView(interaction.user, deck, player_hand, dealer_hand, bot, amount)
+        await interaction.followup.send(  # Use followup for subsequent messages
+            embed=view.get_game_state(),
+            view=view
+        )
+        
+    @app_commands.command(name="stats", description="View a user's stats for blackjack")
+    @app_commands.describe(user="The user you want to view the stats for.")
+    async def bjstats(self, interaction: discord.Interaction, user: discord.User = None):
+        user = user or interaction.user
+        stats = gambling_stats(str(user.id), "blackjack")
+
+        embed = discord.Embed(title=f"{user.name}'s Blackjack Stats")
+        embed.add_field(name="Wins", value=stats["wins"])
+        embed.add_field(name="Losses", value=stats["losses"])
+        embed.add_field(name="Draws", value=stats["draws"])
+        embed.add_field(name="Coins Won", value=stats["coinsWon"])
+        embed.add_field(name="Coins Lost", value=stats["coinsLost"])
+
+        await interaction.response.send_message(embed=embed)
+
+class TicTacToeGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="tictactoe", description="Not coming soon")
+
+    @app_commands.command(name="wager", description="Wager in a tic tac toe game")
+    @app_commands.describe(amount="The amount you want to wager")
+    async def tttwager(self, interaction: discord.Interaction, amount: int):
+        pass
+
+    @app_commands.command(name="casual", description="Play a casual gane of tic tac toe")
+    async def tttcasual(self, interaction: discord.Interaction):
+        pass
+
+    @app_commands.command(name="stats", description="View a user's stats for tic tac toe")
+    @app_commands.describe(user="The user you want to view the stats for.")
+
+    async def tttstats(self, interaction: discord.Interaction, user: str = None):
+        pass
+
+
+class connect4Group(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="connect4", description="Not coming soon")
+
+    @app_commands.command(name="wager", description="Wager in a connect 4 game")
+    @app_commands.describe(amount="The amount you want to wager")
+    async def c4wager(self, interaction: discord.Interaction, amount: int):
+        pass
+
+    @app_commands.command(name="casual", description="Play a casual gane of connect 4")
+    async def c4casual(self, interaction: discord.Interaction):
+        pass
+
+    @app_commands.command(name="stats", description="View a user's stats for connect 4")
+    @app_commands.describe(user="The user you want to view the stats for.")
+
+    async def c4stats(self, interaction: discord.Interaction, user: str = None):
+        pass
+
+
+class slotsGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="slots", description="Not coming soon")
+
+    @app_commands.command(name="wager", description="Gamble in slots")
+    @app_commands.describe(amount="The amount you want to wager")
+    async def slotwager(self, interaction: discord.Interaction, amount: int):
+        pass
+
+    @app_commands.command(name="stats", description="View a user's stats for slots")
+    @app_commands.describe(user="The user you want to view the stats for.")
+
+    async def slotstats(self, interaction: discord.Interaction, user: str = None):
+        pass
+
+
+bot.tree.add_command(BlackjackGroup())
+bot.tree.add_command(TicTacToeGroup())
+bot.tree.add_command(connect4Group())
+bot.tree.add_command(slotsGroup())
 
 # Currency system
 class MarketGroup(app_commands.Group):
