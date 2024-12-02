@@ -733,7 +733,8 @@ class ProfileView(discord.ui.View):
         self.emoji_data = self.load_emoji_data()
 
     def load_emoji_data(self):
-        return open_file("storage/emoji_data.json")
+        with open("storage/emoji_data.json", "r") as f:
+            return json.load(f)
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
@@ -772,8 +773,9 @@ class ProfileView(discord.ui.View):
         embed.add_field(name="User", value=f"{name} ({user_id})", inline=False)
         embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({winrate:.2f}%)", inline=False)
         embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
-        if goblin_trophies and goblin_trophies > 0:
-            embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
+        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
         embed.add_field(name="Clan", value=f"{clan_name} ({clan_tag})", inline=False)
         return embed
 
@@ -990,10 +992,10 @@ class RobloxGroup(app_commands.Group):
 
     @app_commands.command(name="description", description="Provides the description of a Roblox account.")
     @app_commands.describe(username="The username of the Roblox account (leave blank to use linked account).")
-    async def rbxdescription(self, interaction: discord.Interaction, username: str = None, user: discord.Member = None):
+    async def rbxdescription(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            discord_user_id = str(user.id) or str(interaction.user.id)
+            discord_user_id = str(member.id) or str(interaction.user.id)
             member_info = open_file("info/member_info.json")
 
             if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
@@ -1016,10 +1018,10 @@ class RobloxGroup(app_commands.Group):
 
     @app_commands.command(name="info", description="Provides info about your linked Roblox account.")
     @app_commands.describe(username="The username of the Roblox account (leave blank to use linked account).")
-    async def rbxinfo(self, interaction: discord.Interaction, username: str = None, user: discord.Member = None):
+    async def rbxinfo(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            discord_user_id = str(user.id) or str(interaction.user.id)
+            discord_user_id = str(member.id) or str(interaction.user.id)
             member_info = open_file("info/member_info.json")
 
             if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
@@ -1088,10 +1090,10 @@ class RobloxGroup(app_commands.Group):
 
     @app_commands.command(name="avatar", description="Provides a Roblox account's avatar.")
     @app_commands.describe(username="The username of the Roblox account (leave blank to use linked account).", items="Whether or not to display the list of currently worn items (default: False).")
-    async def rbxavatar(self, interaction: discord.Interaction, username: str = None, user: discord.Member = None, items: bool = False):
+    async def rbxavatar(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, items: bool = False):
         await interaction.response.defer()
         try:
-            discord_user_id = str(user.id) or str(interaction.user.id)
+            discord_user_id = str(member.id) or str(interaction.user.id)
             member_info = open_file("info/member_info.json")
 
             if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
@@ -1246,10 +1248,10 @@ class GloveView(discord.ui.View):
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @bot.tree.command(name="cgloves", description="Check all the user's gloves in slap battles.")
 @app_commands.describe(username="The user to check gloves for (leave empty to check your own)", ephemeral="If the message is hidden (Useful if no perms)")
-async def cgloves(interaction: discord.Interaction, username: str = None, user: discord.Member = None, ephemeral: bool = True):
+async def cgloves(interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
     await interaction.response.defer(ephemeral=ephemeral)
     try:
-        discord_user_id = str(user.id) or str(interaction.user.id)
+        discord_user_id = str(member.id) or str(interaction.user.id)
 
         if username is None:
             member_info = open_file("info/member_info.json")
@@ -1441,6 +1443,7 @@ async def uuid(interaction: discord.Interaction, username: str):
     uuid_result = await getUUID(interaction, username)
     if uuid_result:
         await interaction.followup.send(f"The UUID for {username} is {uuid_result}")
+
 """
 HYPIXEL COMMANDS
 """
@@ -1517,11 +1520,11 @@ class MemeifyGroup(app_commands.Group):
             
     @app_commands.command(name="petpet", description="Creates a pet-pet gif from a user's avatar, emoji, custom image URL, or uploaded file")
     @app_commands.describe(
-        user="Use a member's avatar",
+        member="Use a member's avatar",
         url="URL to an image to create a pet-pet gif (optional)",
         attachment="File attachment to use for the pet-pet gif (optional)"
     )
-    async def petpet(self, interaction: discord.Interaction, user: discord.Member = None, url: str = None, attachment: discord.Attachment = None):
+    async def petpet(self, interaction: discord.Interaction, member: discord.Member = None, url: str = None, attachment: discord.Attachment = None):
         await interaction.response.defer(ephemeral=True)
         try:
             if attachment:
@@ -1535,10 +1538,10 @@ class MemeifyGroup(app_commands.Group):
                             return
                         image_data = await response.read()
 
-            elif isinstance(user, discord.Member):
-                image_data = await user.display_avatar.read()
+            elif isinstance(member, discord.Member):
+                image_data = await member.display_avatar.read()
             else:
-                image_data = await interaction.user.display_avatar.read()
+                image_data = await interaction.member.display_avatar.read()
 
             source = BytesIO(image_data)
             dest = BytesIO()
@@ -1604,14 +1607,14 @@ async def say(
 )
 async def dm(
     interaction: discord.Interaction,
-    user: discord.Member,
+    member: discord.Member,
     message: str = None,
     attachment: discord.Attachment = None,
 ):
     await interaction.response.defer()
     try:
-        await user.send(content=message, file=await attachment.to_file())
-        await interaction.followup.send(f"Sent '{message}' to {user}")              
+        await member.send(content=message, file=await attachment.to_file())
+        await interaction.followup.send(f"Sent '{message}' to {member}")              
     except Exception as error:
         await handle_logs(interaction, error)
 
@@ -1884,7 +1887,7 @@ async def info(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.22")
+        embed.add_field(name="Version", value="v1.1.21")
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
         embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
@@ -1948,17 +1951,17 @@ async def roleinfo(interaction: discord.Interaction, role: discord.Role):
 
 @bot.tree.command(name="userinfo", description="Provides information about a user.")
 @app_commands.describe(user="The member to get the info for",)
-async def userinfo(interaction: discord.Interaction, user: discord.Member = None):
+async def userinfo(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer(ephemeral=True)
     try:
-        member = user or interaction.user
+        member = member or interaction.user
         embed = discord.Embed(title="User Info", color=0x808080)
-        embed.set_thumbnail(url=user.avatar.url)
-        embed.add_field(name="Username", value=user.display_name)
-        embed.add_field(name="User ID", value=user.id)
-        embed.add_field(name="Joined Discord", value=user.created_at.strftime("%b %d, %Y"))
-        embed.add_field(name="Joined Server", value=user.joined_at.strftime("%b %d, %Y"))
-        embed.add_field(name="Roles", value=", ".join([role.name for role in user.roles]))
+        embed.set_thumbnail(url=member.avatar.url)
+        embed.add_field(name="Username", value=member.display_name)
+        embed.add_field(name="User ID", value=member.id)
+        embed.add_field(name="Joined Discord", value=member.created_at.strftime("%b %d, %Y"))
+        embed.add_field(name="Joined Server", value=member.joined_at.strftime("%b %d, %Y"))
+        embed.add_field(name="Roles", value=", ".join([role.name for role in member.roles]))
         embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
         await interaction.followup.send(embed=embed)
     except Exception as error:
@@ -1970,12 +1973,12 @@ class AvatarGroup(app_commands.Group):
 
     @app_commands.command(name="get", description="Displays a user's global avatar.")
     @app_commands.describe(user="The member to get the avatar for")
-    async def get(self, interaction: discord.Interaction, user: discord.Member = None):
+    async def get(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            member = user or interaction.user
-            embed = discord.Embed(title=f"{user.display_name}'s Avatar", color=0x808080)
-            embed.set_image(url=user.avatar.url)
+            member = member or interaction.user
+            embed = discord.Embed(title=f"{member.display_name}'s Avatar", color=0x808080)
+            embed.set_image(url=member.avatar.url)
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
             await interaction.followup.send(embed=embed)
         except Exception as error:
@@ -1983,12 +1986,12 @@ class AvatarGroup(app_commands.Group):
 
     @app_commands.command(name="server", description="Displays a user's server-specific avatar if available.",)
     @app_commands.describe(user="The member to get the server-specific avatar for")
-    async def server(self, interaction: discord.Interaction, user: discord.Member = None):
+    async def server(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            member = user or interaction.user
-            embed = discord.Embed(title=f"{user.display_name}'s Server Avatar", color=0x808080)
-            embed.set_image(url=user.display_avatar.url)  
+            member = member or interaction.user
+            embed = discord.Embed(title=f"{member.display_name}'s Server Avatar", color=0x808080)
+            embed.set_image(url=member.display_avatar.url)  
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
             await interaction.followup.send(embed=embed)
         except Exception as error:
@@ -2050,10 +2053,12 @@ async def define(interaction: discord.Interaction, word: str):
                 field_value = f"**Definition**: {definition.get('definition', '') or 'Nothing'}\n"
                 field_value += f"**Example**: {definition.get('example', 'Nothing')}\n"
 
+                synonyms = definition.get("synonyms", [])
+                antonyms = definition.get("antonyms", [])
                 if synonyms:
-                    field_value += f"**Synonyms**: {', '.join(definition.get("synonyms", []))}\n"
+                    field_value += f"**Synonyms**: {', '.join(synonyms)}\n"
                 if antonyms:
-                    field_value += f"**Antonyms**: {', '.join(definition.get("antonyms", []))}\n"
+                    field_value += f"**Antonyms**: {', '.join(antonyms)}\n"
 
                 embed.add_field(name=part_of_speech.capitalize(), value=field_value, inline=False)
 
@@ -2488,21 +2493,21 @@ async def setroles(interaction: discord.Interaction, option: str, role: discord.
 
 @bot.command(name="purge")
 @commands.has_permissions(manage_messages=True)
-async def cpurge(ctx, amount: int, user: discord.Member = None):
+async def cpurge(ctx, amount: int, member: discord.Member = None):
     if amount <= 0:
         await ctx.send("The amount must be greater than zero.", delete_after=5)
         return
 
     messages_to_delete = []
     
-    if user is None:
+    if member is None:
         deleted_messages = await ctx.channel.purge(limit=amount)
         messages_to_delete = deleted_messages
     else:
         async for message in ctx.channel.history(limit=1000):
             if len(messages_to_delete) >= amount:
                 break
-            if message.author.id == user.id:
+            if message.author.id == member.id:
                 messages_to_delete.append(message)
 
         await ctx.channel.delete_messages(messages_to_delete)
@@ -2681,27 +2686,27 @@ async def clean(interaction: discord.Interaction, amount: int = 10, reason: str 
 
 @bot.tree.command(name="role", description="Toggle a role for a member")
 @app_commands.describe(user="Member to manage roles for", role="Role to manage", reason="Reason for management")
-async def role(interaction: discord.Interaction, user: discord.Member, role: discord.Role, reason: str = "No reason provided."):
+async def role(interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "manage_roles"):
             return
     
-        if role in user.roles:
-            await user.remove_roles(role)
+        if role in member.roles:
+            await member.remove_roles(role)
             task = "removed"
         else:
-            await user.add_roles(role)
+            await member.add_roles(role)
             task = "added"
 
         embed = discord.Embed(
                 title=f"Role {task}.",
-                description=f"{role.mention} was successfully {task} to {user.mention}",
+                description=f"{role.mention} was successfully {task} to {member.mention}",
                 color=discord.Color.orange
             )
         await interaction.followup.send(embed=embed)
 
-        await store_modlog(f"Role {task}", interaction.guild.id, interaction.user, user, reason=reason)
+        await store_modlog(f"Role {task}", interaction.guild.id, interaction.user, member, reason=reason)
     except Exception as error:
         await handle_logs(interaction, error)
 
@@ -2837,7 +2842,7 @@ async def mute(interaction: discord.Interaction, member: discord.Member, duratio
             return
 
         until = discord.utils.utcnow() + duration
-        await user.timeout(until, reason=reason)
+        await member.timeout(until, reason=reason)
 
         hours, remainder = divmod(duration.total_seconds(), 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -2850,12 +2855,12 @@ async def mute(interaction: discord.Interaction, member: discord.Member, duratio
 
 @bot.tree.command(name="unmute", description="Unmutes a user.")
 @commands.has_permissions(kick_members=True)
-async def unmute(interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
+async def unmute(interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "timeout_members"):
             return
-        await user.timeout(None, reason=reason)
+        await member.timeout(None, reason=reason)
         await dmbed(interaction, member, "unmuted", reason)
 
         await store_modlog("Unmute", interaction.guild.id, interaction.user, member, reason=reason)
@@ -2864,12 +2869,12 @@ async def unmute(interaction: discord.Interaction, user: discord.Member, reason:
 
 @bot.tree.command(name="kick", description="Kick a member out of the guild.")
 @commands.has_permissions(kick_members=True)
-async def kick(interaction: discord.Interaction, user: discord.Member, reason: str = "No Reason Provided."):
+async def kick(interaction: discord.Interaction, member: discord.Member, reason: str = "No Reason Provided."):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "kick_members"):
             return
-        await user.kick(reason=reason)
+        await member.kick(reason=reason)
         await dmbed(interaction, member, "kicked", reason)
 
         await store_modlog("Kick", interaction.guild.id, interaction.user, member, reason=reason)
@@ -2880,7 +2885,7 @@ class DelLog(discord.ui.Select):
     def __init__(
         self,
         log_type,
-        user: discord.Member,
+        member: discord.Member,
         embed: discord.Embed,
         interaction: discord.Interaction,
         *args,
@@ -2897,9 +2902,9 @@ class DelLog(discord.ui.Select):
         server_info = open_file("info/server_info.json")
         
         if self.log_type == "warn":
-            self.logs = server_info.get("warnings", {}).get(str(interaction.guild.id), {}).get(str(user.id), {})
+            self.logs = server_info.get("warnings", {}).get(str(interaction.guild.id), {}).get(str(member.id), {})
         elif self.log_type == "note":
-            self.logs = server_info.get("notes", {}).get(str(interaction.guild.id), {}).get(str(user.id), {})
+            self.logs = server_info.get("notes", {}).get(str(interaction.guild.id), {}).get(str(member.id), {})
 
         self.options = [
             discord.SelectOption(
@@ -2978,7 +2983,7 @@ class DelLog(discord.ui.Select):
         app_commands.Choice(name="KYS Joke", value="kys joke"),
     ]
 )
-async def warn(interaction: discord.Interaction, user: discord.Member, reason: str):
+async def warn(interaction: discord.Interaction, member: discord.Member, reason: str):
     await interaction.response.defer()
 
     try:
@@ -2990,9 +2995,9 @@ async def warn(interaction: discord.Interaction, user: discord.Member, reason: s
 
         server_info.setdefault("warnings", {})
         server_info["warnings"].setdefault(server_id, {})
-        server_info["warnings"][server_id].setdefault(str(user.id), {})
+        server_info["warnings"][server_id].setdefault(str(member.id), {})
 
-        member_warnings = server_info["warnings"][server_id][str(user.id)]
+        member_warnings = server_info["warnings"][server_id][str(member.id)]
 
         if member_warnings:
             try:
@@ -3002,7 +3007,7 @@ async def warn(interaction: discord.Interaction, user: discord.Member, reason: s
                 if int(time.time()) - last_warning_time < 60:
                     await interaction.followup.send(embed=discord.Embed(
                         title="Warning Error",
-                        description=f"{user.mention} has been warned recently and cannot be warned again yet.",
+                        description=f"{member.mention} has been warned recently and cannot be warned again yet.",
                         color=0xFF0000
                     ))
                     return
@@ -3039,7 +3044,7 @@ async def warn(interaction: discord.Interaction, user: discord.Member, reason: s
             except discord.Forbidden:
                 await interaction.followup.send(embed=discord.Embed(
                     title="Mute Failed",
-                    description=f"Failed to mute {user.mention} due to insufficient permissions.",
+                    description=f"Failed to mute {member.mention} due to insufficient permissions.",
                     color=0xFF0000
                 ))
     except Exception as error:
@@ -3047,7 +3052,7 @@ async def warn(interaction: discord.Interaction, user: discord.Member, reason: s
 
 @bot.tree.command(name="warns", description="Displays the warnings for a user.")
 @app_commands.describe(user="The member whose warnings you want to view.")
-async def warns(interaction: discord.Interaction, user: discord.Member = None):
+async def warns(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "manage_messages"):
@@ -3057,8 +3062,8 @@ async def warns(interaction: discord.Interaction, user: discord.Member = None):
         server_info = open_file("info/server_info.json")
         server_id = str(interaction.guild.id)
         
-        member_warnings = server_info["warnings"].get(server_id, {}).get(str(user.id), {})
-        embed = discord.Embed(title=f"Warnings for {user.display_name}", color=0xFFA500)
+        member_warnings = server_info["warnings"].get(server_id, {}).get(str(member.id), {})
+        embed = discord.Embed(title=f"Warnings for {member.display_name}", color=0xFFA500)
 
         if member_warnings:
             for case_number, warning_data in sorted(member_warnings.items(), key=lambda x: int(x[0])):
@@ -3075,20 +3080,20 @@ async def warns(interaction: discord.Interaction, user: discord.Member = None):
             view.add_item(del_log_dropdown)
             await interaction.followup.send(embed=embed, view=view)
         else:
-            await interaction.followup.send(f"No warnings found for {user.display_name}.", ephemeral=True)
+            await interaction.followup.send(f"No warnings found for {member.display_name}.", ephemeral=True)
     except Exception as error:
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="note", description="Gives a note to a user.")
 @app_commands.describe(user="The member to add a note to", note="Whatever you want to say")
-async def note(interaction: discord.Interaction, user: discord.Member, note: str):
+async def note(interaction: discord.Interaction, member: discord.Member, note: str):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "manage_messages"):
             return
         
         server_info = open_file("info/server_info.json")
-        member_notes = server_info["notes"].setdefault(str(interaction.guild.id), {}).setdefault(str(user.id), {})
+        member_notes = server_info["notes"].setdefault(str(interaction.guild.id), {}).setdefault(str(member.id), {})
         case_number = str(max(map(int, member_notes.keys()), default=0) + 1)
         member_notes[case_number] = {
             "reason": note,
@@ -3098,7 +3103,7 @@ async def note(interaction: discord.Interaction, user: discord.Member, note: str
         save_file("info/server_info.json", server_info)
         await interaction.followup.send(embed=discord.Embed(
             title="Note Added",
-            description=f"Added note to: {user.mention}\nCase #{case_number}\n{note}",
+            description=f"Added note to: {member.mention}\nCase #{case_number}\n{note}",
             color=0xFFA500
         ))
     except Exception as error:
@@ -3106,7 +3111,7 @@ async def note(interaction: discord.Interaction, user: discord.Member, note: str
 
 @bot.tree.command(name="notes", description="Displays the notes for a member")
 @app_commands.describe(user="The member whose notes you want to view.")
-async def notes(interaction: discord.Interaction, user: discord.Member = None):
+async def notes(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "manage_messages"):
@@ -3114,8 +3119,8 @@ async def notes(interaction: discord.Interaction, user: discord.Member = None):
         
         member = member or interaction.user
         server_info = open_file("info/server_info.json")
-        member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(user.id), {})
-        embed = discord.Embed(title=f"Notes for {user.display_name}", color=0xFFA500)
+        member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(member.id), {})
+        embed = discord.Embed(title=f"Notes for {member.display_name}", color=0xFFA500)
 
         if member_notes:
             for case_number, note in sorted(member_notes.items(), key=lambda x: int(x[0])):
@@ -3134,7 +3139,7 @@ async def notes(interaction: discord.Interaction, user: discord.Member = None):
 
             await interaction.followup.send(embed=embed, view=view)
         else:
-            await interaction.followup.send(f"No notes found for {user.display_name}.", ephemeral=True)
+            await interaction.followup.send(f"No notes found for {member.display_name}.", ephemeral=True)
     except Exception as error:
         await handle_logs(interaction, error)
 
@@ -3203,19 +3208,19 @@ class LogSelect(discord.ui.Select):
         await interaction.message.edit(view=self.view)
 
 @bot.tree.command(name="modlogs", description="View moderation logs for a user.")
-async def modlogs(interaction: discord.Interaction, user: discord.Member, page: int = 1):
+async def modlogs(interaction: discord.Interaction, member: discord.Member, page: int = 1):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "manage_messages"):
             return
-        embed, total_logs, total_pages = await send_modlog_embed(interaction, user, page)
+        embed, total_logs, total_pages = await send_modlog_embed(interaction, member, page)
 
         if embed is None:
             return
 
         options = [discord.SelectOption(label=f"Page {i + 1}", value=str(i + 1)) for i in range(total_pages)]
 
-        select_menu = LogSelect(options, interaction, user, page)
+        select_menu = LogSelect(options, interaction, member, page)
         view = discord.ui.View()
         view.add_item(select_menu)
 
@@ -3225,7 +3230,7 @@ async def modlogs(interaction: discord.Interaction, user: discord.Member, page: 
 
 @bot.tree.command(name="modstats", description="Check the moderation statistics of a moderator")
 @commands.has_permissions(kick_members=True)
-async def modstats(interaction: discord.Interaction, user: discord.Member = None):
+async def modstats(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
         if not await check_mod(interaction, "manage_messages"):
@@ -3247,7 +3252,7 @@ async def modstats(interaction: discord.Interaction, user: discord.Member = None
         thirty_days_ago = now - timedelta(days=30)
 
         for server_id, moderators in server_info["modstats"].items():
-            user_stats = moderators.get(str(user.id), {})
+            user_stats = moderators.get(str(member.id), {})
 
             for case_number, action in user_stats.items():
                 action_type = action["type"].lower()
@@ -3263,7 +3268,7 @@ async def modstats(interaction: discord.Interaction, user: discord.Member = None
                     stats[action_type]["all time"] += 1
                     totals["all time"] += 1
 
-        embed = discord.Embed(title=f"Moderation Statistics for {user.display_name}", color=0xFFA500)
+        embed = discord.Embed(title=f"Moderation Statistics for {member.display_name}", color=0xFFA500)
         embed.add_field(name="\u200b", value="**Last 7 days**")
         embed.add_field(name="\u200b", value="**Last 30 days**")
         embed.add_field(name="\u200b", value="**All Time**")
@@ -3411,7 +3416,7 @@ async def process_transaction(user_id, transaction_type, amount):
 
 @bot.tree.command(name="balance", description="Check a user's purse and bank balance!")
 @app_commands.describe(user="The user whose balance you want to check.")
-async def balance(interaction: discord.Interaction, user: discord.Member = None):
+async def balance(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
         user = user or interaction.user
