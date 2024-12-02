@@ -733,8 +733,7 @@ class ProfileView(discord.ui.View):
         self.emoji_data = self.load_emoji_data()
 
     def load_emoji_data(self):
-        with open("storage/emoji_data.json", "r") as f:
-            return json.load(f)
+        return open_file("storage/emoji_data.json")
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
@@ -773,7 +772,8 @@ class ProfileView(discord.ui.View):
         embed.add_field(name="User", value=f"{name} ({user_id})", inline=False)
         embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({winrate:.2f}%)", inline=False)
         embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
-        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        if goblin_trophies and goblin_trophies > 0:
+            embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
         embed.add_field(name="Clan", value=f"{clan_name} ({clan_tag})", inline=False)
         return embed
 
@@ -1425,7 +1425,22 @@ async def cgloves(interaction: discord.Interaction, username: str = None, user: 
 MINECRAFT COMMANDS
 """
 
+async def getUUID(interaction: discord.Interaction, username: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.mojang.com/users/profiles/minecraft/{username}") as response:
+            if response.status == 200:
+                return (await response.json())["id"]
+            else:
+                await interaction.followup.send(f"The usename is incorrect or the minecraft API is down. Exiting with status: {response.status}")
+                return False
 
+@bot.tree.command(name="uuid", description="Get a Minecraft UUID based on a username")
+@app_commands.describe(username="A Minecraft username")
+async def uuid(interaction: discord.Interaction, username: str):
+    await interaction.response.defer()
+    uuid_result = await getUUID(interaction, username)
+    if uuid_result:
+        await interaction.followup.send(f"The UUID for {username} is {uuid_result}")
 """
 HYPIXEL COMMANDS
 """
@@ -1869,7 +1884,7 @@ async def info(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.21")
+        embed.add_field(name="Version", value="v1.1.22")
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
         embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
@@ -2035,12 +2050,10 @@ async def define(interaction: discord.Interaction, word: str):
                 field_value = f"**Definition**: {definition.get('definition', '') or 'Nothing'}\n"
                 field_value += f"**Example**: {definition.get('example', 'Nothing')}\n"
 
-                synonyms = definition.get("synonyms", [])
-                antonyms = definition.get("antonyms", [])
                 if synonyms:
-                    field_value += f"**Synonyms**: {', '.join(synonyms)}\n"
+                    field_value += f"**Synonyms**: {', '.join(definition.get("synonyms", []))}\n"
                 if antonyms:
-                    field_value += f"**Antonyms**: {', '.join(antonyms)}\n"
+                    field_value += f"**Antonyms**: {', '.join(definition.get("antonyms", []))}\n"
 
                 embed.add_field(name=part_of_speech.capitalize(), value=field_value, inline=False)
 
