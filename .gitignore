@@ -1,3 +1,10 @@
+# Basic stuff
+/storage/secrets.json
+/storage/cookies.txt
+/info/server_info.json
+/info/member_info.json
+/testing.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
