@@ -1522,38 +1522,69 @@ async def uuid(interaction: discord.Interaction, username: str):
 HYPIXEL COMMANDS 
 """
 class HypixelView(discord.ui.View):
-    def __init__(self, player_data, current_page="main"):
+    def __init__(self, player_data, message, current_page="main"):
         super().__init__(timeout=None)
+        self.message = message
         self.player_data = player_data
+        self.player = self.player_data.get("player", {})
         self.current_page = current_page
 
         self.main_button = discord.ui.Button(label="Main", style=discord.ButtonStyle.secondary)
         self.main_button.callback = self.show_main_page
         self.add_item(self.main_button)
 
+        self.skyblock_button = discord.ui.Button(label="Skyblock", style=discord.ButtonStyle.secondary)
+        self.skyblock_button.callback = self.show_skyblock_page
+        self.add_item(self.skyblock_button)
+
         self.update_buttons()
-    
     
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
+        self.skyblock_button.disabled = self.current_page == "skyblock"
 
+    async def show_skyblock_page(self, interaction: discord.Interaction):
+        self.current_page = "skyblock"
+        self.update_buttons()
+
+        embed = self.create_skyblock_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_skyblock_embed(self):
+        cookie_claim_time = self.player.get("skyblock_free_cookie", None)
+        cookie_string = f"<t:{int(int(cookie_claim_time) / 1000)}:F>" if cookie_claim_time is not None else "Never claimed."
+
+        profile_data = self.player.get("stats", None).get("SkyBlock", None).get("profiles", None)
+
+        cute_names = [profile_data[i]["cute_name"] for i in profile_data]
+        profile_ids = [profile_data[i]["profile_id"] for i in profile_data]
+
+        embed = discord.Embed(title="Skyblock data")
+
+        embed.add_field(name="Free booster cookie claim time", value=f"{cookie_string}", inline=False)
+        for profiles in range(len(cute_names)):
+            embed.add_field(name=cute_names[profiles], value=profile_ids[profiles], inline=False)
+        return embed
+    
     async def show_main_page(self, interaction: discord.Interaction):
         self.current_page = "main"
         self.update_buttons()
 
         embed = self.create_main_embed()
-        await interaction.response.send_message(embed=embed, view=self)
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
 
     def create_main_embed(self):
-        player = self.player_data.get("player", "Unknown")
-        id = player.get("_id", "Unknown")
-        rank = player.get("newPackageRank", "Unknown")
-        username = player.get("displayname", "Unknown")
+        id = self.player.get("_id", "Unknown")
+        rank = self.player.get("newPackageRank", "Unknown")
+        username = self.player.get("displayname", "Unknown")
 
-        firstLogin = player.get("firstLogin", "Unknown")
-        lastLogin = player.get("lastLogin", "Unknown")
-        lastLogout = player.get("lastLogout", "Unknown")
-        recentGame = player.get("mostRecentGameType", "Unknown")
+        firstLogin = self.player.get("firstLogin", "Unknown")
+        lastLogin = self.player.get("lastLogin", "Unknown")
+        lastLogout = self.player.get("lastLogout", "Unknown")
+        recentGame = self.player.get("mostRecentGameType", "Unknown")
 
         embed = discord.Embed(title=f"Hypixel profile for [{rank.replace("_", " ")}] {username} ({id})")
         embed.add_field(
@@ -1566,11 +1597,11 @@ class HypixelView(discord.ui.View):
         )
 
         # Ignore why I stop using camel case it's how im feeling and I do these like 2 days apart
-        exp = player.get("networkExp", "Unknown")
-        level_rewards = player.get("leveling", "Unknown").get("claimedRewards", "Unknown")
-        achievement_points = player.get("achievementPoints", "Unknown")
-        karma = player.get("karma", "Unknown")
-        achievements = player.get("achievements", "Unknown")
+        exp = self.player.get("networkExp", "Unknown")
+        level_rewards = self.player.get("leveling", "Unknown").get("claimedRewards", "Unknown")
+        achievement_points = self.player.get("achievementPoints", "Unknown")
+        karma = self.player.get("karma", "Unknown")
+        achievements = self.player.get("achievements", "Unknown")
 
         embed.add_field(
             name="Levels and Experience",
@@ -1582,16 +1613,16 @@ class HypixelView(discord.ui.View):
             inline=False
             )
 
-        last_claimed_reward = player.get("lastClaimedReward", "Unknown")
-        reward_high_score = player.get("rewardHighScore", "Unknown")
-        reward_score = player.get("rewardScore", "Unknown")
-        reward_streak = player.get("rewardStreak", "Unknown")
-        total_daily_rewards = player.get("totalDailyRewards", "Unknown")
-        total_rewards = player.get("totalRewards", "Unknown")
+        last_claimed_reward = self.player.get("lastClaimedReward", 0)
+        reward_high_score = self.player.get("rewardHighScore", 0)
+        reward_score = self.player.get("rewardScore", 0)
+        reward_streak = self.player.get("rewardStreak", 0)
+        total_daily_rewards = self.player.get("totalDailyRewards", 0)
+        total_rewards = self.player.get("totalRewards", 0)
 
         embed.add_field(
             name="Daily Rewards",
-            value=f"Last claim time: <t:{int(int(last_claimed_reward) / 1000)}:F>\n"
+            value=f"Last claim time: <t:{int(int(last_claimed_reward) / 1000) if last_claimed_reward > 0 else "Never claimed"}:F>\n"
             f"Reward score/streak: {reward_score:,}/{reward_streak:,}\n"
             f"Reward highscore: {reward_high_score:,}\n"
             f"Total daily rewards: {total_daily_rewards:,}\n"
@@ -1599,10 +1630,10 @@ class HypixelView(discord.ui.View):
             inline=False
         )
 
-        current_click_effect = player.get("currentClickEffect", "Unknown")
-        particle_pack = player.get("particlePack", "Unknown")
-        current_gadget = player.get("currentGadget", "Unknown")
-        current_pet = player.get("currentPet", "Unknown")
+        current_click_effect = self.player.get("currentClickEffect", "Unknown")
+        particle_pack = self.player.get("particlePack", "Unknown")
+        current_gadget = self.player.get("currentGadget", "Unknown")
+        current_pet = self.player.get("currentPet", "Unknown")
 
         embed.add_field(
             name="Cosmetics",
@@ -1627,10 +1658,11 @@ class HypixelCommandsGroup(app_commands.Group):
             async with aiohttp.ClientSession() as session:
                 async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}&uuid={uuid}") as response:
                     if response.status == 200:
+                        message = await interaction.followup.send("Fetching profile...")
                         data = await response.json()
-                        view = HypixelView(data)
+                        view = HypixelView(data, message)
                         embed = view.create_main_embed()
-                        await interaction.followup.send(embed=embed, view=view)
+                        await message.edit(embed=embed, view=view, content=None)
                     else:
                         await interaction.followup.send(f"Failed to retrieve data. Status code: {response.status}")
         except Exception as error:
@@ -1638,12 +1670,24 @@ class HypixelCommandsGroup(app_commands.Group):
 
 bot.tree.add_command(HypixelCommandsGroup())
 
+'''
+
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="sb", description="Hypixel skyblock commands")
-
-
+    @app_commands.command(name="profile", description="Get a hypixel skyblock account's data")
+    @app_commands.describe(profile_id="The profile ID, use /hypixel profile if not known.")
+    async def sbprofile(self, interaction: discord.Interaction, uuid: str = None, profile_id: str = None):
+        await interaction.response.defer()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"")
+        except Exception as error:
+            await handle_logs(interaction, error)
 bot.tree.add_command(SkyblockCommandsGroup())
+
+'''
+
 """
 FUN COMMANDS
 """
