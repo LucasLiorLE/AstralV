@@ -932,13 +932,13 @@ class ClashRoyaleCommandGroup(app_commands.Group):
 
     @app_commands.command(name="profile", description="Get Clash Royale player profile data")
     @app_commands.describe(tag="The user's tag (The one with the #, optional)", user="The user ID of the member (optional)")
-    async def crprofile(self, interaction: discord.Interaction, tag: str = None, user: str = None):
+    async def crprofile(self, interaction: discord.Interaction, tag: str = None, user: discord.User = None):
         await interaction.response.defer()
         try:
             member_info = open_file("info/member_info.json")
 
             if tag is None:
-                user_id = str(interaction.user.id)
+                user_id = str(user.id) or str(interaction.user.id)
                 cr_id = member_info.get(user_id, {}).get("cr_id")
 
                 if cr_id:
@@ -949,7 +949,6 @@ class ClashRoyaleCommandGroup(app_commands.Group):
             else:
                 if not tag.startswith("#"):
                     tag = "#" + tag.strip()
-
 
             player_data = await get_player_data(tag.replace("#", "%23"))
 
@@ -1254,7 +1253,7 @@ class GloveView(discord.ui.View):
     def update_buttons(self):
         self.glove_data_button.disabled = self.current_page == "glove_data"
         self.full_glove_data_button.disabled = self.current_page == "full_glove_data"
-        self.additional_badges_button.disabled = (self.current_page == "additional_badges")
+        self.additional_badges_button.disabled = self.current_page == "additional_badges"
         self.gamepass_data_button.disabled = self.current_page == "gamepass_data"
 
     @discord.ui.button(label="Glove Data", style=discord.ButtonStyle.secondary)
@@ -1512,13 +1511,133 @@ async def getUUID(interaction: discord.Interaction, username: str):
 @app_commands.describe(username="A Minecraft username")
 async def uuid(interaction: discord.Interaction, username: str):
     await interaction.response.defer()
-    uuid_result = await getUUID(interaction, username)
-    if uuid_result:
-        await interaction.followup.send(f"The UUID for {username} is {uuid_result}")
+    try:
+        uuid_result = await getUUID(interaction, username)
+        if uuid_result:
+            await interaction.followup.send(f"The UUID for {username} is {uuid_result}")
+    except Exception as error:
+        await handle_logs(interaction, error)
 
 """
 HYPIXEL COMMANDS 
 """
+class HypixelView(discord.ui.View):
+    def __init__(self, player_data, current_page="main"):
+        super().__init__(timeout=None)
+        self.player_data = player_data
+        self.current_page = current_page
+
+        self.main_button = discord.ui.Button(label="Main", style=discord.ButtonStyle.secondary)
+        self.main_button.callback = self.show_main_page
+        self.add_item(self.main_button)
+
+        self.update_buttons()
+    
+    
+    def update_buttons(self):
+        self.main_button.disabled = self.current_page == "main"
+
+    async def show_main_page(self, interaction: discord.Interaction):
+        self.current_page = "main"
+        self.update_buttons()
+
+        embed = self.create_main_embed()
+        await interaction.response.send_message(embed=embed, view=self)
+
+    def create_main_embed(self):
+        player = self.player_data.get("player", "Unknown")
+        id = player.get("_id", "Unknown")
+        rank = player.get("newPackageRank", "Unknown")
+        username = player.get("displayname", "Unknown")
+
+        firstLogin = player.get("firstLogin", "Unknown")
+        lastLogin = player.get("lastLogin", "Unknown")
+        lastLogout = player.get("lastLogout", "Unknown")
+        recentGame = player.get("mostRecentGameType", "Unknown")
+
+        embed = discord.Embed(title=f"Hypixel profile for [{rank.replace("_", " ")}] {username} ({id})")
+        embed.add_field(
+            name="Login and dates", 
+            value=f"Join Date: <t:{int(int(firstLogin) / 1000)}:F>\n"
+            f"Last Login: <t:{int(int(lastLogin) / 1000)}:F>\n"
+            f"Last Logout: <t:{int(int(lastLogout) / 1000)}:F>\n"
+            f"Most recent game: {recentGame.replace("_", " ").title()}",
+            inline=False
+        )
+
+        # Ignore why I stop using camel case it's how im feeling and I do these like 2 days apart
+        exp = player.get("networkExp", "Unknown")
+        level_rewards = player.get("leveling", "Unknown").get("claimedRewards", "Unknown")
+        achievement_points = player.get("achievementPoints", "Unknown")
+        karma = player.get("karma", "Unknown")
+        achievements = player.get("achievements", "Unknown")
+
+        embed.add_field(
+            name="Levels and Experience",
+            value = f"Total EXP: {exp:,}\n"
+            f"Claimed level rewards: {len(level_rewards):,}\n"
+            f"Achievement Points: {achievement_points:,}\n"
+            f"Total achievements: {len(achievements):,}\n"
+            f"Karma: {karma:,}",
+            inline=False
+            )
+
+        last_claimed_reward = player.get("lastClaimedReward", "Unknown")
+        reward_high_score = player.get("rewardHighScore", "Unknown")
+        reward_score = player.get("rewardScore", "Unknown")
+        reward_streak = player.get("rewardStreak", "Unknown")
+        total_daily_rewards = player.get("totalDailyRewards", "Unknown")
+        total_rewards = player.get("totalRewards", "Unknown")
+
+        embed.add_field(
+            name="Daily Rewards",
+            value=f"Last claim time: <t:{int(int(last_claimed_reward) / 1000)}:F>\n"
+            f"Reward score/streak: {reward_score:,}/{reward_streak:,}\n"
+            f"Reward highscore: {reward_high_score:,}\n"
+            f"Total daily rewards: {total_daily_rewards:,}\n"
+            f"Total rewards: {total_rewards:,}",
+            inline=False
+        )
+
+        current_click_effect = player.get("currentClickEffect", "Unknown")
+        particle_pack = player.get("particlePack", "Unknown")
+        current_gadget = player.get("currentGadget", "Unknown")
+        current_pet = player.get("currentPet", "Unknown")
+
+        embed.add_field(
+            name="Cosmetics",
+            value=f"Current click effect: {current_click_effect.replace("_", " ").title()}\n"
+            f"Particle pack: {particle_pack.replace("_", " ").title()}\n"
+            f"Current gadget: {current_gadget.replace("_", " ").title()}\n"
+            f"Current pet: {current_pet.replace("_", " ").title()}"
+        )
+
+        return embed
+
+class HypixelCommandsGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="hypixel", description="Base Hypixel commands")
+
+    @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
+    @app_commands.describe(username="Their Minecraft username.")
+    async def hyProfile(self, interaction: discord.Interaction, username: str):
+        await interaction.response.defer()
+        try:
+            uuid = await getUUID(interaction, username)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}&uuid={uuid}") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        view = HypixelView(data)
+                        embed = view.create_main_embed()
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send(f"Failed to retrieve data. Status code: {response.status}")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+bot.tree.add_command(HypixelCommandsGroup())
+
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="sb", description="Hypixel skyblock commands")
