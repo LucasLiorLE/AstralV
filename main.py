@@ -276,7 +276,7 @@ async def on_message(message):
                                     inline=False,
                                 )
 
-                        reply_button = ReplyButton(user=message.author, message_id=message.id)
+                        reply_button = ReplyButton(member=message.author, message_id=message.id)
                         view = discord.ui.View()
                         view.add_item(reply_button)
 
@@ -723,22 +723,25 @@ class ProfileView(discord.ui.View):
         super().__init__(timeout=None)
         self.player_data = player_data
         self.current_page = current_page
-        self.main_button = discord.ui.Button(label="Main", style=discord.ButtonStyle.primary)
+        self.main_button = discord.ui.Button(label="Main", style=discord.ButtonStyle.secondary)
         self.main_button.callback = self.show_main_page
         self.add_item(self.main_button)
-        self.deck_button = discord.ui.Button(label="Deck", style=discord.ButtonStyle.secondary)
+        self.deck_button = discord.ui.Button(label="Current Deck", style=discord.ButtonStyle.secondary)
         self.deck_button.callback = self.show_deck_page
         self.add_item(self.deck_button)
+        self.path_button = discord.ui.Button(label="Path of Legends", style=discord.ButtonStyle.secondary)
+        self.path_button.callback = self.show_path_page
+        self.add_item(self.path_button)
         self.update_buttons()
         self.emoji_data = self.load_emoji_data()
 
     def load_emoji_data(self):
-        with open("storage/emoji_data.json", "r") as f:
-            return json.load(f)
+        return open_file("storage/emoji_data.json")
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
         self.deck_button.disabled = self.current_page == "deck"
+        self.path_button.disabled = self.current_page == "path"
 
     async def show_main_page(self, interaction: discord.Interaction):
         self.current_page = "main"
@@ -754,29 +757,77 @@ class ProfileView(discord.ui.View):
         embed = self.create_deck_embed()
         await interaction.response.edit_message(embed=embed, view=self)
 
+    async def show_path_page(self, interaction: discord.Interaction):
+        self.current_page = "path"
+        self.update_buttons()
+
+        embed = self.create_path_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
     def create_main_embed(self):
         name = self.player_data.get("name", "Unknown")
         user_id = self.player_data.get("tag", "Unknown")
+
         wins = self.player_data.get("wins", 0)
         losses = self.player_data.get("losses", 0)
+        winrate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
+
         trophies = self.player_data.get("trophies", "Unknown")
         max_trophies = self.player_data.get("bestTrophies", "Unknown")
         arena = self.player_data.get("arena", {}).get("name", "Unknown")
+
+        legacy_trophies = self.player_data.get("legacyTrophyRoadHighScore", "Unknown")
+        
         goblin_trophies = self.player_data.get("progress", {}).get("goblin-road", {}).get("trophies", "Unknown")
         max_goblin_trophies = self.player_data.get("progress", {}).get("goblin-road", {}).get("bestTrophies", "Unknown")
         goblin_arena = self.player_data.get("progress", {}).get("goblin-road", {}).get("arena", {}).get("name", "Unknown")
+
         clan_name = self.player_data.get("clan", {}).get("name", "No Clan")
         clan_tag = self.player_data.get("clan", {}).get("tag", "N/A")
-        winrate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
+        clan_role = self.player_data.get("role", "Unknown")
 
         embed = discord.Embed(title=f"{name}'s Clash Royale Profile", color=discord.Color.blue())
         embed.add_field(name="User", value=f"{name} ({user_id})", inline=False)
         embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({winrate:.2f}%)", inline=False)
         embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
-        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
-        embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
-        embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
-        embed.add_field(name="Clan", value=f"{clan_name} ({clan_tag})", inline=False)
+        if legacy_trophies is not None and (legacy_trophies > 0 if isinstance(legacy_trophies, (int, float)) else False):
+            embed.add_field(name="<:Trophy:1299093384882950245> Legacy Trophies", value=legacy_trophies, inline=False)
+        if int(max_goblin_trophies) > 0:
+            embed.add_field(name="<:Goblin_Trophy:1299093585274343508> Goblin Queen's Journey", value=f"{goblin_trophies}/{max_goblin_trophies} ({goblin_arena})", inline=False)
+        embed.add_field(name="Clan", value=f"{clan_name} ({clan_role}) ({clan_tag})", inline=False)
+        return embed
+
+    def create_path_embed(self):
+        current_path_of_legends = self.player_data.get("currentPathOfLegendSeasonResult", {})
+        best_path_of_legends = self.player_data.get("bestPathOfLegendSeasonResult", {})
+        last_path_of_legends = self.player_data.get("lastPathOfLegendSeasonResult", {})
+
+        cPOL_league = current_path_of_legends.get("leagueNumber", "Unknown")
+        bPOL_league = best_path_of_legends.get("leagueNumber", "Unknown")
+        lPOL_league = last_path_of_legends.get("leagueNumber", "Unknown")
+
+        cPOL_rank = current_path_of_legends.get("rank", "Unknown")
+        bPOL_rank = best_path_of_legends.get("rank", "Unknown")
+        lPOL_rank = last_path_of_legends.get("rank", "Unknown")
+
+        embed = discord.Embed(title="Path of Legends", color=discord.Color.purple())
+
+        embed.add_field(
+            name="Current Path of Legends",
+            value=f"League: {self.get_league_emoji(cPOL_league)} | Rank: {cPOL_rank}",
+            inline=False
+        )
+        embed.add_field(
+            name="Best Path of Legends",
+            value=f"League: {self.get_league_emoji(bPOL_league)} | Rank: {bPOL_rank}",
+            inline=False
+        )
+        embed.add_field(
+            name="Last Path of Legends",
+            value=f"League: {self.get_league_emoji(lPOL_league)} | Rank: {lPOL_rank}",
+            inline=False
+        )
+
         return embed
 
     def create_deck_embed(self):
@@ -801,7 +852,28 @@ class ProfileView(discord.ui.View):
         embed.description=f"[Click here to copy the deck](https://link.clashroyale.com/en/?clashroyale://copyDeck?deck={'%3B'.join(card_ids)}&l=Royals)"
 
         return embed
+    
+    def get_league_emoji(self, rank):
+        league_names = {
+            1: "Challenger 1",
+            2: "Challenger 2",
+            3: "Challenger 3",
+            4: "Master 1",
+            5: "Master 2",
+            6: "Master 3",
+            7: "Champion",
+            8: "Grand Champion",
+            9: "Royal Champion",
+            10: "Ultimate Champion"
+        }
 
+        if rank in league_names:
+            emoji_id = self.emoji_data.get(f"cr{league_names[rank].replace(' ', '')}")
+            if emoji_id:
+                return f"<:cr{league_names[rank].replace(' ', '')}:{emoji_id}> {league_names[rank]}"
+        
+        return "❓ Unknown League"
+    
     def get_card_emoji(self, card_name):
         formatted_name = ''.join(re.findall(r'[A-Za-z]', card_name))
         emoji_id = self.emoji_data.get(formatted_name)
@@ -1445,7 +1517,7 @@ async def uuid(interaction: discord.Interaction, username: str):
         await interaction.followup.send(f"The UUID for {username} is {uuid_result}")
 
 """
-HYPIXEL COMMANDS
+HYPIXEL COMMANDS 
 """
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
@@ -1601,7 +1673,7 @@ async def say(
 
 @bot.tree.command(name="dm", description="Directly message a person.")
 @app_commands.describe(
-    user="The user to DM",
+    member="The user to DM",
     message="The message to send to them",
     attachment="An optional attachment to include",
 )
@@ -1950,7 +2022,7 @@ async def roleinfo(interaction: discord.Interaction, role: discord.Role):
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="userinfo", description="Provides information about a user.")
-@app_commands.describe(user="The member to get the info for",)
+@app_commands.describe(member="The member to get the info for",)
 async def userinfo(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer(ephemeral=True)
     try:
@@ -1972,7 +2044,7 @@ class AvatarGroup(app_commands.Group):
         super().__init__(name="avatar", description="Avatar-related commands")
 
     @app_commands.command(name="get", description="Displays a user's global avatar.")
-    @app_commands.describe(user="The member to get the avatar for")
+    @app_commands.describe(member="The member to get the avatar for")
     async def get(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -1985,7 +2057,7 @@ class AvatarGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="server", description="Displays a user's server-specific avatar if available.",)
-    @app_commands.describe(user="The member to get the server-specific avatar for")
+    @app_commands.describe(member="The member to get the server-specific avatar for")
     async def server(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -2567,14 +2639,12 @@ class MessageCheck:
                     await interaction.followup.send(f"Succesfully deleted {len(messages_to_delete)} messages")
                     return messages_to_delete
                 except discord.HTTPException as e:
-                    print(f"Error deleting messages: {e}")
                     return []
             else:
                 try:
                     await messages_to_delete[0].delete()
                     return [messages_to_delete[0]]
                 except discord.HTTPException as e:
-                    print(f"Error deleting message: {e}")
                     return []
 
         return []
@@ -2598,15 +2668,15 @@ class PurgeCommandGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="user", description="Purges messages from a specific user.")
-    @app_commands.describe(user="The user to purge the messages for", amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
-    async def upurge(self, interaction: discord.Interaction, user: discord.User, amount: int = 10, reason: str = "No reason provided."):
+    @app_commands.describe(member="The user to purge the messages for", amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
+    async def upurge(self, interaction: discord.Interaction, member: discord.Member, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
             if not await check_mod(interaction, "manage_messages"):
                 return
 
-            await MessageCheck.purge_messages(interaction.channel, amount, lambda msg: MessageCheck.is_from_user(msg, user), interaction, reason)
-            await store_modlog(f"Purged {amount} messages from {user}", interaction.guild.id, interaction.user, reason=reason)
+            await MessageCheck.purge_messages(interaction.channel, amount, lambda msg: MessageCheck.is_from_user(msg, member), interaction, reason)
+            await store_modlog(f"Purged {amount} messages from {member}", interaction.guild.id, interaction.user, reason=reason)
         except Exception as error:
             await handle_logs(interaction, error)
 
@@ -2685,7 +2755,7 @@ async def clean(interaction: discord.Interaction, amount: int = 10, reason: str 
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="role", description="Toggle a role for a member")
-@app_commands.describe(user="Member to manage roles for", role="Role to manage", reason="Reason for management")
+@app_commands.describe(member="Member to manage roles for", role="Role to manage", reason="Reason for management")
 async def role(interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
     await interaction.response.defer()
     try:
@@ -2969,7 +3039,7 @@ class DelLog(discord.ui.Select):
 
 
 @bot.tree.command(name="warn", description="Warns a user.")
-@app_commands.describe(user="The member to warn.", reason="Reason for the warn.")
+@app_commands.describe(member="The member to warn.", reason="Reason for the warn.")
 @app_commands.choices(
     reason=[
         app_commands.Choice(name="Spamming", value="spamming"),
@@ -3012,7 +3082,7 @@ async def warn(interaction: discord.Interaction, member: discord.Member, reason:
                     ))
                     return
             except ValueError as e:
-                print("Error finding highest case number:", e)
+                pass
 
         await dmbed(interaction, member, "warn", reason)
         await store_modlog("Warn", interaction.guild.id, interaction.user, member, reason=reason)
@@ -3035,10 +3105,10 @@ async def warn(interaction: discord.Interaction, member: discord.Member, reason:
 
         if mute_duration > 0:
             try:
-                await user.timeout(timedelta(seconds=mute_duration))
+                await member.timeout(timedelta(seconds=mute_duration))
                 await interaction.followup.send(embed=discord.Embed(
                     title="Member Muted",
-                    description=f"{user.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings) + 1} warnings.",
+                    description=f"{member.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings) + 1} warnings.",
                     color=0xFF0000
                 ))
             except discord.Forbidden:
@@ -3051,7 +3121,7 @@ async def warn(interaction: discord.Interaction, member: discord.Member, reason:
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="warns", description="Displays the warnings for a user.")
-@app_commands.describe(user="The member whose warnings you want to view.")
+@app_commands.describe(member="The member whose warnings you want to view.")
 async def warns(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
@@ -3085,7 +3155,7 @@ async def warns(interaction: discord.Interaction, member: discord.Member = None)
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="note", description="Gives a note to a user.")
-@app_commands.describe(user="The member to add a note to", note="Whatever you want to say")
+@app_commands.describe(member="The member to add a note to", note="Whatever you want to say")
 async def note(interaction: discord.Interaction, member: discord.Member, note: str):
     await interaction.response.defer()
     try:
@@ -3110,7 +3180,7 @@ async def note(interaction: discord.Interaction, member: discord.Member, note: s
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="notes", description="Displays the notes for a member")
-@app_commands.describe(user="The member whose notes you want to view.")
+@app_commands.describe(member="The member whose notes you want to view.")
 async def notes(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
@@ -3415,7 +3485,7 @@ async def process_transaction(user_id, transaction_type, amount):
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
 
 @bot.tree.command(name="balance", description="Check a user's purse and bank balance!")
-@app_commands.describe(user="The user whose balance you want to check.")
+@app_commands.describe(member="The user whose balance you want to check.")
 async def balance(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
@@ -3810,30 +3880,30 @@ class BlackjackGroup(app_commands.Group):
         super().__init__(name="blackjack", description="Not coming soon")
 
     @app_commands.command(name="wager", description="Wager in a blackjack game")
-    @app_commands.describe(amount="The amount you want to wager", user="User you want to wager against (Or bot if none)")
-    async def bjwager(self, interaction: discord.Interaction, amount: int, user: discord.User = None):
+    @app_commands.describe(amount="The amount you want to wager", member="User you want to wager against (Or bot if none)")
+    async def bjwager(self, interaction: discord.Interaction, amount: int, member: discord.User = None):
         try:
-            if user == interaction.user:
+            if member == interaction.user:
                 await interaction.response.send_message("You can't go against yourself!", ephemeral=True)
                 return
-            if user is None:
+            if member is None:
                 await self.start_game(interaction, amount, bot=True)
             else:
-                await self.challenge_user(interaction, amount, user=user)
+                await self.challenge_user(interaction, amount, member=member)
         except Exception as error:
             await handle_logs(interaction, error)
 
     @app_commands.command(name="casual", description="Play a casual game of blackjack")
-    @app_commands.describe(user="The user you want to play against")
-    async def bjcasual(self, interaction: discord.Interaction, user: discord.User = None):
+    @app_commands.describe(member="The user you want to play against")
+    async def bjcasual(self, interaction: discord.Interaction, member: discord.User = None):
         try:
-            if user == interaction.user:
+            if member == interaction.user:
                 await interaction.response.send_message("You can't go against yourself!!", ephemeral=True)
                 return
-            if user is None:
+            if member is None:
                 await self.start_game(interaction, amount=0, bot=True)
             else:
-                await self.challenge_user(interaction, amount=0, user=user)
+                await self.challenge_user(interaction, amount=0, member=member)
         except Exception as error:
             await handle_logs(interaction, error)
 
@@ -3893,7 +3963,6 @@ class TicTacToeGroup(app_commands.Group):
 
     @app_commands.command(name="stats", description="View a user's stats for tic tac toe")
     @app_commands.describe(user="The user you want to view the stats for.")
-
     async def tttstats(self, interaction: discord.Interaction, user: str = None):
         pass
 
@@ -3928,7 +3997,6 @@ class slotsGroup(app_commands.Group):
 
     @app_commands.command(name="stats", description="View a user's stats for slots")
     @app_commands.describe(user="The user you want to view the stats for.")
-
     async def slotstats(self, interaction: discord.Interaction, user: str = None):
         pass
 
