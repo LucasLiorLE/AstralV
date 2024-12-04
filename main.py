@@ -31,6 +31,8 @@ import random, time, datetime, math
 import aiohttp, requests, asyncio, asyncpraw
 import yt_dlp, tempfile, traceback
 from datetime import datetime, timedelta, timezone
+from dotenv import load_dotenv
+from pathlib import Path
 
 from aiohttp import ClientError
 from io import BytesIO
@@ -168,20 +170,19 @@ def save_file(filename, data):
     with open(filename, "w") as f:
         json.dump(data, f, indent=4, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o)
 
-secrets = open_file("storage/secrets.json")
+secrets = Path('storage/secrets.env')
+load_dotenv(dotenv_path=secrets)
 
-client_id = secrets.get("client_id")
-client_secret = secrets.get("client_secret")
-user_agent = secrets.get("user_agent")
-cr_API = secrets.get("cr_API")
-token = secrets.get("token")
+client_id = os.getenv("client_id")
+client_secret = os.getenv("client_secret")
+user_agent = os.getenv("user_agent")
+cr_API = os.getenv("cr_API")
+token = os.getenv("token")
+osu_api = os.getenv("osu_api")
+osu_secret = os.getenv("osu_secret")
+hypixel_api = os.getenv("hypixel_api")
 
-osu_id = secrets.get("osu_id")
-osu_secret = secrets.get("osu_secret")
-
-hypixel_api = secrets.get("hypixel_api")
-
-osu_api = Ossapi(osu_id, osu_secret)
+osu_api = Ossapi(int(osu_api), osu_secret)
 
 reddit = asyncpraw.Reddit(
     client_id=client_id,
@@ -1575,7 +1576,6 @@ class HypixelView(discord.ui.View):
         await self.message.edit(embed=embed, view=self)
         await interaction.response.defer()
 
-
     def create_main_embed(self):
         id = self.player.get("_id", "Unknown")
         rank = self.player.get("newPackageRank", "Unknown")
@@ -1651,7 +1651,15 @@ class HypixelCommandsGroup(app_commands.Group):
 
     @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
     @app_commands.describe(username="Their Minecraft username.")
-    async def hyProfile(self, interaction: discord.Interaction, username: str):
+    @app_commands.choices(
+        profile=[
+            app_commands.Choice(name=1, value=0),
+            app_commands.Choice(name=2, value=1),
+            app_commands.Choice(name=3, value=2),
+            app_commands.Choice(name=4, value=3),
+        ]
+    )
+    async def hyProfile(self, interaction: discord.Interaction, username: str, profile: int = 1):
         await interaction.response.defer()
         try:
             uuid = await getUUID(interaction, username)
@@ -1670,23 +1678,122 @@ class HypixelCommandsGroup(app_commands.Group):
 
 bot.tree.add_command(HypixelCommandsGroup())
 
-'''
+class SkyblockView(discord.ui.View):
+    def __init__(self, player_data, message, find_profile, current_page="main"):
+        super().__init__(timeout=None)
+        self.message = message
+        self.player_data = player_data
+        self.find_profile = find_profile
+        self.profiles = self.player_data.get("profiles", {})
+        self.current_page = current_page
+
+        self.profile_data = (
+            self.profiles[find_profile]
+            if len(self.profiles) > find_profile
+            else None
+        )
+
+        self.main_button = discord.ui.Button(label="Main", style=discord.ButtonStyle.secondary)
+        self.main_button.callback = self.show_main_page
+        self.add_item(self.main_button)
+
+        self.collections_button = discord.ui.Button(label="Collections", style=discord.ButtonStyle.secondary)
+        self.collections_button.callback = self.show_collections_page
+        self.add_item(self.collections_button)
+
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.main_button.disabled = self.current_page == "main"
+        self.collections_button.disabled = self.current_page == "collections"
+
+    async def show_main_page(self, interaction: discord.Interaction):
+        self.current_page = "main"
+        self.update_buttons()
+
+        embed = self.create_main_embed()
+        if embed:
+            await self.message.edit(embed=embed, view=self)
+        else:
+            await self.message.edit(content="That is not an account.", embed=None, view=self)
+        await interaction.response.defer()
+
+    def create_main_embed(self):
+        if self.profile_data is not None:
+            profile_id = self.profile_data.get("profile_id", "Unknown")
+            cute_name = self.profile_data.get("cute_name", "Unknown")
+            creation_date = self.profile_data.get("created_at", 0)
+            game_mode = self.profile_data.get("game_mode", "Regular")
+            members = self.profile_data.get("members", 1)
+
+            creation_thing = f"<t:{int(int(creation_date) / 1000)}:F>" if creation_date > 0 else "No creation date somehow?"
+
+            embed = discord.Embed(title=f"Profile data for: {profile_id}")
+            embed.add_field(name="Gamemode", value=game_mode.title(), inline=False)
+            embed.add_field(name="Cute Name", value=cute_name, inline=False)
+            embed.add_field(name="Creation Date", value=creation_thing, inline=False)
+            if len(members) > 1:
+                embed.add_field(name="Co-op members", value=f"{len(members)} members")
+
+            return embed
+        else:
+            return None
+
+    async def show_collections_page(self, interaction: discord.Interaction):
+        self.current_page = "collections"
+        self.update_buttons()
+
+        embed = self.create_collections_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_collections_embed(self):
+        embed = discord.Embed(title="Noob (only if you're noo_oobh)", description="Clicking on this button because you were curious is wild")
+
+        return embed
+
 
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="sb", description="Hypixel skyblock commands")
-    @app_commands.command(name="profile", description="Get a hypixel skyblock account's data")
+
+    @app_commands.command(name="profile", description="Get a Hypixel Skyblock account's data")
     @app_commands.describe(profile_id="The profile ID, use /hypixel profile if not known.")
-    async def sbprofile(self, interaction: discord.Interaction, uuid: str = None, profile_id: str = None):
+    @app_commands.choices(
+        profile_id=[
+            app_commands.Choice(name="1", value=0),
+            app_commands.Choice(name="2", value=1),
+            app_commands.Choice(name="3", value=2),
+            app_commands.Choice(name="4", value=3),
+        ]
+    )
+    async def sbprofile(self, interaction: discord.Interaction, username: str, profile_id: int = None):
         await interaction.response.defer()
         try:
+            uuid = await getUUID(interaction, username)
             async with aiohttp.ClientSession() as session:
-                async with session.get(f"")
+                async with session.get(f"https://api.hypixel.net/v2/skyblock/profiles?key={hypixel_api}&uuid={uuid}") as response:
+                    if response.status == 200:
+                        message = await interaction.followup.send("Fetching profiles...")
+                        data = await response.json()
+
+                        if profile_id is None:
+                            profiles = data.get("profiles", [])
+                            selected_profile_index = next(
+                                (i for i, profile in enumerate(profiles) if profile.get("selected")), 0
+                            )
+                            profile_id = selected_profile_index
+
+                        view = SkyblockView(data, message, profile_id)
+                        await message.edit(content=None, view=view)
+                    else:
+                        await interaction.followup.send(f"Failed to retrieve data. Status code: {response.status}")
+
         except Exception as error:
             await handle_logs(interaction, error)
+
 bot.tree.add_command(SkyblockCommandsGroup())
 
-'''
 
 """
 FUN COMMANDS
