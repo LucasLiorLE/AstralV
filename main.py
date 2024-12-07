@@ -1,3 +1,5 @@
+print("Script loaded.")
+print("Current Version: v1.1.22")
 """
 Made by LucasLiorLE
 
@@ -26,7 +28,7 @@ Future updates:
 This was last updated: 12/1/24 at 1:55 AM
 """
 
-import json, os, io, re
+import json, os, io, re, sys
 import random, time, datetime, math
 import aiohttp, requests, asyncio, asyncpraw
 import yt_dlp, tempfile, traceback
@@ -176,14 +178,34 @@ load_dotenv(dotenv_path=secrets)
 client_id = os.getenv("client_id")
 client_secret = os.getenv("client_secret")
 user_agent = os.getenv("user_agent")
-cr_API = os.getenv("cr_API")
+cr_api = os.getenv("cr_api")
 token = os.getenv("token")
 osu_api = os.getenv("osu_api")
 osu_secret = os.getenv("osu_secret")
 hypixel_api = os.getenv("hypixel_api")
 
-osu_api = Ossapi(int(osu_api), osu_secret)
+try:
+    osu_api = Ossapi(int(osu_api), osu_secret)
+    print("Osu API key is valid.")
+except ValueError:
+    print("Invalid API keys; Are you sure you entered your osu api correctly?")
+    print("Automatically exiting, rerun the script to try again.")
+    sys.exit()
 
+async def test_hy_key():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}") as response:
+            if response.status == 403:
+                data = await response.json()
+                if data.get("success") == False and data.get("cause") == "Invalid API key":
+                    print("Invalid API key provided. Please check secrets.env.")
+                    return False
+            elif response.status == 400:
+                return True
+            else:
+                print(f"Request failed with status code: {response.status}")
+                return False
+                
 reddit = asyncpraw.Reddit(
     client_id=client_id,
     client_secret=client_secret,
@@ -307,9 +329,20 @@ async def on_message(message):
 
 @bot.event
 async def on_ready():
-    await bot.tree.sync()
-    status_manager = StatusManager(bot)
-    bot.loop.create_task(status_manager.change_status())
+    print("Bot successfully connected, syncing commands...")
+    try:
+        await bot.tree.sync()
+        print("Successfully synced commands.")
+    except Exception as e:
+        print(f"An error occured when syncing commands. Press Ctrl+C to stop the bot. Error: {e}")
+
+    print("Completing other tasks...")        
+    try:
+        status_manager = StatusManager(bot)
+        bot.loop.create_task(status_manager.change_status())
+    except Exception as e:
+        print(f"An error occured when completing tasks. Press Ctrl+C to stop the bot. Error: {e}")
+        
 
 
 """
@@ -688,7 +721,7 @@ CLASH ROYALE COMMANDS
 
 async def get_player_data(tag: str):
     api_url = f"https://api.clashroyale.com/v1/players/{tag}"  
-    headers = {"Authorization": f"Bearer {cr_API}"}
+    headers = {"Authorization": f"Bearer {cr_api}"}
 
     async with aiohttp.ClientSession() as session:
         async with session.get(api_url, headers=headers) as response:
@@ -696,10 +729,12 @@ async def get_player_data(tag: str):
 
             if response.status == 200:
                 return response_json
+            if response.status == 400:
+                return True
 
 async def get_clan_data(clan_tag: str):
     api_url = f"https://api.clashroyale.com/v1/clans/{clan_tag}"
-    headers = {"Authorization": f"Bearer {cr_API}"}
+    headers = {"Authorization": f"Bearer {cr_api}"}
 
     async with aiohttp.ClientSession() as session:
         async with session.get(api_url, headers=headers) as response:
@@ -1660,7 +1695,8 @@ class HypixelCommandsGroup(app_commands.Group):
         ]
     )
     async def hyProfile(self, interaction: discord.Interaction, username: str, profile: int = 1):
-        await interaction.response.defer()
+        if not interaction.response.is_done():
+            await interaction.response.defer()
         try:
             uuid = await getUUID(interaction, username)
             async with aiohttp.ClientSession() as session:
@@ -1679,8 +1715,9 @@ class HypixelCommandsGroup(app_commands.Group):
 bot.tree.add_command(HypixelCommandsGroup())
 
 class SkyblockView(discord.ui.View):
-    def __init__(self, player_data, message, find_profile, current_page="main"):
+    def __init__(self, player_data, message, uuid, find_profile, current_page="main"):
         super().__init__(timeout=None)
+        self.uuid = uuid
         self.message = message
         self.player_data = player_data
         self.find_profile = find_profile
@@ -1693,7 +1730,7 @@ class SkyblockView(discord.ui.View):
             else None
         )
 
-        self.main_button = discord.ui.Button(label="Main", style=discord.ButtonStyle.secondary)
+        self.main_button = discord.ui.Button(label="Main (Base stats)", style=discord.ButtonStyle.secondary)
         self.main_button.callback = self.show_main_page
         self.add_item(self.main_button)
 
@@ -1702,6 +1739,25 @@ class SkyblockView(discord.ui.View):
         self.add_item(self.collections_button)
 
         self.update_buttons()
+
+    def get_level(self, total_xp, type=None):
+        cumulative_xp = [
+            0, 50, 175, 375, 675, 1175, 1925, 2925, 4425, 6425,
+            9925, 14925, 22425, 32425, 47425, 67425, 97425, 147425,
+            222425, 322425, 522425, 822425, 1222425, 1722425, 2322425,
+            3022425, 3822425, 4722425, 5722425, 6822425, 8022425, 9322425,
+            107222425, 122222425, 138222425, 155222425, 173222425, 192222425,
+            212222425, 233222425, 255222425, 278222425, 302222425, 327222425,
+            353222425, 380722425, 409722425, 440722425, 474722425, 511722425,
+            551722425
+        ]
+
+        for level in range(len(cumulative_xp) - 1, -1, -1):
+            if total_xp >= cumulative_xp[level]:
+                return level
+
+        return 0
+
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
@@ -1724,16 +1780,67 @@ class SkyblockView(discord.ui.View):
             cute_name = self.profile_data.get("cute_name", "Unknown")
             creation_date = self.profile_data.get("created_at", 0)
             game_mode = self.profile_data.get("game_mode", "Regular")
-            members = self.profile_data.get("members", 1)
+            members = self.profile_data.get("members", {})
 
             creation_thing = f"<t:{int(int(creation_date) / 1000)}:F>" if creation_date > 0 else "No creation date somehow?"
 
             embed = discord.Embed(title=f"Profile data for: {profile_id}")
-            embed.add_field(name="Gamemode", value=game_mode.title(), inline=False)
-            embed.add_field(name="Cute Name", value=cute_name, inline=False)
-            embed.add_field(name="Creation Date", value=creation_thing, inline=False)
-            if len(members) > 1:
-                embed.add_field(name="Co-op members", value=f"{len(members)} members")
+            embed.add_field(
+                name="Profile Data",
+                value=(
+                    f"Game Mode: {str(game_mode).title()}\n"
+                    f"Cute Name: {cute_name}\n"
+                    f"Creation Date: {creation_thing}\n"
+                    f"Co-op Members: {len(members)} members" if len(members) > 1 else ""
+                ),
+                inline=False
+            )
+
+            found_profile = members.get(self.uuid, {})
+            exp = found_profile.get("leveling", {}).get("experience", 0)
+
+            experience = found_profile.get("player_data", {}).get("experience", {})
+            skills = [skill for skill in experience.items()]
+
+            embed = discord.Embed(title="Player Profile", color=discord.Color.blue())
+
+            embed.add_field(
+                name="Leveling and Advancements",
+                value=f"Level: {int(exp) // 100} ({exp} total EXP)",
+                inline=False
+            )
+
+            skill_details = ""
+            for skill, xp in experience.items():
+                skill_name = skill.replace("SKILL_", "").title()
+                skill_details += f"{skill_name} Skill: {self.get_level(xp)} (EXP: {int(xp)}) **INACCURATE**\n"
+
+            if skill_details:
+                embed.add_field(name="Skills", value=skill_details, inline=False)
+
+            completed_objectives = found_profile.get("completed_objectives", 0)
+            objectives = found_profile.get("objectives", [])
+            embed.add_field(
+                name="Objectives",
+                value=f"{completed_objectives}/{len(objectives)}",
+                inline=False
+            )
+
+            copper = found_profile.get("garden_player_data", {}).get("copper", 0)
+            currencies = found_profile.get("currencies", {})
+            essences = currencies.get("essence", {})
+            purse = currencies.get("coin_purse", 0)
+            bank = found_profile.get("profile", {}).get("bank_account", -1)
+
+            embed.add_field(name="Economy", value=f"Purse: {purse}\nBank: {'{:.2f}'.format(bank) if bank > 0 else 'None'}\nCopper: {copper}", inline=False)
+
+            if essences:
+                essence_details = ""
+                for essence, data in essences.items():
+                    current_essence = data.get("current", 0) if data else 0
+                    essence_details += f"{essence.title()} Essence: {current_essence}\n"
+
+                embed.add_field(name="Essences", value=essence_details, inline=False)
 
             return embed
         else:
@@ -1784,8 +1891,9 @@ class SkyblockCommandsGroup(app_commands.Group):
                             )
                             profile_id = selected_profile_index
 
-                        view = SkyblockView(data, message, profile_id)
-                        await message.edit(content=None, view=view)
+                        view = SkyblockView(data, message, uuid, profile_id)
+                        embed = view.create_main_embed()
+                        await message.edit(content=None, view=view, embed=embed)
                     else:
                         await interaction.followup.send(f"Failed to retrieve data. Status code: {response.status}")
 
@@ -2229,7 +2337,7 @@ async def info(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.21")
+        embed.add_field(name="Version", value="v1.1.22")
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
         embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
@@ -3012,7 +3120,7 @@ async def cclean(ctx, amount: int = 10):
         await ctx.send("You do not have the required permission to run this command.")
 
 @bot.tree.command(name="clean", description="Clean the bot's messages")
-@app_commands.describe(amount="Amount to delete (Default: 10)")
+@app_commands.describe(amount="Amount to delete (Dhoefault: 10)")
 async def clean(interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
     try:
         if not await check_mod(interaction, "manage_messages"):
@@ -4817,5 +4925,33 @@ async def report(interaction: discord.Interaction, type: str, proof: str, user: 
             await interaction.followup.send("Report channel not found.", ephemeral=True)
     except Exception as error:
         await handle_logs(interaction, error)
+        
+async def main():
+    try:
+        if not await test_hy_key():
+            await bot.close()
+        print("Hypixel API key is valid.")
+        if not await get_player_data(None):
+            print("Invalid Clash Royale API key. Please check secrets.env.")
+            print("If your key is there, consider checking if your IP is authorized.")
+            await bot.close()
+        else:
+            print("The bot is starting, please give it a minute.")
+            await bot.start(token)
+    except discord.errors.LoginFailure:
+        print("Incorrect bot token has been passed. Please check secrets.env")
+    except KeyboardInterrupt:
+        print("Shutting down the bot...")
+        await bot.close()
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        print("Bot has been successfully shut down.")
 
-bot.run(token)
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"An unexpected error occurred during bot execution: {e}")
