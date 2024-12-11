@@ -1,31 +1,49 @@
-print("Script loaded.")
-print("Current Version: v1.1.22")
+_version = "v1.1.23"
 """
-Made by LucasLiorLE
+Version.Release.Features
+Version: Remaking the code from scratch, basically a code rework, like adding cogs.
+Release: A release of all the code with small to no bugs. 
+Feature: A release of some new command or code. Most likely something will break (thanks to my luck).
+"""
 
-Some notes I might forget in the github:
-    - Moderation rework (Again), hopefully it works better!
-        - Clean command rework (I actually read the docs instead of working on it at 2 am, although it is 2 am...)
-        - Purge commands rework as well
-    - Blackjack is hurting my brain
-    - Status API
+print("Script loaded.")
+print(f"Current Version: {_version}")
+"""
+Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
+    - This is just my bot I made for fun, mostly during my free time.
+    - Feel free to "steal" or take portions of my code.
+    - Has a lot of usefull utilities!
 
+Current plans (This is the changelogs, since I already did them):
+    - Cool run.bat thing yay
+    - More skyblock info
 
-Future updates:
-    - Economy update (Mainly bj game for now)
-    - GD and OSU connect functions
-        - More GD and OSU commands as well!
+Next Update (Will come):    
+    - Complete hypixel profile by adding every game button into it.
+    - Skyblock profile command shows collections
 
-    - Also includes more BTD6 commands
-    - A /badges command, which just checks badges for a game without the ingame name like /cgloves
+Future updates (Might or might not come, mainly the next update/feature):
+    - Skyblock profile shows user inventory.
+        - I know how to decode the data, it's just if I want to creat like over 200 emojis or not, it's a lot of effort either way.
+    - Fix convert YT command (I think it's just my cookie.txt issue)
+        - Try to find a better alternative
+    - Try to find an API for converting videos and stuff? Maybe cloudconvert has an API.
+    - Don't you hate it when you think of something, get distracted and come back all confused.
+        - I remembered, AFK command
 
-    - API commands
-        - Chess.com: https://www.chess.com/news/view/published-data-api
-        - Lichess: https://lichess.org/api
-        - Clash of clans: https://developer.clashofclans.com/
-        - Hypixel (Epically failed like 3 years prior but I have more API knowledge): https://api.hypixel.net/ 
+Possible ideas: 
+    - GD and OSU connect
+        - Not really sure how osu will work yet.
+    - OSU profile rework (More info)
+    - Finish the alert command
+    - New giveaway commands
+        - Since the giveaway is forever stored, make it so you can view a certain one.
+    - Possibly add comments to explain my code
+    - Start working on economy after all that
 
-This was last updated: 12/1/24 at 1:55 AM
+I WILL MOST LIKELY NOT SEPERATE COMMANDS INTO COGS UNLESS I FIND MORE PEOPLE TO HELP.
+
+This was last updated: 12/6/2024 10:53 PM 
 """
 
 import json, os, io, re, sys
@@ -198,9 +216,10 @@ async def test_hy_key():
             if response.status == 403:
                 data = await response.json()
                 if data.get("success") == False and data.get("cause") == "Invalid API key":
-                    print("Invalid API key provided. Please check secrets.env.")
+                    print("Invalid hypixel API key provided. Please check secrets.env.")
                     return False
             elif response.status == 400:
+                print("Hypixel API key is valid.")
                 return True
             else:
                 print(f"Request failed with status code: {response.status}")
@@ -343,6 +362,7 @@ async def on_ready():
     except Exception as e:
         print(f"An error occured when completing tasks. Press Ctrl+C to stop the bot. Error: {e}")
         
+    print("Bot is ready.")
 
 
 """
@@ -1543,16 +1563,42 @@ async def getUUID(interaction: discord.Interaction, username: str):
                 await interaction.followup.send(f"The usename is incorrect or the minecraft API is down. Exiting with status: {response.status}")
                 return False
 
-@bot.tree.command(name="uuid", description="Get a Minecraft UUID based on a username")
-@app_commands.describe(username="A Minecraft username")
-async def uuid(interaction: discord.Interaction, username: str):
-    await interaction.response.defer()
-    try:
-        uuid_result = await getUUID(interaction, username)
-        if uuid_result:
-            await interaction.followup.send(f"The UUID for {username} is {uuid_result}")
-    except Exception as error:
-        await handle_logs(interaction, error)
+class MinecraftCommandsGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="minecraft", description="Minecraft related commands")
+
+    @app_commands.command(name="uuid", description="Get a Minecraft UUID based on a username")
+    @app_commands.describe(username="A Minecraft username")
+    async def uuid(self, interaction: discord.Interaction, username: str):
+        await interaction.response.defer()
+        try:
+            uuid = await getUUID(interaction, username)
+            if uuid:
+                await interaction.followup.send(f"The UUID for {username} is {uuid}")
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    @app_commands.command(name="avatar", description="Provides a Minecraft account's avatar.")
+    @app_commands.describe(username="A Minecraft username")
+    async def minecraftavatar(self, interaction: discord.Interaction, username: str):
+        await interaction.response.defer()
+        try:
+            uuid = await getUUID(interaction, username)
+            if uuid:
+                image_url = f"https://api.mineatar.io/body/full/{uuid}"
+
+                embed = discord.Embed(title=f"{username}'s Avatar", color=discord.Color.blue())
+                embed.set_image(url=image_url)
+                embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.followup.send("UUID not found for the provided username.")
+        except Exception as error:
+            await handle_logs(interaction, error)
+            await interaction.followup.send("An error occurred while fetching the avatar.")
+
+bot.tree.add_command(MinecraftCommandsGroup())
 
 """
 HYPIXEL COMMANDS 
@@ -1596,7 +1642,7 @@ class HypixelView(discord.ui.View):
         cute_names = [profile_data[i]["cute_name"] for i in profile_data]
         profile_ids = [profile_data[i]["profile_id"] for i in profile_data]
 
-        embed = discord.Embed(title="Skyblock data")
+        embed = discord.Embed(title="Skyblock data", color=discord.Color.green())
 
         embed.add_field(name="Free booster cookie claim time", value=f"{cookie_string}", inline=False)
         for profiles in range(len(cute_names)):
@@ -1621,7 +1667,7 @@ class HypixelView(discord.ui.View):
         lastLogout = self.player.get("lastLogout", "Unknown")
         recentGame = self.player.get("mostRecentGameType", "Unknown")
 
-        embed = discord.Embed(title=f"Hypixel profile for [{rank.replace("_", " ")}] {username} ({id})")
+        embed = discord.Embed(title=f"Hypixel profile for [{rank.replace("_", "").replace("PLUS", "+")}] {username} ({id})")
         embed.add_field(
             name="Login and dates", 
             value=f"Join Date: <t:{int(int(firstLogin) / 1000)}:F>\n"
@@ -1741,23 +1787,31 @@ class SkyblockView(discord.ui.View):
         self.update_buttons()
 
     def get_level(self, total_xp, type=None):
-        cumulative_xp = [
-            0, 50, 175, 375, 675, 1175, 1925, 2925, 4425, 6425,
-            9925, 14925, 22425, 32425, 47425, 67425, 97425, 147425,
-            222425, 322425, 522425, 822425, 1222425, 1722425, 2322425,
-            3022425, 3822425, 4722425, 5722425, 6822425, 8022425, 9322425,
-            107222425, 122222425, 138222425, 155222425, 173222425, 192222425,
-            212222425, 233222425, 255222425, 278222425, 302222425, 327222425,
-            353222425, 380722425, 409722425, 440722425, 474722425, 511722425,
-            551722425
-        ]
+        exp_dict = {
+            "uni_xp": [
+                0, 50, 175, 375, 675, 1175, 1925, 2925, 4425, 6425, 9925, 14925, 22425, 32425, 47425, 67425,
+                97425, 147425, 222425, 322425, 522425, 822425, 1222425, 1722425, 2322425, 3022425, 3822425, 4722425, 5722425,
+                6822425, 8022425, 9322425, 10722425, 12222425, 13822425, 15522425, 17322425, 19222425, 21222425, 23322425,
+                25522425, 27822425, 30222425, 32722425, 35322425, 38072425, 40972425, 44072425, 47472425, 51172425, 55172425,
+                59472425, 64072425, 68972425, 74172425, 79672425, 85472425, 91572425, 97972425, 104672425, 111672425
+            ],
+            "runecrafting": [
+                0, 50, 150, 275, 435, 635, 885, 1200, 1600, 2100, 2725, 3510, 4510, 5760, 7325, 9325, 11825, 14950, 18950,
+                23950, 30200, 38050, 47850, 60100, 75400, 94450
+            ],
+            "social": [
+                0, 50, 150, 300, 550, 1050, 1800, 2800, 4050, 5550, 7550, 10050, 13050, 16800, 21300, 27300, 35300, 45300, 
+                57800, 72800, 92800, 117800, 147800, 182800, 222800, 272800
+            ],
+            "dungeoneering": [
+                0, 50, 125, 235, 395, 625, 955, 1425, 2095, 3045, 4385, 6275, 8940, 12700, 17960, 25340, 35640, 50040, 
+                70040, 97640, 135640, 188140, 259640, 356640, 488640, 668640, 911640, 1239640, 1684640, 2284640, 3084640, 
+                4149640, 5559640, 7459640, 9959640, 13259640, 17759640, 23559640, 31359640, 41559640, 55559640, 74559640, 
+                99559640, 132559640, 177559640, 235559640, 315559640, 423559640, 569809640
+            ]
+        }
 
-        for level in range(len(cumulative_xp) - 1, -1, -1):
-            if total_xp >= cumulative_xp[level]:
-                return level
-
-        return 0
-
+        return next((level for level in range(len(exp_dict[type]) - 1, -1, -1) if total_xp >= exp_dict[type][level]), 0)
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
@@ -1784,7 +1838,7 @@ class SkyblockView(discord.ui.View):
 
             creation_thing = f"<t:{int(int(creation_date) / 1000)}:F>" if creation_date > 0 else "No creation date somehow?"
 
-            embed = discord.Embed(title=f"Profile data for: {profile_id}")
+            embed = discord.Embed(title=f"Profile data for: {profile_id}", color=discord.Color.green())
             embed.add_field(
                 name="Profile Data",
                 value=(
@@ -1800,31 +1854,27 @@ class SkyblockView(discord.ui.View):
             exp = found_profile.get("leveling", {}).get("experience", 0)
 
             experience = found_profile.get("player_data", {}).get("experience", {})
-            skills = [skill for skill in experience.items()]
+            skills = experience.items()
 
-            embed = discord.Embed(title="Player Profile", color=discord.Color.blue())
+            objectives = found_profile.get("objectives", {})
+            completed_count = sum(1 for objective in objectives.values() if isinstance(objective, dict) and objective.get("status") == "COMPLETE")
 
             embed.add_field(
                 name="Leveling and Advancements",
-                value=f"Level: {int(exp) // 100} ({exp} total EXP)",
+                value=(
+                    f"Level: {int(exp) // 100} ({exp} total EXP)\n"
+                    f"Objectives: {completed_count}/{len(objectives)}\n"),
                 inline=False
             )
 
             skill_details = ""
-            for skill, xp in experience.items():
-                skill_name = skill.replace("SKILL_", "").title()
-                skill_details += f"{skill_name} Skill: {self.get_level(xp)} (EXP: {int(xp)}) **INACCURATE**\n"
+            for skill_name, xp in skills:
+                xp_type = skill_name.lower() if skill_name.lower() in skills else "uni_xp"
+                level = self.get_level(xp, xp_type)
+                skill_details += f"{skill_name.replace('SKILL_', '').title()} Skill: {level} (EXP: {int(xp)})\n"
 
             if skill_details:
                 embed.add_field(name="Skills", value=skill_details, inline=False)
-
-            completed_objectives = found_profile.get("completed_objectives", 0)
-            objectives = found_profile.get("objectives", [])
-            embed.add_field(
-                name="Objectives",
-                value=f"{completed_objectives}/{len(objectives)}",
-                inline=False
-            )
 
             copper = found_profile.get("garden_player_data", {}).get("copper", 0)
             currencies = found_profile.get("currencies", {})
@@ -1865,7 +1915,10 @@ class SkyblockCommandsGroup(app_commands.Group):
         super().__init__(name="sb", description="Hypixel skyblock commands")
 
     @app_commands.command(name="profile", description="Get a Hypixel Skyblock account's data")
-    @app_commands.describe(profile_id="The profile ID, use /hypixel profile if not known.")
+    @app_commands.describe(
+        profile_id="The profile ID",
+        username="A Minecraft username"
+    )
     @app_commands.choices(
         profile_id=[
             app_commands.Choice(name="1", value=0),
@@ -2337,15 +2390,17 @@ async def info(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     try:
         embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-        embed.add_field(name="Version", value="v1.1.22")
+        embed.add_field(name="Version", value=_version)
         embed.add_field(name="Server Count", value=len(bot.guilds))
         embed.add_field(name="Library", value="Discord.py")
-        embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 90 hours+")
+        embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 120 hours+")
         embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-        button = discord.ui.Button(label="Visit Website", url="https://lucasliorle.github.io")
         view = discord.ui.View()
-        view.add_item(button)
+
+        website = discord.ui.Button(label="Visit Website", url="https://lucasliorle.github.io")
+        view.add_item(website)
+        github = discord.ui.Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/APEYE")
 
         await interaction.followup.send(embed=embed, view=view)
     except Exception as error:
@@ -4930,11 +4985,11 @@ async def main():
     try:
         if not await test_hy_key():
             await bot.close()
-        print("Hypixel API key is valid.")
-        if not await get_player_data(None):
-            print("Invalid Clash Royale API key. Please check secrets.env.")
-            print("If your key is there, consider checking if your IP is authorized.")
-            await bot.close()
+        #print("Hypixel API key is valid.")
+        #if not await get_player_data(None):
+        #    print("Invalid Clash Royale API key. Please check secrets.env.")
+        #    print("If your key is there, consider checking if your IP is authorized.")
+        #    await bot.close()
         else:
             print("The bot is starting, please give it a minute.")
             await bot.start(token)
@@ -4946,7 +5001,7 @@ async def main():
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
     finally:
-        print("Bot has been successfully shut down.")
+        print("Bot is shutting down. If an error occurs, you can ignore it.")
 
 if __name__ == "__main__":
     try:
