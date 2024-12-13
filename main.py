@@ -15,8 +15,9 @@ Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
     - Has a lot of usefull utilities!
 
 Current plans (This is the changelogs, since I already did them):
-    - Cool run.bat thing yay
-    - More skyblock info
+    - greroll has a check
+    - Roblox commands work lol, one of the only commands I skipped since I only did some minor changes
+
 
 Next Update (Will come):    
     - Complete hypixel profile by adding every game button into it.
@@ -201,6 +202,8 @@ token = os.getenv("token")
 osu_api = os.getenv("osu_api")
 osu_secret = os.getenv("osu_secret")
 hypixel_api = os.getenv("hypixel_api")
+
+# https://sky.shiiyu.moe/api/v2/profile/ also works as a skyblock profile command.
 
 try:
     osu_api = Ossapi(int(osu_api), osu_secret)
@@ -1122,19 +1125,19 @@ class RobloxGroup(app_commands.Group):
     async def rbxdescription(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            discord_user_id = str(member.id) or str(interaction.user.id)
-            member_info = open_file("info/member_info.json")
-
-            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
-                await interaction.response.send_message("The specified account (Or yours) is not linked.")
-                return
-
             if username:
                 roblox_user_id = await GetRobloxID(username)
                 if roblox_user_id is None:
-                    await interaction.response.send_message(f"Failed to retrieve Roblox ID for {username}.")
+                    await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return
             else:
+                discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
+                member_info = open_file("info/member_info.json")
+
+                if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
+                    await interaction.followup.send("The specified account (or yours) is not linked.")
+                    return
+
                 roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
             bio = await fetch_roblox_bio(roblox_user_id)
@@ -1148,19 +1151,19 @@ class RobloxGroup(app_commands.Group):
     async def rbxinfo(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            discord_user_id = str(member.id) or str(interaction.user.id)
-            member_info = open_file("info/member_info.json")
-
-            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
-                await interaction.response.send_message("The specified account (Or yours) is not linked.")
-                return
-
             if username:
                 roblox_user_id = await GetRobloxID(username)
                 if roblox_user_id is None:
                     await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return
             else:
+                discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
+                member_info = open_file("info/member_info.json")
+
+                if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
+                    await interaction.followup.send("The specified account (or yours) is not linked.")
+                    return
+
                 roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
             async with aiohttp.ClientSession() as session:
@@ -1220,19 +1223,19 @@ class RobloxGroup(app_commands.Group):
     async def rbxavatar(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, items: bool = False):
         await interaction.response.defer()
         try:
-            discord_user_id = str(member.id) or str(interaction.user.id)
-            member_info = open_file("info/member_info.json")
-
-            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
-                await interaction.response.send_message("The specified account (Or yours) is not linked.")
-                return
-
             if username:
                 roblox_user_id = await GetRobloxID(username)
                 if roblox_user_id is None:
                     await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return
             else:
+                discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
+                member_info = open_file("info/member_info.json")
+
+                if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
+                    await interaction.followup.send("The specified account (or yours) is not linked.")
+                    return
+
                 roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
             async with aiohttp.ClientSession() as session:
@@ -1378,19 +1381,20 @@ class GloveView(discord.ui.View):
 async def cgloves(interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
     await interaction.response.defer(ephemeral=ephemeral)
     try:
-        discord_user_id = str(member.id) or str(interaction.user.id)
-
-        if username is None:
-            member_info = open_file("info/member_info.json")
-            if (discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]):
-                await interaction.response.send_message("The specified account (Or yours) is not linked.")
-                return
-            roblox_id = member_info[discord_user_id]["roblox_id"]
-        else:
+        if username:
             roblox_id = await GetRobloxID(username)
             if roblox_id is None:
-                await interaction.followup.send(f"No data found for the username: {username}")
+                await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                 return
+        else:
+            discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
+            member_info = open_file("info/member_info.json")
+
+            if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
+                await interaction.followup.send("The specified account (or yours) is not linked.")
+                return
+
+            roblox_id = member_info[discord_user_id]["roblox_id"]
 
         gloves = open_file("storage/gloves.json")
         all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
@@ -4490,7 +4494,7 @@ bot.tree.add_command(MarketGroup())
 bot.tree.add_command(ShopGroup())
 bot.tree.add_command(AuctionGroup())
 
-"""F
+"""
 MISC COMMANDS
 """
 @bot.tree.command(name="error_test", description="Demonstrates intentional error generation")
@@ -4680,6 +4684,9 @@ class GiveawayGroup(app_commands.Group):
         try:
             server_id = str(interaction.guild_id)
             server_info = open_file("info/server_info.json")
+
+            if not await check_mod(interaction, "manage_messages"):
+                return
             
             if server_id not in server_info or "giveaways" not in server_info[server_id]:
                 return await interaction.followup.send("No giveaways found for this server.", ephemeral=True)
@@ -4985,11 +4992,11 @@ async def main():
     try:
         if not await test_hy_key():
             await bot.close()
-        #print("Hypixel API key is valid.")
-        #if not await get_player_data(None):
-        #    print("Invalid Clash Royale API key. Please check secrets.env.")
-        #    print("If your key is there, consider checking if your IP is authorized.")
-        #    await bot.close()
+        print("Hypixel API key is valid.")
+        if not await get_player_data(None):
+            print("Invalid Clash Royale API key. Please check secrets.env.")
+            print("If your key is there, consider checking if your IP is authorized.")
+            await bot.close()
         else:
             print("The bot is starting, please give it a minute.")
             await bot.start(token)
