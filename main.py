@@ -1,4 +1,4 @@
-_version = "v1.1.23"
+_version = "v1.1.24"
 """
 Version.Release.Features
 Version: Remaking the code from scratch, basically a code rework, like adding cogs.
@@ -13,15 +13,20 @@ Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
     - This is just my bot I made for fun, mostly during my free time.
     - Feel free to "steal" or take portions of my code.
     - Has a lot of usefull utilities!
+    - /help for more info!
 
-Current plans (This is the changelogs, since I already did them):
+Update Notes
     - greroll has a check
     - Roblox commands work lol, one of the only commands I skipped since I only did some minor changes
+    - Clean and purge command updated
+    - Modstats for mobile is actually good...
+    - Most games in hypixel profile command (Most of the useful ones)
+    - Skyblock command has more data.
+    - AFK Command!
 
-
-Next Update (Will come):    
-    - Complete hypixel profile by adding every game button into it.
-    - Skyblock profile command shows collections
+Next Patch (Most likely will come):
+    - Skyblock profile command shows collections    
+    - Read TODOs for more info, most of them will probably come!
 
 Future updates (Might or might not come, mainly the next update/feature):
     - Skyblock profile shows user inventory.
@@ -41,10 +46,12 @@ Possible ideas:
         - Since the giveaway is forever stored, make it so you can view a certain one.
     - Possibly add comments to explain my code
     - Start working on economy after all that
+    - Custom command prefix
+    - Json file to store every description. Makes help command easier.
 
 I WILL MOST LIKELY NOT SEPERATE COMMANDS INTO COGS UNLESS I FIND MORE PEOPLE TO HELP.
 
-This was last updated: 12/6/2024 10:53 PM 
+This was last updated: 12/14/2024 10:13 AM
 """
 
 import json, os, io, re, sys
@@ -94,6 +101,8 @@ intents.messages = True
 intents.guilds = True
 intents.dm_messages = True
 intents.members = True
+
+# TODO: Custom command prefix?
 bot = commands.Bot(command_prefix="?", intents=intents)
 
 logs = {}
@@ -123,7 +132,6 @@ def store_log(log_type: str, message: str) -> int:
     log_id_counter += 1
 
     return current_id
-
 
 async def handle_logs(interaction: discord.Interaction, error: Exception, log_type: str = "error"):
     global log_id_counter
@@ -218,10 +226,10 @@ async def test_hy_key():
         async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}") as response:
             if response.status == 403:
                 data = await response.json()
-                if data.get("success") == False and data.get("cause") == "Invalid API key":
+                if data.get("success") == False and data.get("cause") == "Invalid API key": 
                     print("Invalid hypixel API key provided. Please check secrets.env.")
                     return False
-            elif response.status == 400:
+            elif response.status == 400: # UUID is not provided, therefore it would return 400
                 print("Hypixel API key is valid.")
                 return True
             else:
@@ -233,121 +241,64 @@ reddit = asyncpraw.Reddit(
     client_secret=client_secret,
     user_agent=user_agent,
 ) 
-
-class ReplyModal(discord.ui.Modal):
-    def __init__(self, user, message_id, reply_author):
-        super().__init__(title="Reply to User")
-        self.user = user
-        self.message_id = message_id
-        self.reply_author = reply_author
-        self.add_item(
-            discord.ui.TextInput(
-                label="Your reply",
-                placeholder="Type your reply here...",
-            )
-        )
-
-    async def callback(self, interaction: discord.Interaction):
-        reply_content = self.children[0].value
-        try:
-            await self.user.send(
-                f"**Reply from {self.reply_author.display_name}:**\n{reply_content}"
-            )
-            await interaction.response.send_message(
-                f"Replied to {self.user.mention}: {reply_content}", ephemeral=True
-            )
-            reply_log_channel = bot.get_channel(1291626347713790033)
-            if reply_log_channel:
-                embed = discord.Embed(
-                    title="Reply Sent",
-                    description=f"**Replied to:** {self.user.mention}\n"
-                    f"**Replied by:** {self.reply_author.mention}\n"
-                    f"**Original Message ID:** {self.message_id}\n"
-                    f"**Reply Content:** {reply_content}",
-                    color=discord.Color.green(),
-                    timestamp=datetime.now(timezone.utc),
-                )
-                await reply_log_channel.send(embed=embed)
-
-        except discord.Forbidden:
-            await interaction.response.send_message(
-                "Failed to send the reply. The user may have DMs disabled.", ephemeral=True,
-            )
-        except discord.HTTPException:
-            await interaction.response.send_message(
-                "Failed to send the DM or log the reply.", ephemeral=True
-            )
-
-class ReplyButton(discord.ui.Button):
-    def __init__(self, user, message_id):
-        super().__init__(label="Reply", style=discord.ButtonStyle.primary)
-        self.user = user
-        self.message_id = message_id
-
-    async def callback(self, interaction: discord.Interaction):
-        modal = ReplyModal(self.user, self.message_id, interaction.user)
-        await interaction.response.send_modal(modal)
-
 user_last_message_time = {}
+
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
 
-    if isinstance(message.channel, discord.DMChannel) and message.author != bot.user:
-        for guild in bot.guilds:
-            member = guild.get_member(message.author.id)
-            if member:
-                server_info = open_file("info/server_info.json")
-                guild_id = str(guild.id)
+    if isinstance(message.channel, discord.DMChannel):
+        return
 
-                if guild_id in server_info["preferences"] and "dmLogs" in server_info["preferences"][guild_id]:
-                    dm_log_channel = bot.get_channel(server_info["preferences"][guild_id]["dmLogs"])
-                    if dm_log_channel:
-                        embed = discord.Embed(
-                            title="Direct Message Received",
-                            description=f"**User:** {message.author.mention}\n"
-                                        f"**Message:** {message.content or '[No text content]'}\n"
-                                        f"**Message ID:** {message.id}",
-                            color=discord.Color.blue(),
-                            timestamp=message.created_at,
-                        )
+    server_id = str(message.guild.id)
+    member_id = str(message.author.id)
+    current_time = datetime.now(timezone.utc)
 
-                        if message.attachments:
-                            for attachment in message.attachments:
-                                embed.add_field(
-                                    name="Attachment",
-                                    value=attachment.url,
-                                    inline=False,
-                                )
+    server_info = open_file("info/server_info.json")
+    member_data = open_file("info/member_info.json")
 
-                        reply_button = ReplyButton(member=message.author, message_id=message.id)
-                        view = discord.ui.View()
-                        view.add_item(reply_button)
+    afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
 
-                        await dm_log_channel.send(embed=embed, view=view)
+    if member_id in afk_data:
+        original_name = afk_data[member_id].get("original_name")
+        del afk_data[member_id]
+        save_file("info/server_info.json", server_info)
 
-    if not isinstance(message.channel, discord.DMChannel):
-        member_id = str(message.author.id)
-        current_time = datetime.now()
+        await message.add_reaction("👋")
+        await message.channel.send(f"Welcome back, {message.author.mention}! You are no longer AFK.", delete_after=3)
+        if original_name and message.author.display_name != original_name:
+            try:
+                await message.author.edit(nick=original_name)
+            except discord.Forbidden:
+                pass
 
-        member_data = open_file("info/member_info.json")
+    for user in message.mentions:
+        user_id = str(user.id)
+        if user_id in afk_data:
+            afk_reason = afk_data[user_id].get("reason", "No reason provided")
+            afk_time = afk_data[user_id].get("time", datetime.now(timezone.utc).isoformat())
+            embed = discord.Embed(
+                title=f"{user.display_name} is AFK",
+                description=afk_reason,
+                timestamp=datetime.fromisoformat(afk_time),
+                color=discord.Color.orange(),
+            )
+            await message.channel.send(embed=embed)
 
-        if member_id not in member_data:
-            member_data[member_id] = {"EXP": 0}
+    if member_id not in member_data:
+        member_data[member_id] = {"EXP": 0}
 
-        last_message_time = user_last_message_time.get(member_id)
+    last_message_time = user_last_message_time.get(member_id)
 
-        if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
-            message_length = len(message.content)
-            exp_gain = math.floor(message_length / 15)
+    if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
+        message_length = len(message.content)
+        exp_gain = math.floor(message_length / 15)
 
-            member_data[member_id]["EXP"] += exp_gain
-            user_last_message_time[member_id] = current_time
+        member_data[member_id]["EXP"] += exp_gain
+        user_last_message_time[member_id] = current_time
 
-            save_file("info/member_info.json", member_data)
-
-        await bot.process_commands(message)
+        save_file("info/member_info.json", member_data)
 
 @bot.event
 async def on_ready():
@@ -642,12 +593,12 @@ class BloonsTD6CommandGroup(app_commands.Group):
                         color=discord.Color.green()
                     )
                     embed.set_thumbnail(url=avatar_url)
-                    embed.add_field(name="Rank", value=str(rank), inline=True)
+                    embed.add_field(name="Rank", value=str(rank))
                     if int(rank) > 155:
-                        embed.add_field(name="Veteran Rank", value=str(veteran_rank), inline=True)
-                    embed.add_field(name="Achievements", value=f"{str(achievements)}/150", inline=True)
-                    embed.add_field(name="Most Experienced Monkey", value=most_experienced_monkey, inline=True)
-                    embed.add_field(name="Followers", value=str(followers), inline=True)
+                        embed.add_field(name="Veteran Rank", value=str(veteran_rank))
+                    embed.add_field(name="Achievements", value=f"{str(achievements)}/150")
+                    embed.add_field(name="Most Experienced Monkey", value=most_experienced_monkey)
+                    embed.add_field(name="Followers", value=str(followers))
 
                     gameplay = body.get("gameplay", {})
                     total_cash_earned = gameplay.get("cashEarned", "N/A")
@@ -661,10 +612,10 @@ class BloonsTD6CommandGroup(app_commands.Group):
                             return f"{num:,}"
                         return num
 
-                    embed.add_field(name="Total Cash Earned", value=f"${format_number(total_cash_earned)}", inline=True)
-                    embed.add_field(name="Highest Round", value=str(highest_round), inline=True)
-                    embed.add_field(name="Total Games Won", value=f"{str(total_games_won)}/{str(total_games_played)}", inline=True)
-                    embed.add_field(name="Total Monkeys Placed", value=format_number(total_monkeys_placed), inline=True)
+                    embed.add_field(name="Total Cash Earned", value=f"${format_number(total_cash_earned)}")
+                    embed.add_field(name="Highest Round", value=str(highest_round))
+                    embed.add_field(name="Total Games Won", value=f"{str(total_games_won)}/{str(total_games_played)}")
+                    embed.add_field(name="Total Monkeys Placed", value=format_number(total_monkeys_placed))
 
                     towers_placed = body.get("towersPlaced", {})
                     tower_lines = ""
@@ -711,16 +662,16 @@ class OsuCommandGroup(app_commands.Group):
                 color=discord.Color.blue(),
             )
             embed.set_thumbnail(url=user.avatar_url)
-            embed.add_field(name="Username", value=user.username or "N/A", inline=True)
-            embed.add_field(name="ID", value=str(user.id) if user.id is not None else "N/A", inline=True)
+            embed.add_field(name="Username", value=user.username or "N/A")
+            embed.add_field(name="ID", value=str(user.id) if user.id is not None else "N/A")
             
             pp = f"{user.statistics.pp:,}pp" if user.statistics.pp is not None else "N/A"
             rank = f"#{user.statistics.global_rank:,}" if user.statistics.global_rank is not None else "N/A"
 
-            embed.add_field(name="PP", value=pp, inline=True)
-            embed.add_field(name="Rank", value=rank, inline=True)
-            embed.add_field(name="Country", value=user.country.name or "N/A", inline=True)
-            embed.add_field(name="Playcount", value=f"{user.statistics.play_count:,}" if user.statistics.play_count is not None else "N/A", inline=True)
+            embed.add_field(name="PP", value=pp)
+            embed.add_field(name="Rank", value=rank)
+            embed.add_field(name="Country", value=user.country.name or "N/A")
+            embed.add_field(name="Playcount", value=f"{user.statistics.play_count:,}" if user.statistics.play_count is not None else "N/A")
             embed.add_field(
                 name="Hit Accuracy",
                 value=f"{user.statistics.hit_accuracy:.2f}%" if user.statistics.hit_accuracy is not None else "N/A",
@@ -829,7 +780,6 @@ class ProfileView(discord.ui.View):
 
         wins = self.player_data.get("wins", 0)
         losses = self.player_data.get("losses", 0)
-        winrate = (wins / (wins + losses) * 100) if (wins + losses) > 0 else 0
 
         trophies = self.player_data.get("trophies", "Unknown")
         max_trophies = self.player_data.get("bestTrophies", "Unknown")
@@ -847,7 +797,7 @@ class ProfileView(discord.ui.View):
 
         embed = discord.Embed(title=f"{name}'s Clash Royale Profile", color=discord.Color.blue())
         embed.add_field(name="User", value=f"{name} ({user_id})", inline=False)
-        embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({winrate:.2f}%)", inline=False)
+        embed.add_field(name="Wins/Losses", value=f"{wins}/{losses} ({(wins / (wins + losses) * 100) if (wins + losses) > 0 else 0:.2f}%)", inline=False)
         embed.add_field(name="<:Trophy:1299093384882950245> Trophy Road", value=f"{trophies}/{max_trophies} ({arena})", inline=False)
         if legacy_trophies is not None and (legacy_trophies > 0 if isinstance(legacy_trophies, (int, float)) else False):
             embed.add_field(name="<:Trophy:1299093384882950245> Legacy Trophies", value=legacy_trophies, inline=False)
@@ -1623,11 +1573,179 @@ class HypixelView(discord.ui.View):
         self.skyblock_button.callback = self.show_skyblock_page
         self.add_item(self.skyblock_button)
 
+        self.arcade_button = discord.ui.Button(label="Arcade", style=discord.ButtonStyle.secondary)
+        self.arcade_button.callback = self.show_arcade_page
+        self.add_item(self.arcade_button)
+
+        self.bedwars_button = discord.ui.Button(label="Bedwars", style=discord.ButtonStyle.secondary)
+        self.bedwars_button.callback = self.show_bedwars_page
+        self.add_item(self.bedwars_button)
+
+        self.skywars_button = discord.ui.Button(label="Skywars", style=discord.ButtonStyle.secondary)
+        self.skywars_button.callback = self.show_skywars_page
+        self.add_item(self.skywars_button)
+
         self.update_buttons()
     
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
         self.skyblock_button.disabled = self.current_page == "skyblock"
+        self.arcade_button.disabled = self.current_page == "arcade"
+        self.bedwars_button.disabled = self.current_page == "bedwars"
+        self.skywars_button.disabled = self.current_page == "skywars"
+
+    async def show_skywars_page(self, interaction: discord.Interaction):
+        self.current_page = "skywars"
+        self.update_buttons()
+
+        embed = self.create_skywars_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_skywars_embed(self):
+        profile_data = self.player.get("stats", {}).get("SkyWars", {})
+
+        souls = profile_data.get("souls", 0)
+        coins = profile_data.get("coins", 0)
+        skywars_level = profile_data.get("levelFormatted", "Unknown")
+        kills = profile_data.get("kills", 0)
+        deaths = profile_data.get("deaths", 0)
+        wins = profile_data.get("wins", 0)
+        games_played = profile_data.get("games_played_skywars", 0)
+        win_streak = profile_data.get("win_streak", 0)
+        time_played = profile_data.get("time_played", 0)
+        longest_bow_kill = profile_data.get("longest_bow_kill", 0)
+
+        embed = discord.Embed(
+            title="SkyWars Stats",
+            color=discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        # inline=True (Automatically like it)
+
+        embed.add_field(name="SkyWars Level", value=f"{skywars_level.replace("§", "")}")
+        embed.add_field(name="Souls", value=f"{souls:,}") # I spent 10 mins debugging this just to find out I put add_filed
+        embed.add_field(name="Coins", value=f"{coins:,}")
+        embed.add_field(name="Kills", value=f"{kills:,}")
+        embed.add_field(name="Deaths", value=f"{deaths:,}")
+        embed.add_field(name="K/D Ratio", value=f"{kills / deaths if deaths > 0 else kills:.2f}") # Thinking about doing this instead of percentage for some of them.
+        embed.add_field(name="Wins", value=f"{wins:,}")
+        embed.add_field(name="Games Played", value=f"{games_played:,}")
+        embed.add_field(name="Win Streak", value=f"{win_streak:,}")
+        embed.add_field(name="Time Played", value=f"{time_played} seconds") # TODO: Format this?
+        embed.add_field(name="Longest Bow Kill", value=f"{longest_bow_kill} blocks")
+
+        return embed
+
+    async def show_bedwars_page(self, interaction: discord.Interaction):
+        self.current_page = "bedwars"
+        self.update_buttons()
+
+        embed = self.create_bedwars_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_bedwars_embed(self):
+        profile_data = self.player.get("stats", {}).get("Bedwars", {})
+        
+        games_played = profile_data.get("games_played_bedwars", 0)
+        wins = profile_data.get("wins_bedwars", 0)
+        losses = profile_data.get("losses_bedwars", 0)
+        kills = profile_data.get("kills_bedwars", 0)
+        deaths = profile_data.get("deaths_bedwars", 0)
+        beds_broken = profile_data.get("beds_broken_bedwars", 0)
+        beds_lost = profile_data.get("beds_lost_bedwars", 0)
+        
+        embed = discord.Embed(
+            title="Bedwars Stats",
+            color=discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        embed.add_field(name="Games Played", value=f"{games_played}", inline=False)
+        embed.add_field(
+            name="Wins/Losses", 
+            value=f"{wins}/{losses} ({(wins/losses * 100):.2f}%)" if losses > 0 else f"{wins}/{losses} (N/A)", 
+            inline=False
+        )
+        embed.add_field(
+            name="Kills/Deaths", 
+            value=f"{kills}/{deaths} ({(kills/deaths * 100):.2f}%)" if deaths > 0 else f"{kills}/{deaths} (N/A)", 
+            inline=False
+        )
+        embed.add_field(
+            name="Beds Broken/Lost", 
+            value=f"{beds_broken}/{beds_lost} ({(beds_broken/beds_lost) * 100:.2f}%)" if beds_lost > 0 else f"{beds_broken}/{beds_lost} (N/A)", 
+            inline=False
+        )
+
+        return embed
+        
+    async def show_arcade_page(self, interaction: discord.Interaction):
+        self.current_page = "arcade"
+        self.update_buttons()
+
+        embed =  self.create_arcade_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_arcade_embed(self):
+        profile_data = self.player.get("stats", {}).get("Arcade", {})
+        coins = profile_data.get("coins", 0)
+        
+        embed = discord.Embed(
+            title="Arcade Stats",
+            color=discord.Color.blurple(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        embed.add_field(name="Coins", value=f"{coins:,}", inline=False)
+
+        pixel_party = profile_data.get("pixel_party", {})
+        embed.add_field(
+            name="Pixel Party",
+            value=f"Games Played: {pixel_party.get('games_played', 0)}\n"
+                f"Games Played (Normal): {pixel_party.get('games_played_normal', 0)}",
+            inline=False
+        )
+
+        dropper = profile_data.get("dropper", {})
+        map_stats = dropper.get("map_stats", {})
+        dropper_maps = "\n".join(
+            f"{map_name.title()}: Best Time: {stats.get('best_time', 'N/A')} ms, Completions: {stats.get('completions', 0)}"
+            for map_name, stats in map_stats.items()
+        )
+        embed.add_field(
+            name="Dropper",
+            value=f"Fails: {dropper.get('fails', 0)}\n"
+                f"Games Played: {dropper.get('games_played', 0)}\n"
+                f"Maps Completed: {dropper.get('maps_completed', 0)}\n\n"
+                f"**Map Stats:**\n{dropper_maps}",
+            inline=False
+        )
+
+        # print(profile_data)
+        # TODO: This doesn't work on large profiles (too much lines)
+        # Probably just use multiple embeds via returning multiple if too much.
+        # Work on in later verions
+
+        stats_party_games = {
+            (
+                re.sub(
+                    r"(.*) (Deaths|Kills|Final Kills|Wins|Score|Time)$",
+                    r"(\2) \1",
+                    key.title().replace("_", " ").replace("Party", "").strip()
+                )
+            ): value
+            for key, value in profile_data.items() if isinstance(value, int) and key != "coins"
+        }
+
+        party_games_stats = "\n".join(f"{k}: {v}" for k, v in stats_party_games.items())
+        if stats_party_games is not None:
+            embed.add_field(name="Party Games Stats", value=party_games_stats, inline=False)
+
+        return embed
 
     async def show_skyblock_page(self, interaction: discord.Interaction):
         self.current_page = "skyblock"
@@ -1646,7 +1764,11 @@ class HypixelView(discord.ui.View):
         cute_names = [profile_data[i]["cute_name"] for i in profile_data]
         profile_ids = [profile_data[i]["profile_id"] for i in profile_data]
 
-        embed = discord.Embed(title="Skyblock data", color=discord.Color.green())
+        embed = discord.Embed(
+            title="Skyblock data", 
+            color=discord.Color.green(),
+            timestamp=datetime.now(timezone.utc)
+        )
 
         embed.add_field(name="Free booster cookie claim time", value=f"{cookie_string}", inline=False)
         for profiles in range(len(cute_names)):
@@ -1663,15 +1785,19 @@ class HypixelView(discord.ui.View):
 
     def create_main_embed(self):
         id = self.player.get("_id", "Unknown")
-        rank = self.player.get("newPackageRank", "Unknown")
+        rank = self.player.get("newPackageRank", "Regular")
         username = self.player.get("displayname", "Unknown")
 
-        firstLogin = self.player.get("firstLogin", "Unknown")
-        lastLogin = self.player.get("lastLogin", "Unknown")
-        lastLogout = self.player.get("lastLogout", "Unknown")
+        firstLogin = self.player.get("firstLogin", 0)
+        lastLogin = self.player.get("lastLogin", 0)
+        lastLogout = self.player.get("lastLogout", 0)
         recentGame = self.player.get("mostRecentGameType", "Unknown")
 
-        embed = discord.Embed(title=f"Hypixel profile for [{rank.replace("_", "").replace("PLUS", "+")}] {username} ({id})")
+        embed = discord.Embed(
+            title=f"Hypixel profile for [{rank.replace("_", "").replace("PLUS", "+")}] {username} ({id})",
+            color=discord.Color.yellow(),
+            timestamp=datetime.now(timezone.utc)
+        )
         embed.add_field(
             name="Login and dates", 
             value=f"Join Date: <t:{int(int(firstLogin) / 1000)}:F>\n"
@@ -1682,11 +1808,11 @@ class HypixelView(discord.ui.View):
         )
 
         # Ignore why I stop using camel case it's how im feeling and I do these like 2 days apart
-        exp = self.player.get("networkExp", "Unknown")
-        level_rewards = self.player.get("leveling", "Unknown").get("claimedRewards", "Unknown")
-        achievement_points = self.player.get("achievementPoints", "Unknown")
-        karma = self.player.get("karma", "Unknown")
-        achievements = self.player.get("achievements", "Unknown")
+        exp = self.player.get("networkExp", 0)
+        level_rewards = self.player.get("leveling", {}).get("claimedRewards", {})
+        achievement_points = self.player.get("achievementPoints", 0)
+        karma = self.player.get("karma", 0)
+        achievements = self.player.get("achievements", 0)
 
         embed.add_field(
             name="Levels and Experience",
@@ -1707,7 +1833,7 @@ class HypixelView(discord.ui.View):
 
         embed.add_field(
             name="Daily Rewards",
-            value=f"Last claim time: <t:{int(int(last_claimed_reward) / 1000) if last_claimed_reward > 0 else "Never claimed"}:F>\n"
+            value = f"Last claim time: <t:{int(last_claimed_reward / 1000)}:F>\n" if isinstance(last_claimed_reward, int) else "Last claim time: Never claimed\n"
             f"Reward score/streak: {reward_score:,}/{reward_streak:,}\n"
             f"Reward highscore: {reward_high_score:,}\n"
             f"Total daily rewards: {total_daily_rewards:,}\n"
@@ -1715,10 +1841,11 @@ class HypixelView(discord.ui.View):
             inline=False
         )
 
-        current_click_effect = self.player.get("currentClickEffect", "Unknown")
-        particle_pack = self.player.get("particlePack", "Unknown")
-        current_gadget = self.player.get("currentGadget", "Unknown")
-        current_pet = self.player.get("currentPet", "Unknown")
+        # This is "None" and not None because NoneType has no attribute for replace, while a string does
+        current_click_effect = self.player.get("currentClickEffect", "None")
+        particle_pack = self.player.get("particlePack", "None")
+        current_gadget = self.player.get("currentGadget", "None")
+        current_pet = self.player.get("currentPet", "None")
 
         embed.add_field(
             name="Cosmetics",
@@ -1736,15 +1863,7 @@ class HypixelCommandsGroup(app_commands.Group):
 
     @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
     @app_commands.describe(username="Their Minecraft username.")
-    @app_commands.choices(
-        profile=[
-            app_commands.Choice(name=1, value=0),
-            app_commands.Choice(name=2, value=1),
-            app_commands.Choice(name=3, value=2),
-            app_commands.Choice(name=4, value=3),
-        ]
-    )
-    async def hyProfile(self, interaction: discord.Interaction, username: str, profile: int = 1):
+    async def hyProfile(self, interaction: discord.Interaction, username: str):
         if not interaction.response.is_done():
             await interaction.response.defer()
         try:
@@ -1784,9 +1903,29 @@ class SkyblockView(discord.ui.View):
         self.main_button.callback = self.show_main_page
         self.add_item(self.main_button)
 
+        self.mine_button = discord.ui.Button(label="Mining", style=discord.ButtonStyle.secondary)
+        self.mine_button.callback = self.show_mine_page
+        self.add_item(self.mine_button)
+
+        self.farm_button = discord.ui.Button(label="Farming", style=discord.ButtonStyle.secondary)
+        self.farm_button.callback = self.show_farm_page
+        self.add_item(self.farm_button)
+
         self.collections_button = discord.ui.Button(label="Collections", style=discord.ButtonStyle.secondary)
         self.collections_button.callback = self.show_collections_page
         self.add_item(self.collections_button)
+
+        self.misc_button = discord.ui.Button(label="Miscellaneous", style=discord.ButtonStyle.secondary)
+        self.misc_button.callback = self.show_misc_page
+        self.add_item(self.misc_button)
+        '''
+        TODO: Add these buttons for later versions?
+        $.members.found_profile.events.easter (For chocolate factory)
+        $.members.found_profile.dungeons (For dungeons data)
+        $.members.found_profile.nether_island_player_data (That place i forgot what it was called)
+        $.members.found_profile.auctions
+
+        '''
 
         self.update_buttons()
 
@@ -1819,7 +1958,100 @@ class SkyblockView(discord.ui.View):
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
+        self.mine_button.disabled = self.current_page == "mine"
+        self.farm_button.disabled = self.current_page == "farm"
         self.collections_button.disabled = self.current_page == "collections"
+        self.misc_button.disabled = self.current_page == "misc"
+
+    async def show_mine_page(self, interaction: discord.Interaction):
+        self.current_page = "mine"
+        self.update_buttons()
+        
+        embed = self.create_mine_embed()
+        await self.message.edit(embed=embed, view=self)
+
+        await interaction.response.defer()
+
+    def create_mine_embed(self):
+        embed = discord.Embed(
+            title="Mining Stats",
+            color=discord.Color.light_grey(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        found_profile = self.profile_data.get("members", {}).get(self.uuid, {})
+        mining = found_profile.get("mining_core", {})
+
+        last_hotm_reset = mining.get("last_reset", None)
+
+        tokens = mining.get("token", 0)
+        tokens_spent = mining.get("tokens_spent", 0)
+
+        mithril = mining.get("powder_mithril_total", 0) # TODO: Check if it is this or just powder_mithril
+        gemstone = mining.get("powder_gemstone_total", 0)
+        glacite = mining.get("powder_glacite_total", 0)
+
+        embed.add_field(
+            name="Powder",
+            value=f"Mithril: {mithril}\n"
+            f"Gemstone: {gemstone}\n"
+            f"Glacite: {glacite}",
+            inline=False
+        )
+
+        hotm_string = f"<t:{int(last_hotm_reset / 1000)}:F>" if last_hotm_reset is not None else "Never"
+
+        embed.add_field(
+            name="Heart Of The Mountain",
+            value=f"Tokens: {tokens}\n"
+            f"Spent: {tokens_spent}\n"
+            f"Last HOTM Reset Time: {hotm_string}",
+            inline=False
+        )
+
+        return embed
+
+    async def show_farm_page(self, interaction: discord.Interaction):
+        self.current_page = "farm"
+        self.update_buttons()
+        
+        embed = self.create_farm_embed()
+        await self.message.edit(embed=embed, view=self)
+
+        await interaction.response.defer()
+
+    def create_farm_embed(self):
+        embed = discord.Embed(
+            title="Farming Stats",
+            color=discord.Color.from_rgb(165, 42, 42), # 0xA52A2A, thinking of getting a darker color
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        found_profile = self.profile_data.get("members", {}).get(self.uuid, {})
+        contests = found_profile.get("jacobs_contest", {})
+        medals = contests.get("medals_inv", {})
+        perks = contests.get("perks", {})
+        personal_bests = contests.get("personal_bests", {})
+
+        m_string = "\n".join(
+            f"{medal.replace('_', ' ').title()}: {amount}"
+            for medal, amount in medals.items()
+        )
+        embed.add_field(name="Current Medals", value=m_string or "No medals", inline=False)
+
+        p_string = "\n".join(
+            f"{perk.replace('_', ' ').title()}: {value}"
+            for perk, value in perks.items()
+        )
+        embed.add_field(name="Perks", value=p_string or "No perks", inline=False)
+
+        pe_string = "\n".join(
+            f"{crop.replace('_', ' ').title()}: {score}"
+            for crop, score in personal_bests.items()
+        )
+        embed.add_field(name="Personal Bests", value=pe_string or "No personal bests", inline=False)
+
+        return embed
 
     async def show_main_page(self, interaction: discord.Interaction):
         self.current_page = "main"
@@ -1829,7 +2061,7 @@ class SkyblockView(discord.ui.View):
         if embed:
             await self.message.edit(embed=embed, view=self)
         else:
-            await self.message.edit(content="That is not an account.", embed=None, view=self)
+            await self.message.edit(content="That is not an account.", embed=None, view=None)
         await interaction.response.defer()
 
     def create_main_embed(self):
@@ -1840,16 +2072,20 @@ class SkyblockView(discord.ui.View):
             game_mode = self.profile_data.get("game_mode", "Regular")
             members = self.profile_data.get("members", {})
 
-            creation_thing = f"<t:{int(int(creation_date) / 1000)}:F>" if creation_date > 0 else "No creation date somehow?"
+            creation_thing = f"<t:{int(int(creation_date) / 1000)}:F>" if creation_date > 0 else "Most likely old account."
 
-            embed = discord.Embed(title=f"Profile data for: {profile_id}", color=discord.Color.green())
+            embed = discord.Embed(
+                title=f"Profile data for: {profile_id}", 
+                color=discord.Color.green(),
+                timestamp=datetime.now(timezone.utc)
+            )
             embed.add_field(
                 name="Profile Data",
                 value=(
                     f"Game Mode: {str(game_mode).title()}\n"
                     f"Cute Name: {cute_name}\n"
                     f"Creation Date: {creation_thing}\n"
-                    f"Co-op Members: {len(members)} members" if len(members) > 1 else ""
+                    f"Members: {len(members)}"
                 ),
                 inline=False
             )
@@ -1885,9 +2121,17 @@ class SkyblockView(discord.ui.View):
             essences = currencies.get("essence", {})
             purse = currencies.get("coin_purse", 0)
             bank = found_profile.get("profile", {}).get("bank_account", -1)
+            motes = currencies.get("motes_purse", 0)
 
-            embed.add_field(name="Economy", value=f"Purse: {purse}\nBank: {'{:.2f}'.format(bank) if bank > 0 else 'None'}\nCopper: {copper}", inline=False)
-
+            embed.add_field(
+                name="Economy", 
+                value=f"Purse: {purse:.2f}\n"
+                f"Bank: {'{:.2f}'.format(bank) if bank > 0 else 'None'}\n"
+                f"Copper: {copper}\n"
+                f"Motes: {motes}", 
+                inline=False
+                )
+            
             if essences:
                 essence_details = ""
                 for essence, data in essences.items():
@@ -1896,9 +2140,99 @@ class SkyblockView(discord.ui.View):
 
                 embed.add_field(name="Essences", value=essence_details, inline=False)
 
+            gifts = found_profile.get("player_stats", {}).get("gifts", {})
+            gift_given = gifts.get("total_recieved", 0)
+            gift_recieved = gifts.get("total_given", 0)
+
+            if gift_given or gift_recieved > 0:
+                embed.add_field(name="Gifts", value=f"Given: {gift_given}\nRecieved: {gift_recieved}")
+
+
             return embed
         else:
             return None
+
+    async def show_misc_page(self, interaction: discord.Interaction):
+        self.current_page = "misc"
+        self.update_buttons()
+
+        embed = self.create_misc_embed()
+        await self.message.edit(embed=embed, view=self)
+
+        await interaction.response.defer()
+
+    def create_misc_embed(self):
+        found_profile = self.profile_data.get("members", {}).get(self.uuid, {})
+        highest_crit = found_profile.get("player_stats", {}).get("highest_critical_damage", 0)
+        highest_damage = found_profile.get("player_stats", {}).get("highest_damage", 0)
+
+
+        kills = found_profile.get("player_stats", {}).get("kills", {})
+        # deaths = found_profile.get("player_stats", {}).get("deaths", {})
+        deaths = found_profile.get("player_data", {}).get("death_count", 0)
+        # No clue what format this is
+        # last_death = found_profile.get("player_data", {}).get("last_death", None)
+
+        def format_mob_data(data):
+            # formatted_data = []
+            total = 0
+            for _, count in data.items():
+                total += count
+                '''
+                mob_name = mob.replace("_", " ").title()
+                formatted_data.append(f"{mob_name}: {int(count)}")
+                '''
+            return total # formatted_data
+
+        embed = discord.Embed(
+            title="Misc Data",
+            color=discord.Color.orange(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        embed.add_field(name="Highest Damage", value=f"Normal: {highest_damage:,.2f}\nCritical: {highest_crit:,.2f}", inline=False)
+
+        
+        # Kills and deaths have too much items sometimes. Makes it so it's too large to put onto 1 embed
+        # TODO: Multiple embeds per message?
+        if kills:
+            # kills_formatted = "\n".join(format_mob_data(kills))
+            kills = format_mob_data(kills)
+            embed.add_field(name="Kills", value=f"Total: {kills}", inline=False)
+
+        if deaths:
+            # deaths_formatted = "\n".join(format_mob_data(deaths))
+            # deaths = format_mob_data(deaths)
+            # death_string = f"<t:{int(int(last_death) / 1000)}:F>" if last_death is not None else "Never died."
+            embed.add_field(name="Deaths", value=f"Deaths: {deaths}")
+            # \nLast Death: {death_string}", inline=False)
+            
+            
+        fairy_souls = found_profile.get("fairy_soul", {})
+        total = fairy_souls.get("total_collected", 0)
+        exchanged = fairy_souls.get("fairy_exchanges", 0)
+        unspent = fairy_souls.get("unspent_souls", 0)
+
+        if fairy_souls is not None:
+            embed.add_field(
+                name="Fairy Souls", 
+                value=f"Total: {total}\nExchanged: {exchanged * 5} ({exchanged} times exchanged)\nUnspent: {unspent}",
+                inline=False
+            )
+
+
+        glow_mushrooms = found_profile.get("player_stats", {}).get("glowing_mushrooms_broken", 0)
+        sea_kills = found_profile.get("player_stats", {}).get("sea_creature_kills", 0)
+
+
+        embed.add_field(
+            name="Other",
+            value=f"Glowing Mushrooms Broken: {glow_mushrooms}\n"
+            f"Sea Creature Kills: {sea_kills}",
+            inline=False
+        )
+        
+        return embed
 
     async def show_collections_page(self, interaction: discord.Interaction):
         self.current_page = "collections"
@@ -1909,10 +2243,15 @@ class SkyblockView(discord.ui.View):
         await interaction.response.defer()
 
     def create_collections_embed(self):
-        embed = discord.Embed(title="Noob (only if you're noo_oobh)", description="Clicking on this button because you were curious is wild")
 
-        return embed
+        # TODO: Coming v1.1.25
+        embed = discord.Embed(
+            title="Coming next version!", 
+            color=discord.Color.yellow(),
+            timestamp=datetime.now(timezone.utc)
+        )
 
+        return embed    
 
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
@@ -1929,6 +2268,7 @@ class SkyblockCommandsGroup(app_commands.Group):
             app_commands.Choice(name="2", value=1),
             app_commands.Choice(name="3", value=2),
             app_commands.Choice(name="4", value=3),
+            app_commands.Choice(name="5", value=4)
         ]
     )
     async def sbprofile(self, interaction: discord.Interaction, username: str, profile_id: int = None):
@@ -2260,9 +2600,9 @@ INFORMATIVE COMMANDS
 @bot.tree.command(name="help", description="Get details about a specific command.")
 @app_commands.describe(command="The command you'd like to learn about.")
 async def help_command(interaction: discord.Interaction, command: str):
-    commands_data = open_file("info/commands.json")
+    commands_data = open_file("info/commands.json") # TODO: Organize everything in a JSON file.
     
-    for group, group_commands in commands_data.items():
+    for _, group_commands in commands_data.items():
         for cmd_name, cmd_details in group_commands.items():
             if cmd_name.lower() == command.lower():
                 arguments = cmd_details.get("arguments", {})
@@ -2343,10 +2683,10 @@ async def view_error(interaction: discord.Interaction, error_id: int):
                 
                 embed = discord.Embed(
                     title=f"Error ID: {error_id}",
-                    color=discord.Color.red()
+                    color=discord.Color.red(),
+                    timestamp=datetime.now(timezone.utc)
                 )
                 embed.add_field(name="Type", value=log_type.capitalize(), inline=False)
-                embed.timestamp = datetime.utcfromtimestamp(time.time())
                 
                 chunks = [error_message[i:i + 1024] for i in range(0, len(error_message), 1024)]
                 for idx, chunk in enumerate(chunks):
@@ -2835,7 +3175,7 @@ async def store_modlog(
     channel_id = server_info["preferences"].get(str(server_id), {}).get("modLogs")
     channel = bot.get_channel(channel_id) if channel_id else None
 
-    embed = discord.Embed(title="Moderation Log", color=discord.Color.red())
+    embed = discord.Embed(title="Moderation Log", color=discord.Color.red(), timestamp=datetime.now(timezone.utc))
     embed.add_field(name="Type", value=type, inline=False)
     embed.add_field(name="Reason", value=reason)
     embed.add_field(name="Moderator", value=moderator.mention, inline=False)
@@ -2847,7 +3187,6 @@ async def store_modlog(
         embed.add_field(name="Channel affected", value=channel.mention, inline=False)
     if arguments is not None:
         embed.add_field(name="Extra arguments", value=arguments, inline=False)
-    embed.timestamp = datetime.utcnow()
 
     if user is not None:
         user_id = str(user.id)
@@ -3073,7 +3412,7 @@ class MessageCheck:
             if len(messages_to_delete) > 1:
                 try:
                     await channel.delete_messages(messages_to_delete, reason=reason)
-                    await interaction.followup.send(f"Succesfully deleted {len(messages_to_delete)} messages")
+                    await interaction.followup.send(f"Succesfully deleted {len(messages_to_delete)} messages", ephemeral=True)
                     return messages_to_delete
                 except discord.HTTPException as e:
                     return []
@@ -3146,7 +3485,7 @@ class PurgeCommandGroup(app_commands.Group):
     @app_commands.command(name="text", description="Purges messages based on criteria (Default: 10)")
     @app_commands.describe(amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
     async def tpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         try:
             if not await check_mod(interaction, "manage_messages"):
                 return
@@ -3168,25 +3507,30 @@ async def test(ctx):
         await asyncio.sleep(0.5)
 
 @bot.command(name="clean")
-async def cclean(ctx, amount: int = 10):
+async def cclean(ctx, amount: int = 10, reason: str = "No reason provided."):
     if ctx.author.guild_permissions.manage_messages:
         try:
-            await MessageCheck.purge_messages(ctx.channel, amount, MessageCheck.cleanCommand)
-            await ctx.send(f"{amount} messages have been deleted.", delete_after=2)
+            await ctx.message.delete()
+            await MessageCheck.purge_messages(ctx.channel, amount, MessageCheck.cleanCommand, ctx, reason)
         except Exception as e:
-            await ctx.send(f"An error occurred: {e}")
+            if not isinstance(e, AttributeError):
+                print(f"Error: {e}")
+            else:
+                await ctx.send(f"Succesfully deleted {amount} messages", delete_after=5)
+
     else:
-        await ctx.send("You do not have the required permission to run this command.")
+        await ctx.send("You do not have the required permission to run this command.", delete_after=3)
 
 @bot.tree.command(name="clean", description="Clean the bot's messages")
 @app_commands.describe(amount="Amount to delete (Dhoefault: 10)")
 async def clean(interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
+    await interaction.response.defer(ephemeral=True)
     try:
         if not await check_mod(interaction, "manage_messages"):
             await interaction.followup.send("You do not have permission to use this command.", ephemeral=True)
             return
 
-        await MessageCheck.purge_clean_command(interaction.channel, amount)
+        await MessageCheck.purge_messages(interaction.channel, amount, MessageCheck.cleanCommand, interaction, reason)
         await store_modlog(f"Clean ({amount} messages)", interaction.guild.id, interaction.user, reason=reason)
     except Exception as error:
         await handle_logs(interaction, error)
@@ -3247,8 +3591,6 @@ async def lock(interaction: discord.Interaction, channel: discord.TextChannel = 
         else:
             await channel.set_permissions(role, send_messages=False)
 
-        reason_with_role = f"{reason}. Role: {role.name}"
-
         await store_modlog("Lock", interaction.guild.id, interaction.user, role=role, channel=channel, reason=reason)
         await interaction.followup.send(f"{channel.mention} has been locked for {role.name}.\nReason: {reason}")
     except Exception as error:
@@ -3281,8 +3623,6 @@ async def unlock(interaction: discord.Interaction, channel: discord.TextChannel 
         if role in channel.overwrites:
             await channel.set_permissions(role, send_messages=True)
 
-        reason_with_role = f"{reason}. Role: {role.name}"
-
         await store_modlog("Unlock", interaction.guild.id, interaction.user, role=role, channel=channel, reason=reason)
         await interaction.followup.send(f"{channel.mention} has been unlocked for {role.name}.\nReason: {reason}")
     except Exception as error:
@@ -3299,11 +3639,9 @@ async def slowmode(interaction: discord.Interaction, channel: discord.TextChanne
             return
         if delay is None:
             await channel.edit(slowmode_delay=0)
-            reason = f"Slowmode removed in #{channel.name}."
             await interaction.followup.send(embed=discord.Embed(title="Slowmode", description="Slowmode has been removed.", color=0x00FF00))
         elif 0 <= delay <= 21600:
             await channel.edit(slowmode_delay=delay)
-            reason = f"Slowmode set to {delay} seconds in #{channel.name}."
             await interaction.followup.send(embed=discord.Embed(title="Slowmode", description=f"Slowmode set to {delay} seconds.", color=0x00FF00))
         else:
             await interaction.followup.send(embed=discord.Embed(title="Slowmode Error", description="Please provide a delay between 0 and 21600 seconds.", color=0xFF0000))
@@ -3340,8 +3678,9 @@ async def nick(interaction: discord.Interaction, member: discord.Member, new_nic
 async def mute(interaction: discord.Interaction, member: discord.Member, duration: str, reason: str = "No reason provided"):
     await interaction.response.defer()
     try:
-        if not await check_mod(interaction, "timeout_members"):
+        if not await check_mod(interaction, "moderate_members"):
             return
+        
         duration = parse_duration(duration)
 
         if not duration:
@@ -3361,12 +3700,12 @@ async def mute(interaction: discord.Interaction, member: discord.Member, duratio
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="unmute", description="Unmutes a user.")
-@commands.has_permissions(kick_members=True)
 async def unmute(interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
     await interaction.response.defer()
     try:
-        if not await check_mod(interaction, "timeout_members"):
+        if not await check_mod(interaction, "moderate_members"):
             return
+        
         await member.timeout(None, reason=reason)
         await dmbed(interaction, member, "unmuted", reason)
 
@@ -3375,7 +3714,6 @@ async def unmute(interaction: discord.Interaction, member: discord.Member, reaso
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="kick", description="Kick a member out of the guild.")
-@commands.has_permissions(kick_members=True)
 async def kick(interaction: discord.Interaction, member: discord.Member, reason: str = "No Reason Provided."):
     await interaction.response.defer()
     try:
@@ -3427,7 +3765,6 @@ class DelLog(discord.ui.Select):
             selected_index = self.values[0]
 
             if selected_index in self.logs:
-                log_entry = self.logs[selected_index]
                 del self.logs[selected_index]
 
                 if not self.logs:
@@ -3709,7 +4046,7 @@ class LogSelect(discord.ui.Select):
 
         await interaction.response.defer()
         selected_page = int(self.values[0])
-        embed, total_logs, total_pages = await send_modlog_embed(self.interaction, self.user, selected_page)
+        embed, _, _ = await send_modlog_embed(self.interaction, self.user, selected_page)
         await interaction.message.edit(embed=embed)
         self.placeholder = f"Current page: {selected_page}"
         await interaction.message.edit(view=self.view)
@@ -3720,7 +4057,7 @@ async def modlogs(interaction: discord.Interaction, member: discord.Member, page
     try:
         if not await check_mod(interaction, "manage_messages"):
             return
-        embed, total_logs, total_pages = await send_modlog_embed(interaction, member, page)
+        embed, _, total_pages = await send_modlog_embed(interaction, member, page)
 
         if embed is None:
             return
@@ -3736,7 +4073,6 @@ async def modlogs(interaction: discord.Interaction, member: discord.Member, page
         await handle_logs(interaction, error)
 
 @bot.tree.command(name="modstats", description="Check the moderation statistics of a moderator")
-@commands.has_permissions(kick_members=True)
 async def modstats(interaction: discord.Interaction, member: discord.Member = None):
     await interaction.response.defer()
     try:
@@ -3758,10 +4094,10 @@ async def modstats(interaction: discord.Interaction, member: discord.Member = No
         seven_days_ago = now - timedelta(days=7)
         thirty_days_ago = now - timedelta(days=30)
 
-        for server_id, moderators in server_info["modstats"].items():
+        for _, moderators in server_info["modstats"].items():
             user_stats = moderators.get(str(member.id), {})
 
-            for case_number, action in user_stats.items():
+            for _, action in user_stats.items():
                 action_type = action["type"].lower()
                 action_time = datetime.fromtimestamp(action["timestamp"], timezone.utc)
 
@@ -3775,23 +4111,42 @@ async def modstats(interaction: discord.Interaction, member: discord.Member = No
                     stats[action_type]["all time"] += 1
                     totals["all time"] += 1
 
-        embed = discord.Embed(title=f"Moderation Statistics for {member.display_name}", color=0xFFA500)
-        embed.add_field(name="\u200b", value="**Last 7 days**")
-        embed.add_field(name="\u200b", value="**Last 30 days**")
-        embed.add_field(name="\u200b", value="**All Time**")
+        embed = discord.Embed(
+            title=f"Moderation Statistics",
+            color=discord.Color.orange(),
+            timestamp=now
+        )
+        embed.set_author(
+            name=f"{member.display_name}", 
+            icon_url=member.avatar.url
+        )
 
-        for action_type in stats.keys():
-            embed.add_field(name=f"**{action_type.capitalize()}**", value=str(stats[action_type]["last 7 days"]))
-            embed.add_field(name="\u200b", value=str(stats[action_type]["last 30 days"]))
-            embed.add_field(name="\u200b", value=str(stats[action_type]["all time"]))
+        embed.add_field(name="Mutes (last 7 days):", value=stats["mute"]["last 7 days"])
+        embed.add_field(name="Mutes (last 30 days):", value=stats["mute"]["last 30 days"])
+        embed.add_field(name="Mutes (all time):", value=stats["mute"]["all time"])
 
-        embed.add_field(name="**Total**", value=str(totals["last 7 days"]))
-        embed.add_field(name="\u200b", value=str(totals["last 30 days"]))
-        embed.add_field(name="\u200b", value=str(totals["all time"]))
+        embed.add_field(name="Bans (last 7 days):", value=stats["ban"]["last 7 days"])
+        embed.add_field(name="Bans (last 30 days):", value=stats["ban"]["last 30 days"])
+        embed.add_field(name="Bans (all time):", value=stats["ban"]["all time"])
+
+        embed.add_field(name="Kicks (last 7 days):", value=stats["kick"]["last 7 days"])
+        embed.add_field(name="Kicks (last 30 days):", value=stats["kick"]["last 30 days"])
+        embed.add_field(name="Kicks (all time):", value=stats["kick"]["all time"])
+
+        embed.add_field(name="Warns (last 7 days):", value=stats["warn"]["last 7 days"])
+        embed.add_field(name="Warns (last 30 days):", value=stats["warn"]["last 30 days"])
+        embed.add_field(name="Warns (all time):", value=stats["warn"]["all time"])
+
+        embed.add_field(name="Total (last 7 days):", value=totals["last 7 days"])
+        embed.add_field(name="Total (last 30 days):", value=totals["last 30 days"])
+        embed.add_field(name="Total (all time):", value=totals["all time"])
+
+        embed.set_footer(text=f"ID: {member.id}")
 
         await interaction.followup.send(embed=embed)
     except Exception as error:
         await handle_logs(interaction, error)
+
 
 """
 ECONOMY COMMANDS
@@ -4497,6 +4852,34 @@ bot.tree.add_command(AuctionGroup())
 """
 MISC COMMANDS
 """
+@bot.tree.command(name="afk", description="AFK and set a status of why.")
+@app_commands.describe(reason="Your reason to AFK")
+async def afk(interaction: discord.Interaction, reason: str = None):
+    await interaction.response.defer(ephemeral=True)
+    try:
+        user_id = str(interaction.user.id)
+        server_id = str(interaction.guild.id)
+
+        server_info = open_file("info/server_info.json")
+        afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
+
+        if user_id in afk_data:
+            await interaction.followup.send("You are already AFK! Talk if you want to unAFK!")
+            return
+
+        afk_data[user_id] = {
+            "reason": reason,
+            "time": datetime.now(timezone.utc).isoformat(),
+            "original_name": interaction.user.display_name
+        }
+        
+        save_file("info/server_info.json", server_info)
+
+        await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
+        await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
+    except Exception as error:
+        await handle_logs(interaction, error)
+
 @bot.tree.command(name="error_test", description="Demonstrates intentional error generation")
 async def error_test(interaction: discord.Interaction):
     error_list = []
@@ -5002,7 +5385,7 @@ async def main():
             await bot.start(token)
     except discord.errors.LoginFailure:
         print("Incorrect bot token has been passed. Please check secrets.env")
-    except KeyboardInterrupt:
+    except KeyboardInterrupt: # Ctrl + C
         print("Shutting down the bot...")
         await bot.close()
     except Exception as e:
