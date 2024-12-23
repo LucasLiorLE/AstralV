@@ -934,7 +934,6 @@ async def process_transaction(user_id, transaction_type, amount):
     
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
 
-
 def gambling_stats(user_id, game):
     eco = open_file(eco_path)
     if user_id not in eco:

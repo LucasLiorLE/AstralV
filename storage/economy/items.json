@@ -5,8 +5,12 @@
             "buyPrice": 5000,
             "amount": -1
         },
+<<<<<<< HEAD
         "description": "Example description",
         "type": null
+=======
+        "description": "Example description"
+>>>>>>> 06cf1a8b4cda51f3ed8afc5922a4c1c6f3b62e1e
     },
     "example": {
         "price": 2500,
@@ -14,8 +18,12 @@
             "buyPrice": 2500,
             "amount": 5
         },
+<<<<<<< HEAD
         "description": "Example description",
         "type": null
+=======
+        "description": "Example description"
+>>>>>>> 06cf1a8b4cda51f3ed8afc5922a4c1c6f3b62e1e
     },
     "another_item": {
         "price": 1500,
@@ -23,7 +31,11 @@
             "buyPrice": 1500,
             "amount": 20
         },
+<<<<<<< HEAD
         "description": "Example description",
         "type": null
+=======
+        "description": "Example description"
+>>>>>>> 06cf1a8b4cda51f3ed8afc5922a4c1c6f3b62e1e
     }
 }

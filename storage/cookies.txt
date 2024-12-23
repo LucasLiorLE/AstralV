@@ -1,0 +1,5 @@
+Please download
+https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc?hl=en
+Then "Export all cookies" while on YouTube.com and replace the txt file here
+DO NOT SHARE YOUR COOKIE WITH OTHER PEOPLE
+Use an alt if you don't want your main search history and stuff to be messed up
