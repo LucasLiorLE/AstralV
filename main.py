@@ -1,11 +1,3 @@
-"""
-TODO:
-Use aiohttp in fun.py
-More fun.py commands
-Server and global EXP
-    - Also have a /level server (username) and /level global command(username) 
-"""
-
 __version__ = "v2.0.0"
 
 """
@@ -724,6 +716,7 @@ async def GetRobloxID(roblox_username):
         return data["data"][0]["id"]
 
 
+
 """
 MINECRAFT COMMANDS
 """
@@ -776,21 +769,6 @@ async def view_error(interaction: discord.Interaction, error_id: int):
 
     await interaction.followup.send(f"No error found with ID {error_id}", ephemeral=True)
 '''
-
-@bot.command("test")
-async def test(ctx):
-    for i in range(10):
-        await ctx.channel.send(i)
-        await asyncio.sleep(0.5)
-
-@bot.command()
-async def reload(ctx, cog: str):
-    """Reloads a cog."""
-    try:
-        await bot.reload_extension(f"cogs.{cog}")
-        await ctx.send(f"Reloaded {cog}")
-    except Exception as e:
-        await ctx.send(f"Failed to reload {cog}: {e}")
 
 def get_next_report_id(reports_data):
     if reports_data:
