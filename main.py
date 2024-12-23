@@ -405,11 +405,14 @@ async def on_message(message):
         user_last_message_time[member_id] = current_time
 
         save_file("info/member_info.json", member_data)
-        
+      
 @bot.event
 async def on_ready():
+    # import logging
+    # logging.basicConfig(level=logging.INFO)
+    # logger = logging.getLogger('discord')
     try:
-        print("Loading cogs..\n-----------------")
+        print("Loading cogs...\n-----------------")
         await load_cogs()
         print("-----------------\nCogs loaded successfully.")
         try:
@@ -417,11 +420,11 @@ async def on_ready():
             await bot.tree.sync()
             print("Commands successfully synced.")
         except Exception as e:
-            print(f"An error occured when syncing commands: {e}")
+            print(f"An error occurred when syncing commands: {e}")
     except Exception as e:
-        print(f"An error occured when loading cogs: {e}")
-    
+        print(f"An error occurred when loading cogs: {e}")
     print("Bot is ready.")
+
 
 async def load_cogs():
     for filename in os.listdir("./cogs"):

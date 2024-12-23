@@ -170,7 +170,6 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-<<<<<<< HEAD
 storage/secrets.env
 a.py
 base.json
@@ -180,5 +179,4 @@ moretest.py
 run.bat
 testing.py
 storage/economy/economy.json
-=======
->>>>>>> 06cf1a8b4cda51f3ed8afc5922a4c1c6f3b62e1e
+cogs/testing.py

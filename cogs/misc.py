@@ -410,15 +410,7 @@ class MiscCog(commands.Cog):
             await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
         except Exception as e:
             await handle_logs(interaction, e)
-
-    @app_commands.command(name="error_test", description="Demonstrates intentional error generation")
-    async def error_test(self, interaction: discord.Interaction):
-        error_list = []
-        try:
-            print(error_list[0]) 
-        except Exception as e:
-            await handle_logs(interaction, e)
-
+            
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="report", description="Report an in game rule breaker")

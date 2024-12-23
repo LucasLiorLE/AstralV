@@ -188,7 +188,7 @@ class FunCog(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         embed = discord.Embed(title="Random Fact 🤓", description=data["text"], color=0x9370DB, timestamp=datetime.now(timezone.utc))
-                        embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                        embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         await interaction.followup.send(embed=embed)
                     else:
                         await interaction.followup.send("An error occurred while fetching the fact.")
@@ -208,7 +208,7 @@ class FunCog(commands.Cog):
                         data = await response.json()
                         if "setup" in data and "punchline" in data:
                             embed = discord.Embed(title=data['setup'], description=f"||{data['punchline']}||", timestamp=datetime.now(timezone.utc))
-                            embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                            embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                             await interaction.followup.send(embed=embed)
                         else:
                             await interaction.followup.send("Sorry, I couldn't fetch a joke right now. Try again later!")
@@ -229,7 +229,7 @@ class FunCog(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         embed = discord.Embed(title="Here's a cute cat for you!", color=0xFFA07A, timestamp=datetime.now(timezone.utc))
-                        embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                        embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         embed.set_image(url=data[0]["url"])
                         await interaction.followup.send(embed=embed)
                     else:
@@ -249,7 +249,7 @@ class FunCog(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         embed = discord.Embed(title="Here's a cute dog for you!", color=0xADD8E6, timestamp=datetime.now(timezone.utc))
-                        embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                        embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         embed.set_image(url=data["message"])
                         await interaction.followup.send(embed=embed)
                     else:
@@ -257,6 +257,29 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
             
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.command(name="duck", description="Fetches a random duck GIF.")
+    async def duck(self, interaction: discord.Interaction, ephemeral: bool = False):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            async with ClientSession() as session:
+                async with session.get("https://random-d.uk/api/random") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if "url" in data:
+                            embed = discord.Embed(title="Random Duck GIF", timestamp=datetime.now(timezone.utc))
+                            embed.set_image(url=data["url"])
+                            embed.set_footer(f"Powered by random-d.uk\nRequested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                            await interaction.followup.send(embed=embed)
+                        else:
+                            await interaction.followup.send("Sorry, I couldn't fetch a duck GIF right now. Try again later!")
+                    else:
+                        await interaction.followup.send("An error occurred while fetching the duck GIF.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
@@ -269,7 +292,7 @@ class FunCog(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         embed = discord.Embed(title=data[0]["q"], description=f"- {data[0]['a']}", color=0x66CDAA, timestamp=datetime.now(timezone.utc))
-                        embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                        embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         await interaction.followup.send(embed=embed)
                     else:
                         await interaction.followup.send("An error occurred while fetching the quote.")
@@ -300,6 +323,36 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.describe(question="Ask it a question!")
+    @app_commands.command(name='8ball', description='Ask the magic 8-ball a question')
+    async def eight_ball(self, interaction: discord.Interaction, question: str):
+        await interaction.response.defer()
+        try:
+            responses = [
+                "Yes, definitely.",
+                "No, not at all.",
+                "Maybe, try again later.",
+                "It is certain.",
+                "Cannot predict now.",
+                "Outlook not so good.",
+                "Yes, but with caution.",
+                "I don't know, ask again."
+            ]
+            
+            response = random.choice(responses)
+            
+            embed = discord.Embed(
+                title="Magic 8-ball",
+                description=f'**Question:** {question}\n**Answer:** {response}',
+                color=discord.Color.blurple()
+            )
+            
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
     @app_commands.command(name="xkcd", description="Fetches a random xkcd comic.")
     async def xkcd(self, interaction: discord.Interaction, ephemeral: bool = False):
@@ -313,8 +366,13 @@ class FunCog(commands.Cog):
                         async with session.get(f"https://xkcd.com/{random.randint(1, max_comic)}/info.0.json") as random_response:
                             if random_response.status == 200:
                                 comic_data = await random_response.json()
+                                comic_url = f"https://xkcd.com/{comic_data['num']}/"
+                                year = int(comic_data['year'])
+                                posted_date = datetime(year, 1, 1).date()
+
                                 embed = discord.Embed(title=comic_data["title"], description=comic_data["alt"], color=0x6A5ACD, timestamp=datetime.now(timezone.utc))
-                                embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                                embed.url = comic_url
+                                embed.set_footer(text=f"Posted on {posted_date}", icon_url="https://xkcd.com/favicon.ico")
                                 embed.set_image(url=comic_data["img"])
                                 await interaction.followup.send(embed=embed)
                             else:
