@@ -5,7 +5,8 @@
             "buyPrice": 5000,
             "amount": -1
         },
-        "description": "Example description"
+        "description": "Example description",
+        "type": null
     },
     "example": {
         "price": 2500,
@@ -13,7 +14,8 @@
             "buyPrice": 2500,
             "amount": 5
         },
-        "description": "Example description"
+        "description": "Example description",
+        "type": null
     },
     "another_item": {
         "price": 1500,
@@ -21,6 +23,7 @@
             "buyPrice": 1500,
             "amount": 20
         },
-        "description": "Example description"
+        "description": "Example description",
+        "type": null
     }
 }
