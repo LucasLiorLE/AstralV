@@ -1,8 +1,9 @@
 import main
-from main import handle_logs, open_file
+from main import handle_logs, open_file, logs, botTesters
 
 import discord
 from discord.ext import commands
+from discord.ui import View, Button
 from discord import app_commands
 
 import time, asyncio, os, io, tempfile
@@ -261,14 +262,14 @@ class InfoCog(commands.Cog):
             embed.add_field(name="Version", value=main.__version__)
             embed.add_field(name="Server Count", value=len(self.bot.guilds))
             embed.add_field(name="Library", value="Discord.py")
-            embed.add_field(name="Other", value="made by lucasliorle\nEstimated time: 120 hours+")
+            embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 200 hours+")
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-            view = discord.ui.View()
+            view = View()
 
-            website = discord.ui.Button(label="Visit Website", url="https://lucasliorle.github.io")
+            website = Button(label="Visit Website", url="https://lucasliorle.github.io")
             view.add_item(website)
-            github = discord.ui.Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/APEYE")
+            github = Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/APEYE")
             view.add_item(github)
 
             await interaction.followup.send(embed=embed, view=view)
@@ -480,6 +481,40 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
+    @app_commands.guilds(discord.Object(1279160584662679673)) # This is my guild ID, if you want to debug change this!
+    @app_commands.command(name="error", description="Allows you to view a certain error.")
+    async def view_error(self, interaction: discord.Interaction, error_id: int):
+        await interaction.response.defer()
+
+        if interaction.user.id not in botTesters:
+            await interaction.followup.send("You do not have permission to use this command.")
+            return
+
+        for log_type, log_entries in logs.items():
+            for entry in log_entries:
+                if entry["ID"] == error_id:
+                    timestamp = entry["Time"]
+                    error_message = entry.get("Message", "No error message available.")
+                    
+                    embed = discord.Embed(
+                        title=f"Error ID: {error_id}",
+                        color=discord.Color.red(),
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    embed.add_field(name="Type", value=log_type.capitalize(), inline=False)
+                    
+                    chunks = [error_message[i:i + 1024] for i in range(0, len(error_message), 1024)]
+                    for idx, chunk in enumerate(chunks):
+                        embed.add_field(
+                            name=f"Error (Part {idx + 1})" if len(chunks) > 1 else "Error",
+                            value=chunk,
+                            inline=False
+                        )
+                    
+                    await interaction.followup.send(embed=embed)
+                    return
+
+        await interaction.followup.send(f"No error found with ID {error_id}", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(InfoCog(bot))

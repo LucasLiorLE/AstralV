@@ -1,3 +1,7 @@
+# TODO: 
+# /joke
+# 
+
 __version__ = "v2.0.0"
 
 """
@@ -301,7 +305,7 @@ class RestrictedView(discord.ui.View):
         Behavior:
         - Sends an ephemeral message if the interaction is not from the original user.
         """
-        if interaction.user.id != self.original_user.id:
+        if not check_user(interaction, self.original_user):
             await interaction.response.send_message(
                 "You can't interact with this.", ephemeral=True
             )
@@ -322,7 +326,7 @@ hypixel_api = os.getenv("hypixel_api")
 
 # https://sky.shiiyu.moe/api/v2/profile/ also works as a skyblock profile command.
 
-async def test_hy_key():
+async def test_hy_key() -> bool:
     async with ClientSession() as session:
         async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}") as response:
             if response.status == 403:
@@ -336,12 +340,13 @@ async def test_hy_key():
             else:
                 print(f"Request failed with status code: {response.status}")
                 return False
-                
+'''     
 reddit = asyncpraw.Reddit(
     client_id=client_id,
     client_secret=client_secret,
     user_agent=user_agent,
 ) 
+'''
 user_last_message_time = {}
 
 @bot.event
@@ -734,42 +739,6 @@ async def getUUID(interaction: discord.Interaction, username: str):
 INFORMATIVE COMMANDS
 """
 
-'''
-@bot.tree.command(name="error", description="Allows you to view a certain error.")
-async def view_error(interaction: discord.Interaction, error_id: int):
-    await interaction.response.defer()
-
-    if interaction.user.id not in botTesters:
-        await interaction.followup.send("You do not have permission to use this command.")
-        return
-
-    for log_type, log_entries in logs.items():
-        for entry in log_entries:
-            if entry["ID"] == error_id:
-                timestamp = entry["Time"]
-                error_message = entry.get("Message", "No error message available.")
-                
-                embed = discord.Embed(
-                    title=f"Error ID: {error_id}",
-                    color=discord.Color.red(),
-                    timestamp=datetime.now(timezone.utc)
-                )
-                embed.add_field(name="Type", value=log_type.capitalize(), inline=False)
-                
-                chunks = [error_message[i:i + 1024] for i in range(0, len(error_message), 1024)]
-                for idx, chunk in enumerate(chunks):
-                    embed.add_field(
-                        name=f"Error (Part {idx + 1})" if len(chunks) > 1 else "Error",
-                        value=chunk,
-                        inline=False
-                    )
-                
-                await interaction.followup.send(embed=embed)
-                return
-
-    await interaction.followup.send(f"No error found with ID {error_id}", ephemeral=True)
-'''
-
 def get_next_report_id(reports_data):
     if reports_data:
         return max(map(int, reports_data.keys())) + 1
@@ -997,7 +966,7 @@ def convert_number(number: str) -> int:
 
 
 async def main():
-    await bot.start(token)
+    await bot.start(token) # TODO: Delete
     try:
         if not await test_hy_key():
             await bot.close()
@@ -1020,6 +989,7 @@ async def main():
         print("Bot is shutting down. If an error occurs, you can ignore it.")
 
 if __name__ == "__main__":
+    asyncio.run(main()) # TODO: Delete
     try:
         print("Script loaded.")
         print(f"Current Version: {__version__}")
