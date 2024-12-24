@@ -6,115 +6,11 @@ from discord.ext import commands
 from discord.ui import View, Button
 from discord import app_commands
 
-import time, asyncio, os, io, tempfile
+import time, asyncio, os, tempfile
 from aiohttp import ClientSession, ClientError
 from datetime import datetime, timezone
-from PIL import Image, ImageSequence
 from moviepy.editor import VideoFileClip, AudioFileClip
 
-
-class Convert(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="convert", description="Image conversion commands")
-
-    @app_commands.command(name="image", description="Convert an uploaded image to a specified format")
-    @app_commands.describe(
-        image="The image file you want to convert.", 
-        format="The format you want to convert the image to.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
-    @app_commands.choices(
-        format=[
-            app_commands.Choice(name="JPEG", value="jpeg"),
-            app_commands.Choice(name="PNG", value="png"),
-            app_commands.Choice(name="WEBP", value="webp"),
-            app_commands.Choice(name="GIF", value="gif"),
-            app_commands.Choice(name="BMP", value="bmp"),
-            app_commands.Choice(name="TIFF", value="tiff"),
-        ]
-    )
-    async def convert_image(self, interaction: discord.Interaction, image: discord.Attachment, format: str, ephemeral: bool = True):
-        await interaction.response.defer(ephemeral=ephemeral)
-        try:
-            if not image.content_type.startswith("image/"):
-                await interaction.response.send_message("Please upload a valid image file.", ephemeral=True)
-                return
-
-            img_data = await image.read()
-            image_pil = Image.open(io.BytesIO(img_data))
-
-            if format == "jpeg" and image_pil.mode == "RGBA":
-                image_pil = image_pil.convert("RGB")
-
-            output_buffer = io.BytesIO()
-
-            if format == "gif" and image_pil.is_animated:
-                frames = []
-                for frame in ImageSequence.Iterator(image_pil):
-                    frame = frame.convert("RGBA")
-                    frames.append(frame)
-
-                frames[0].save(output_buffer, format="GIF", save_all=True, append_images=frames[1:], loop=0)
-            else:
-                output_filename = f"{image.filename.rsplit('.', 1)[0]}.{format.lower()}"
-                image_pil.save(output_buffer, format=format.upper())
-
-            output_buffer.seek(0)
-
-            await interaction.followup.send(
-                content=f"Here is your converted image in {format.upper()} format:",
-                file=discord.File(fp=output_buffer, filename=f"{output_filename}")
-            )
-        except Exception as error:
-            await handle_logs(interaction, error)
-
-    @app_commands.command(name="video", description="Convert an uploaded video to a specified format")
-    @app_commands.describe(
-        video="The uploaded video file you want to convert.", 
-        format="The format you want to convert the video to.",
-        ephemeral="If you want the message ephemeral or not."
-    )
-    @app_commands.choices(
-        format=[
-            app_commands.Choice(name="MP4", value="mp4"),
-            app_commands.Choice(name="MP3", value="mp3"),
-            app_commands.Choice(name="WMV", value="wmv"),
-            app_commands.Choice(name="MOV", value="mov"),
-            app_commands.Choice(name="MKV", value="mkv"),
-            app_commands.Choice(name="AVI", value="avi"),
-            app_commands.Choice(name="GIF", value="gif")
-        ]
-    )
-    async def convert_video(self, interaction: discord.Interaction, video: discord.Attachment, format: str, ephemeral: bool = True):
-        await interaction.response.defer(ephemeral=ephemeral)
-        try:
-            video_data = await video.read()
-            output_filename = await asyncio.to_thread(self.process_video, video_data, video.filename, format)
-
-            await interaction.followup.send(
-                content=f"Here is your converted file in {format.upper()} format:",
-                file=discord.File(fp=output_filename, filename=output_filename.split('/')[-1])
-            )
-
-        except Exception as error:
-            await handle_logs(interaction, error)
-
-    def process_video(self, video_data, original_filename, target_format):
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{original_filename.split('.')[-1]}") as temp_input:
-            temp_input.write(video_data)
-            temp_input_path = temp_input.name
-
-        output_filename = f"{tempfile.gettempdir()}/{original_filename.rsplit('.', 1)[0]}.{target_format.lower()}"
-
-        if target_format.lower() == "mp3":
-            input_audio = AudioFileClip(temp_input_path)
-            input_audio.write_audiofile(output_filename)
-        else:
-            input_video = VideoFileClip(temp_input_path)
-            input_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", remove_temp=True)
-
-        return output_filename
-    
 class AvatarGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="avatar", description="Avatar related commands.")
@@ -156,12 +52,11 @@ class InfoCog(commands.Cog):
         self.bot = bot
 
         self.bot.tree.add_command(AvatarGroup())
-        self.bot.tree.add_command(Convert())
 
     @app_commands.command(name="help", description="Get details about a specific command.")
     @app_commands.describe(command="The command you'd like to learn about.")
     async def help_command(self, interaction: discord.Interaction, command: str):
-        commands_data = open_file("info/commands.json")  # Access the JSON file
+        commands_data = open_file("info/commands.json")
         for _, group_commands in commands_data.items():
             for cmd_name, cmd_details in group_commands.items():
                 if cmd_name.lower() == command.lower():
@@ -214,12 +109,13 @@ class InfoCog(commands.Cog):
 
             embed = discord.Embed(
                 title="Mee6 Level Calculator",
-                description=f"Based on {hours_per_day} hours of chatting per day and gaining {hours_per_day * 1200} EXP.\n\n**Info**\nCurrent Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}",
+                description=f"Based on {hours_per_day} hours of chatting per day and gaining {hours_per_day * 1200} EXP.",
                 color=discord.Color.blue()
             )
-            embed.add_field(name="Required EXP", value=f"{required_exp:,}")
-            embed.add_field(name="Estimated Messages", value=f"{round((required_exp / 20) * 1.5):,}")
-            embed.add_field(name="Estimated Days", value=f"{round(required_exp / (hours_per_day * 1200)):,}")
+            embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}", inline=False)
+            embed.add_field(name="Required EXP", value=f"{required_exp:,}", inline=False)
+            embed.add_field(name="Minimum Messages/Estimated Messages", value=f"{int(required_exp / 20):,}/{int((required_exp / 20) * 1.8):,}", inline=False)
+            embed.add_field(name="Estimated Days", value=f"{round(required_exp / (hours_per_day * 1200)):,}", inline=False)
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)

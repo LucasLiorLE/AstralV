@@ -2,7 +2,7 @@
 # /joke
 # 
 
-__version__ = "v2.0.0"
+__version__ = "v2.0.1"
 
 """
 Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
@@ -416,6 +416,9 @@ async def on_ready():
         await load_cogs()
         print("-----------------\nCogs loaded successfully.")
         try:
+            # print("Clearing existing commands...")
+            # for guild in bot.guilds:
+            #     bot.tree.clear_commands(guild=guild)
             print("Syncing commands...")
             await bot.tree.sync()
             print("Commands successfully synced.")
@@ -424,7 +427,6 @@ async def on_ready():
     except Exception as e:
         print(f"An error occurred when loading cogs: {e}")
     print("Bot is ready.")
-
 
 async def load_cogs():
     for filename in os.listdir("./cogs"):

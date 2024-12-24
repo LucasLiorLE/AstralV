@@ -180,3 +180,4 @@ run.bat
 testing.py
 storage/economy/economy.json
 cogs/testing.py
+cogs/work.py
