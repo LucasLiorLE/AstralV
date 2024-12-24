@@ -483,46 +483,8 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             )
         except Exception as e:
             await handle_logs(interaction, e)    
-            
-class VideoGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="video", description="Video manipulation commands")
 
-    @app_commands.command(name="speed", description="Change the speed of an uploaded video")
-    @app_commands.describe(
-        video="The video file you want to change the speed of.",
-        factor="The factor you want to change the speed by.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
-    async def speed_video(self, interaction: discord.Interaction, video: discord.Attachment, factor: float, ephemeral: bool = True):
-        await interaction.response.defer(ephemeral=ephemeral)
-        try:
-            video_data = await video.read()
-            output_filename = await asyncio.to_thread(self.process_speed, video_data, video.filename, factor)
-
-            await interaction.followup.send(
-                content=f"Here is your video with the speed changed by a factor of {factor}:",
-                file=discord.File(fp=output_filename, filename=output_filename.split('/')[-1])
-            )
-
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    def process_speed(self, video_data, original_filename, factor):
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{original_filename.split('.')[-1]}") as temp_input:
-            temp_input.write(video_data)
-            temp_input_path = temp_input.name
-
-        output_filename = f"{tempfile.gettempdir()}/{original_filename.rsplit('.', 1)[0]}_speed.mp4"
-
-        input_video = VideoFileClip(temp_input_path)
-        sped_video = input_video.fx(VideoFileClip.fx, lambda x: x.fx(VideoFileClip.speedx, factor))
-
-        sped_video.write_videofile(output_filename, codec="libx264", audio_codec="aac", remove_temp=True)
-
-        return output_filename
-
-class ConvertGroup(app_commands.Group):
+class ConvertGroup(app_commands.Group): # Keep this here for now.
     def __init__(self):
         super().__init__(name="convert", description="Image conversion commands")
 
@@ -630,7 +592,6 @@ class FileCog(commands.Cog):
 
         self.bot.tree.add_command(ConvertGroup())
         self.bot.tree.add_command(ImageGroup())
-        self.bot.tree.add_command(VideoGroup())
 
 async def setup(bot):
     await bot.add_cog(FileCog(bot))
