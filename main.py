@@ -1,7 +1,3 @@
-# TODO: 
-# /joke
-# 
-
 __version__ = "v2.0.1"
 
 """
@@ -971,7 +967,6 @@ def convert_number(number: str) -> int:
 
 
 async def main():
-    await bot.start(token) # TODO: Delete
     try:
         if not await test_hy_key():
             await bot.close()
@@ -994,7 +989,6 @@ async def main():
         print("Bot is shutting down. If an error occurs, you can ignore it.")
 
 if __name__ == "__main__":
-    asyncio.run(main()) # TODO: Delete
     try:
         print("Script loaded.")
         print(f"Current Version: {__version__}")
