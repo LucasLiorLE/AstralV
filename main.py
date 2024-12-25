@@ -1,4 +1,11 @@
-__version__ = "v2.0.2"
+__version__ = "v2.0.5"
+"""
+Major.Release.Push
+
+Major - Everything a major update happens; Change of code, rework of everything, etc.
+Release - Every release that happens, usually involving finally having a ton of fixes/new commands
+Push - Every push that happens, or commit that is big enough.
+"""
 
 """
 Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
@@ -7,38 +14,14 @@ Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
     - Has a lot of usefull utilities!
     - /help for more info!
 
-Update Notes:
-    - Everything organized into cogs!
-    - main.py is now just for functions, and some other stuff. 
-    - No more requests, I did not realize some of the older commands had it.
-        - Everything should now be used with aiohttp.
-    - I think I forgot to mention the AFK command now exists.
+Release Notes:
+    - Video and image related commands (check videos and images cog)
+    - EXP system now has a server and client
+        - exp and level commands group
 
-Known Bugs:
-    - Regular commands (Prefixes) are not working. Currently trying to find a fix, >clean will work with an alternative for now.
-    - An error occured when syncing commands. Press Ctrl+C to stop the bot. Error: 400 Bad Request (error code: 50240): You cannot remove this app's Entry Point command in a bulk update operation. Please include the Entry Point command in your update request or delete it separately.
-        - It took me like 30 minutes of research to find nothing. It's because the original bot you had cannot change so much slash commands from v1 to v2. 
-        - To delete all commands do: 
-            @bot.event
-            async def on_ready():
-                print("Removing all global commands...")
-
-                try:
-                    global_commands = await bot.tree.fetch_commands()
-                    for command in global_commands:
-                        await command.delete()
-
-                        print(f"Deleted global command: {command.name}")
-                    print("All global commands have been removed.")
-                except Exception as e:
-                    print(f"An error occurred while removing global commands: {e}")
-
-        - After deleting commands, you can go back to the original on_ready() function.
 
 Next Patch (Most likely will come):
-    - EXP System rework
     - Hopefully fix the regular commands!
-    - Add more fun commands
 
 Future updates (Might or might not come, mainly the next update/feature):
     - Fix convert YT command (I think it's just my cookie.txt issue)
@@ -336,13 +319,7 @@ async def test_hy_key() -> bool:
             else:
                 print(f"Request failed with status code: {response.status}")
                 return False
-'''     
-reddit = asyncpraw.Reddit(
-    client_id=client_id,
-    client_secret=client_secret,
-    user_agent=user_agent,
-) 
-'''
+
 user_last_message_time = {}
 
 @bot.event
@@ -361,6 +338,7 @@ async def on_message(message):
     member_data = open_file("info/member_info.json")
 
     afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
+    exp_data = server_info.setdefault(server_id, {}).setdefault("exp", {})
 
     if member_id in afk_data:
         original_name = afk_data[member_id].get("original_name")
@@ -378,7 +356,7 @@ async def on_message(message):
     for user in message.mentions:
         user_id = str(user.id)
         if user_id in afk_data:
-            afk_reason = afk_data[user_id].get("reason", "No reason provided")
+            afk_reason = afk_data[user_id].get("reason", None)
             afk_time = afk_data[user_id].get("time", datetime.now(timezone.utc).isoformat())
             embed = discord.Embed(
                 title=f"{user.display_name} is AFK",
@@ -391,17 +369,26 @@ async def on_message(message):
     if member_id not in member_data:
         member_data[member_id] = {"EXP": 0}
 
+    if member_id not in exp_data:
+        exp_data[member_id] = {"EXP": 0}
+
     last_message_time = user_last_message_time.get(member_id)
 
     if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
         message_length = len(message.content)
-        exp_gain = math.floor(message_length / 15)
+        exp_gain = min(75, math.floor(message_length / 15)) + (random.randint(5, 15)) 
 
         member_data[member_id]["EXP"] += exp_gain
-        user_last_message_time[member_id] = current_time
+
+        if "exp" not in server_info:
+            server_info["exp"] = {}
+        if server_id not in server_info["exp"]:
+            server_info["exp"][server_id] = {}
+        server_info["exp"][server_id][member_id] = server_info["exp"][server_id].get(member_id, 0) + exp_gain
 
         save_file("info/member_info.json", member_data)
-      
+        save_file("info/server_info.json", server_info)
+
 @bot.event
 async def on_ready():
     # import logging
@@ -967,6 +954,7 @@ def convert_number(number: str) -> int:
 
 
 async def main():
+    await bot.start(token)
     try:
         if not await test_hy_key():
             await bot.close()
@@ -989,6 +977,7 @@ async def main():
         print("Bot is shutting down. If an error occurs, you can ignore it.")
 
 if __name__ == "__main__":
+    asyncio.run(main())
     try:
         print("Script loaded.")
         print(f"Current Version: {__version__}")
@@ -998,7 +987,18 @@ if __name__ == "__main__":
             print("Osu API key is valid.")
         except ValueError:
             print("Invalid API keys; Are you sure you entered your osu api correctly?")
-            print("Automatically exiting, rerun the script to try again.")
+            sys.exit()
+
+        try:
+            reddit = asyncpraw.Reddit(
+                client_id=client_id,
+                client_secret=client_secret,
+                user_agent=user_agent,
+            ) 
+            print("Reddit API is valid.")
+        except Exception as e:
+            print(f"An error occured when checking reddit API: {e}")
+            print("Are you sure you entered secrets.env correctly?")
             sys.exit()
 
         asyncio.run(main())

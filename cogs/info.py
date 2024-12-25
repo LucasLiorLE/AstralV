@@ -11,6 +11,7 @@ from aiohttp import ClientSession, ClientError
 from datetime import datetime, timezone
 from moviepy.editor import VideoFileClip, AudioFileClip
 
+
 class AvatarGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="avatar", description="Avatar related commands.")
@@ -53,6 +54,12 @@ class InfoCog(commands.Cog):
 
         self.bot.tree.add_command(AvatarGroup())
 
+    def exp_required(self, level):
+        total_exp = 0
+        for l in range(1, level + 1):
+            total_exp += 5 * (l ** 2) + 50 * l + 100
+        return total_exp
+
     @app_commands.command(name="help", description="Get details about a specific command.")
     @app_commands.describe(command="The command you'd like to learn about.")
     async def help_command(self, interaction: discord.Interaction, command: str):
@@ -87,7 +94,103 @@ class InfoCog(commands.Cog):
                     return
 
         await interaction.response.send_message(f"Command `{command}` not found. Please check your input and try again.", ephemeral=True)
+        
+    @app_commands.command(name="level", description="View your level globally or in your guild.")
+    @app_commands.describe(where="Where you want to view your level.")
+    @app_commands.choices(
+        where=[
+            app_commands.Choice(name="Local (Server)", value="guild"), 
+            app_commands.Choice(name="Global", value="global")
+        ]
+    )
+    async def level(self, interaction: discord.Interaction, where: str = "guild"):
+        await interaction.response.defer()
+        try:
+            def calculate_level_info(exp):
+                level = 1
+                while self.exp_required(level + 1) <= exp:
+                    level += 1
+                
+                current_level_exp = 0 if level == 1 else self.exp_required(level)
+                next_level_exp = self.exp_required(level + 1)
+                
+                exp_progress = exp - current_level_exp
+                exp_needed = next_level_exp - current_level_exp
+                
+                progress_percent = max(0, round((exp_progress / exp_needed) * 100, 2))
+                
+                return {
+                    "level": level,
+                    "exp_progress": exp_progress,
+                    "exp_needed": exp_needed,
+                    "progress_percent": progress_percent
+                }
+                
+            member_id = str(interaction.user.id)
+            server_id = str(interaction.guild.id)
+            server_info = open_file("info/server_info.json")
+                
+            if where == "guild": 
+                server_exp = server_info.get("exp", {}).get(server_id, {})
+                user_exp = server_exp.get(member_id, 0)
+                
+                exp_list = [(uid, exp) for uid, exp in server_exp.items()]
+                exp_list.sort(key=lambda x: x[1], reverse=True)
+                rank = next((i for i, (uid, _) in enumerate(exp_list, 1) if uid == member_id), 0)
+                total_users = len(exp_list)
+                
+                title = f"Server Level - {interaction.user.name}"
+                rank_text = f"Rank: #{rank}/{total_users}"
+            else:
+                global_exp_dict = {}
+                for server_data in server_info.get("exp", {}).values():
+                    for uid, exp in server_data.items():
+                        global_exp_dict[uid] = global_exp_dict.get(uid, 0) + exp
+                
+                user_exp = global_exp_dict.get(member_id, 0)
+                
+                exp_list = [(uid, exp) for uid, exp in global_exp_dict.items()]
+                exp_list.sort(key=lambda x: x[1], reverse=True)
+                rank = next((i for i, (uid, _) in enumerate(exp_list, 1) if uid == member_id), 0)
+                total_users = len(exp_list)
+                
+                title = f"Global Level - {interaction.user.name}"
+                rank_text = f"Rank: #{rank}/{total_users}"
 
+            info = calculate_level_info(user_exp)
+            
+            progress = int(info["progress_percent"] / 5)
+            progress_bar = "█" * progress + "░" * (20 - progress)
+
+            embed = discord.Embed(
+                title=title,
+                color=interaction.user.color if interaction.user.color.value else discord.Color.blue()
+            )
+            
+            embed.add_field(
+                name=f"Level {info['level']} • {rank_text}", 
+                value=f"```\n{progress_bar} {info['progress_percent']}%\n```", 
+                inline=False
+            )
+            
+            embed.add_field(
+                name="Progress", 
+                value=f"{info['exp_progress']:,}/{info['exp_needed']:,} XP", 
+                inline=True
+            )
+            
+            embed.add_field(
+                name="Total XP", 
+                value=f"{user_exp:,} XP", 
+                inline=True
+            )
+            
+            embed.set_thumbnail(url=interaction.user.display_avatar.url)
+            
+            await interaction.followup.send(embed=embed)
+            
+        except Exception as e:
+            await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
 
     @app_commands.command(name="mlevel", description="Calculate Mee6 levels and time to achieve them.")
     @app_commands.describe( 
@@ -99,13 +202,7 @@ class InfoCog(commands.Cog):
     async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, hours_per_day: int):
         await interaction.response.defer()
         try:
-            def exp_required(level):
-                total_exp = 0
-                for l in range(1, level + 1):
-                    total_exp += 5 * (l ** 2) + 50 * l + 100
-                return total_exp
-
-            required_exp = exp_required(target_level) - (exp_required(current_level) + current_exp)
+            required_exp = self.exp_required(target_level) - (self.exp_required(current_level) + current_exp)
 
             embed = discord.Embed(
                 title="Mee6 Level Calculator",

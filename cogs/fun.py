@@ -5,85 +5,12 @@ from discord.ext import commands
 from discord import app_commands
 
 import random
-from io import BytesIO
 from datetime import datetime, timezone
-from petpetgif import petpet # pip install petpetgif
 from aiohttp import ClientSession
-
-class MemeifyGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="memeify", description="Generate memes!")
-
-    @app_commands.command(name="spongebob", description="Generates a Spongebob meme")
-    @app_commands.describe(text="The text you want to show on the paper")
-    async def spongebob(self, interaction: discord.Interaction, text: str):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            async with ClientSession() as session:
-                async with session.get(f"https://memeado.vercel.app/api/spongebob?text={text}") as response:
-                    if response.status == 200:
-                        meme_url = str(response.url)
-                        await interaction.followup.send(content=meme_url)
-                    else:
-                        await interaction.followup.send("Failed to generate the meme. Please try again later.")
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @app_commands.command(name="drakelikehate", description="Generates a Drake Like Hate meme")
-    @app_commands.describe(text1="The text for the 'Like' part", text2="The text for the 'Hate' part")
-    async def drakelikehate(self, interaction: discord.Interaction, text1: str, text2: str):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            async with ClientSession() as session:
-                url = f"https://memeado.vercel.app/api/drakelikehate?text1={text1}&text2={text2}"
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        meme_url = str(response.url)
-                        await interaction.followup.send(content=meme_url)
-                    else:
-                        await interaction.followup.send("Failed to generate the meme. Please try again later.")
-        except Exception as e:
-            await handle_logs(interaction, e)
-            
-    @app_commands.command(name="petpet", description="Creates a pet-pet gif from a user's avatar, emoji, custom image URL, or uploaded file")
-    @app_commands.describe(
-        member="Use a member's avatar",
-        url="URL to an image to create a pet-pet gif (optional)",
-        attachment="File attachment to use for the pet-pet gif (optional)"
-    )
-    async def petpet(self, interaction: discord.Interaction, member: discord.Member = None, url: str = None, attachment: discord.Attachment = None):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            if attachment:
-                image_data = await attachment.read()
-
-            elif url:
-                async with ClientSession() as session:
-                    async with session.get(url) as response:
-                        if response.status != 200:
-                            await interaction.followup.send("Failed to retrieve the image from the URL.")
-                            return
-                        image_data = await response.read()
-
-            elif isinstance(member, discord.Member):
-                image_data = await member.display_avatar.read()
-            else:
-                image_data = await interaction.member.display_avatar.read() # TODO: Check if it's interaction.user 
-
-            source = BytesIO(image_data)
-            dest = BytesIO()
-            petpet.make(source, dest)
-            dest.seek(0)
-
-            await interaction.followup.send(file=discord.File(dest, filename="petpet.gif"))
-        except Exception as e:
-            await handle_logs(interaction, e)
 
 class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-        self.bot.tree.add_command(MemeifyGroup())
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)

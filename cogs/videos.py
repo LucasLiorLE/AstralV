@@ -305,6 +305,7 @@ class VideoGroup(app_commands.Group):
 	@app_commands.describe(
 		video="The video file you want to apply random effects to.",
 		link="The link to the video you want to apply random effects to.",
+		amount="The amount of random effects to apply.",
 		ephemeral="If the message is hidden (Useful if no perms)"
 	)
 	async def random_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None, amount: int = 3, ephemeral: bool = True):
