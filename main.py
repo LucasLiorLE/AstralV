@@ -205,8 +205,7 @@ async def load_cogs():
             except Exception as e:
                 print(f"Failed to load {filename}: {e}")
 
-async def main(): # TODO: Delete this.
-    await bot.start(token)
+async def main():
     try:
         if not await test_hy_key():
             await bot.close()
@@ -229,7 +228,6 @@ async def main(): # TODO: Delete this.
         print("Bot is shutting down. If an error occurs, you can ignore it.")
 
 if __name__ == "__main__":
-    asyncio.run(main()) # TODO: Delete this.
     try:
         print("Script loaded.")
         print(f"Current Version: {__version__}")
