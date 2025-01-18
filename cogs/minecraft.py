@@ -1,4 +1,7 @@
-from main import getUUID, handle_logs
+from bot_utils import (
+    handle_logs,
+    getUUID
+)
 
 import discord
 from discord.ext import commands

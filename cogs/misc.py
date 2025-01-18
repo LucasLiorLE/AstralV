@@ -1,4 +1,12 @@
-from main import open_file, save_file, store_log, handle_logs, parse_duration, get_next_report_id, blacklist_user, is_user_blacklisted, botAdmins
+from bot_utils import (
+    handle_logs, 
+    store_log,
+    open_file,
+    save_file,
+    parse_duration
+)
+
+from main import botAdmins
 
 import discord
 from discord.ext import commands
@@ -6,108 +14,6 @@ from discord import app_commands
 
 import asyncio, random, time, traceback
 from datetime import datetime, timezone
-
-class ReportButtons(discord.ui.View):
-    def __init__(self, report_id, reports_data, message):
-        super().__init__(timeout=None)
-        self.report_id = str(report_id)
-        self.reports_data = reports_data
-        self.message = message
-
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.success)
-    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        report = self.reports_data.get(self.report_id)
-        if not report:
-            await interaction.followup.send(f"Report ID {self.report_id} not found.", ephemeral=True)
-            return
-
-        if report["Status"] != "Open":
-            await interaction.followup.send(f"Ticket ID {self.report_id} has already been processed.",ephemeral=True,)
-            return
-
-        report["Status"] = "Accepted"
-        report["Reviewed by"] = interaction.user.display_name
-        save_file("reports.json", self.reports_data)
-
-        reporter = interaction.guild.get_member(report["Reporter"])
-        if reporter:
-            await reporter.send(f"Your ticket ID: {self.report_id} for user: {report['User']} has been accepted!")
-
-        embed = discord.Embed(
-            title=f"Report ID: {self.report_id}",
-            description=f"**Type:** {report['Type']}\n**Proof:** {report['Proof']}\n**Reported User:** {report['User']}\n**Other:** {report['Other']}\n**Status:** Accepted\n**Reviewed by:** {interaction.user.display_name} ({interaction.user.id})",
-            color=discord.Color.green(),
-            timestamp=datetime.now(),
-        )
-        embed.set_footer(text=f"Reported by {report['Reporter'].user.display_name}", icon_url=report['Reporter'].avatar.url)
-
-        await self.message.edit(embed=embed, view=None)
-        await interaction.followup.send(f"Ticket ID {self.report_id} has been accepted.", ephemeral=True)
-
-    @discord.ui.button(label="Decline", style=discord.ButtonStyle.danger)
-    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defe
-        report = self.reports_data.get(self.report_id)
-        if not report:
-            await interaction.followup.send(f"Report ID {self.report_id} not found.", ephemeral=True)
-            return
-
-        if report["Status"] != "Open":
-            await interaction.followup.send(f"Ticket ID {self.report_id} has already been processed.", ephemeral=True)
-            return
-
-        report["Status"] = "Declined"
-        report["Reviewed by"] = interaction.user.display_name
-        save_file("reports.json", self.reports_data)
-
-        reporter = interaction.guild.get_member(report["Reporter"])
-        if reporter:
-            await reporter.send(f"Your ticket ID: {self.report_id} for user: {report['User']} has been declined.")
-
-        embed = discord.Embed(
-            title=f"Report ID: {self.report_id}",
-            description=f"**Type:** {report['Type']}\n**Proof:** {report['Proof']}\n**Reported User:** {report['User']}\n**Other:** {report['Other']}\n**Status:** Declined\n**Reviewed by:** {interaction.user.display_name} ({interaction.user.id})",
-            color=discord.Color.red(),
-            timestamp=datetime.now(),
-        )
-        embed.set_footer(text=f"Reported by {report['Reporter'].user.display_name}", icon_url=report['Reporter'].avatar.url)
-
-        await self.message.edit(embed=embed, view=None)
-        await interaction.followup.send(f"Ticket ID {self.report_id} has been declined.", ephemeral=True)
-
-    @discord.ui.button(label="Blacklist", style=discord.ButtonStyle.secondary)
-    async def blacklist(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        report = self.reports_data.get(self.report_id)
-        if not report:
-            await interaction.followup.send(f"Report ID {self.report_id} not found.", ephemeral=True)
-            return
-
-        blacklist_user(interaction.user.id)
-
-        report["Status"] = "Declined"
-        report["Reviewed by"] = interaction.user.display_name
-        save_file("reports.json", self.reports_data)
-        reporter = interaction.guild.get_member(report["Reporter"])
-        if reporter:
-            await reporter.send(f"Your ticket ID: {self.report_id} for user: {report['User']} has been declined.\nYou are now ticket blacklisted.")
-
-        await interaction.followup.send(f"The report has been declined and the reported is now blacklisted.", ephemeral=True)
-
-        reporter = interaction.guild.get_member(report["Reporter"])
-        if reporter:
-            await reporter.send(f"Your ticket ID: {self.report_id} has been declined and you have been blacklisted.")
-
-        embed = discord.Embed(
-            title=f"Report ID: {self.report_id}",
-            description=f"**Type:** {report['Type']}\n**Proof:** {report['Proof']}\n**Reported User:** {report['User']}\n**Other:** {report['Other']}\n**Status:** Declined (Blacklisted)\n**Reviewed by:** {interaction.user.display_name} ({interaction.user.id})",
-            color=discord.Color.greyple(),
-            timestamp=datetime.now(),
-        )
-        embed.set_footer(text=f"Reported by {report['Reporter'].user.display_name}", icon_url=report['Reporter'].avatar.url)
-
-        await self.message.edit(embed=embed, view=None)
 
 async def end_giveaway(self, interaction: discord.Interaction, giveaway_id: str, server_id: str):
     try:
@@ -411,89 +317,5 @@ class MiscCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
             
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.command(name="report", description="Report an in game rule breaker")
-    @app_commands.choices(
-        type=[
-            app_commands.Choice(name="Auto Win", value="Auto Win"),
-            app_commands.Choice(name="Ability Spam", value="Ability Spam"),
-            app_commands.Choice(name="Alchemist Auto Brew", value="Alchemist Auto Brew"),
-            app_commands.Choice(name="Bob Auto Farm", value="Bob Auto Farm"),
-            app_commands.Choice(name="Bypassing", value="Bypassing"),
-            app_commands.Choice(name="False Votekick", value="False Votekick"),
-            app_commands.Choice(name="Flight", value="Flight"),
-            app_commands.Choice(name="Framing Exploit", value="Framing Exploit"),
-            app_commands.Choice(name="Item Vacuum", value="Item Vacuum"),
-            app_commands.Choice(name="Kick Exploit", value="Kick Exploit"),
-            app_commands.Choice(name="Godmode", value="Godmode"),
-            app_commands.Choice(name="NSFW", value="NSFW"),
-            app_commands.Choice(name="Reach", value="Reach"),
-            app_commands.Choice(name="Rhythm Ability Spam", value="Rhythm Ability Spam"),
-            app_commands.Choice(name="Slap Aura", value="Slap Aura"),
-            app_commands.Choice(name="Slap Auto Farm", value="Slap Auto Farm"),
-            app_commands.Choice(name="Slapple Farm", value="Slapple Farm"),
-            app_commands.Choice(name="Teleport", value="Teleport"),
-            app_commands.Choice(name="Toxicity", value="Toxicity"),
-            app_commands.Choice(name="Trap Auto Farm", value="Trap Auto Farm"),
-            app_commands.Choice(name="Anti Acid/Lava", value="Anti Acid/Lava"),
-            app_commands.Choice(name="Anti Ragdoll", value="Anti Ragdoll"),
-            app_commands.Choice(name="Anti Void", value="Anti Void"),
-            app_commands.Choice(name="Other", value="Other"),
-        ]
-    )
-    @app_commands.describe(
-        type="The type of exploit they used",
-        proof="Use medal or youtube and post the link",
-        user="The user to report",
-        other="Any other information needed)",
-    )
-    async def report(self, interaction: discord.Interaction, type: str, proof: str, user: str, other: str):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            member_info = open_file("info/member_info.json")
-            reporter_id = str(interaction.user.id)
-
-            if member_info.get(reporter_id, {}).get("TicketBlacklist"):
-                await interaction.followup.send("You are blacklisted from submitting reports.", ephemeral=True)
-                return
-
-            reports_data = open_file("info/reports.json")
-            report_id = get_next_report_id(reports_data)
-
-            timestamp = datetime.now().isoformat()
-            new_report = {
-                "Status": "Open",
-                "Reporter": reporter_id,
-                "User": user,
-                "Proof": proof,
-                "Type": type,
-                "Other": other,
-                "Timestamp": timestamp,
-            }
-
-            reports_data[str(report_id)] = new_report
-            save_file("reports.json", reports_data)
-
-            report_embed = discord.Embed(
-                title=f"Report ID: {report_id}",
-                description=f"**Type:** {type}\n**Proof:** {proof}\n**Reported User:** {user}\n**Other:** {other}",
-                color=discord.Color.red(),
-                timestamp=datetime.now(),
-            )
-
-            report_embed.set_footer(text=f"Reported by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
-
-            guild = interaction.client.get_guild(1279160584662679673)
-            report_channel = guild.get_channel(1292649491203096646)
-            if report_channel:
-                message = await report_channel.send(embed=report_embed, view=None)
-                await message.edit(view=ReportButtons(report_id, reports_data, message))
-                await interaction.followup.send(f"Your report has been submitted for {user}.")
-            else:
-                await interaction.followup.send("Report channel not found.", ephemeral=True)
-        except Exception as e:
-            await handle_logs(interaction, e)
-        
 async def setup(bot):
     await bot.add_cog(MiscCog(bot))

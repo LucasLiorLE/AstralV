@@ -1,4 +1,14 @@
-from main import handle_logs, save_file, open_file, check_user, parse_duration, send_modlog_embed, store_modlog, check_mod, dmbed
+from bot_utils import (
+    open_file,
+    save_file,
+    send_modlog_embed,
+    store_modlog,
+    check_mod,
+    dmbed,
+    check_user,
+    parse_duration,
+    handle_logs
+)
 
 import discord 
 from discord.ext import commands

@@ -1,5 +1,8 @@
-import main
-from main import handle_logs, open_file
+from bot_utils import (
+    handle_logs,
+    open_file,
+    __version__
+)
 
 import discord
 from discord.ext import commands
@@ -10,7 +13,7 @@ import time, asyncio, os, tempfile
 from aiohttp import ClientSession, ClientError
 from datetime import datetime, timezone
 from moviepy.editor import VideoFileClip, AudioFileClip
-
+from PIL import Image
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):
@@ -53,6 +56,20 @@ class InfoCog(commands.Cog):
         self.bot = bot
 
         self.bot.tree.add_command(AvatarGroup())
+
+        self.context_userinfo = app_commands.ContextMenu(
+            name='User Information',
+            callback=self.context_userinfo_callback
+        )
+
+        self.bot.tree.add_command(self.context_userinfo)
+
+        self.context_filedata = app_commands.ContextMenu(
+            name="File Data", 
+            callback=self.context_filedata
+        )
+
+        self.bot.tree.add_command(self.context_filedata)
 
     def exp_required(self, level):
         total_exp = 0
@@ -252,7 +269,7 @@ class InfoCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         try:
             embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-            embed.add_field(name="Version", value=main.__version__)
+            embed.add_field(name="Version", value=f"v{__version__}")
             embed.add_field(name="Server Count", value=len(self.bot.guilds))
             embed.add_field(name="Library", value="Discord.py")
             embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 200 hours+")
@@ -317,8 +334,14 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
+    async def context_userinfo_callback(self, interaction: discord.Interaction, user: discord.Member):
+        await self.userinfo(interaction, user)
+
     @app_commands.command(name="userinfo", description="Provides information about a user.")
     @app_commands.describe(member="The member to get the info for",)
+    async def direct_userinfo(self, interaction: discord.Interaction, member: discord.Member = None):
+        await self.userinfo(interaction, member)
+    
     async def userinfo(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -417,16 +440,37 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="filedata", description="Display metadata for an uploaded file") 
+    async def context_filedata(self, interaction: discord.Interaction, message: discord.Message):
+        if not message.attachments:
+            await interaction.response.send_message("This message doesn't contain any attachments!", ephemeral=True)
+            return
+        
+        file = message.attachments[0]
+
+        if not file:
+            await interaction.response.send_message("No valid attachment found!")
+            return
+        
+        await self.filedata(interaction, file)
+        
+    @app_commands.command(name="filedata", description="Display metadata for an uploaded file")
     @app_commands.describe(file="The uploaded file to analyze.")
+    async def direct_filedata(self, interaction: discord.Interaction, file: discord.Attachment):
+        await self.filedata(interaction, file)
+
     async def filedata(self, interaction: discord.Interaction, file: discord.Attachment):
         await interaction.response.defer()
         try:
             file_data = await file.read()
             file_type = file.content_type
-            file_size = len(file_data) / (1024 * 1024)
+            file_size_kb = len(file_data) / 1024
+            file_size_mb = file_size_kb / 1024
 
-            file_info = f"**File Name:** {file.filename}\n**File Type:** {file_type}\n**File Size:** {file_size:.2f} MB\n"
+            file_info = (
+                f"**File Name:** {file.filename}\n"
+                f"**File Type:** {file_type}\n"
+                f"**File Size:** {file_size_kb:.2f} KB ({file_size_mb:.2f} MB)\n"
+            )
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.filename.split('.')[-1]}") as temp_input:
                 temp_input.write(file_data)
@@ -436,36 +480,41 @@ class InfoCog(commands.Cog):
                 clip = VideoFileClip(temp_input_path)
                 frame_rate = clip.fps
                 duration = clip.duration
-                bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
+                bitrate = (file_size_mb * 8 * 1024) / duration if duration > 0 else "Unknown"
                 resolution = f"{clip.w}x{clip.h} pixels"
                 file_info += (
                     f"**Duration:** {duration:.2f} seconds\n"
                     f"**Frame Rate:** {frame_rate:.2f} fps\n"
                     f"**Bitrate:** {bitrate:.2f} kbps\n"
-                    f"**Resolution:** {resolution}"
+                    f"**Resolution:** {resolution}\n"
                 )
                 clip.close()
 
             elif "audio" in file_type:
                 clip = AudioFileClip(temp_input_path)
                 duration = clip.duration
-                bitrate = (file_size * 8) / duration if duration > 0 else "Unknown"
+                bitrate = (file_size_mb * 8 * 1024) / duration if duration > 0 else "Unknown"
                 file_info += (
                     f"**Duration:** {duration:.2f} seconds\n"
-                    f"**Bitrate:** {bitrate:.2f} kbps"
+                    f"**Bitrate:** {bitrate:.2f} kbps\n"
                 )
                 clip.close()
+
+            elif "image" in file_type:
+                with Image.open(temp_input_path) as img:
+                    resolution = f"{img.width}x{img.height} pixels"
+                    file_info += f"**Resolution:** {resolution}\n"
 
             elif "text" in file_type:
                 with open(temp_input_path, "r", encoding="utf-8") as f:
                     lines = f.readlines()
                 file_info += (
                     f"**Encoding:** UTF-8\n"
-                    f"**Line Count:** {len(lines)}"
+                    f"**Line Count:** {len(lines)}\n"
                 )
 
             else:
-                file_info += "No additional metadata available for this file type."
+                file_info += "No additional metadata available for this file type.\n"
 
             await interaction.followup.send(content=file_info)
 

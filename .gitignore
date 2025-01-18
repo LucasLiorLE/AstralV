@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-=======
-# Basic stuff
-storage/secrets.json
-storage/cookies.txt
-info/server_info.json
-info/member_info.json
-testing.py
-
->>>>>>> 06cf1a8b4cda51f3ed8afc5922a4c1c6f3b62e1e
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

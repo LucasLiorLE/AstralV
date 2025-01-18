@@ -1,11 +1,14 @@
-from main import handle_logs, osu_api
+from bot_utils.logger import (
+    handle_logs
+)
+
+from main import osu_api
 
 import discord
 from discord.ext import commands
 from discord import app_commands
 
 from ossapi import UserLookupKey
-
 
 class OsuCommandGroup(app_commands.Group):
     def __init__(self):

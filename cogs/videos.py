@@ -1,4 +1,6 @@
-from main import handle_logs
+from bot_utils.logger import (
+	handle_logs
+)
 
 import discord
 from discord.ext import commands 

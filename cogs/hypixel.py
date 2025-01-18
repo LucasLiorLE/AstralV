@@ -1,4 +1,9 @@
-from main import handle_logs, getUUID, hypixel_api
+from bot_utils import (
+    handle_logs,
+    getUUID
+)
+
+from main import hypixel_api
 
 import discord
 from discord.ext import commands

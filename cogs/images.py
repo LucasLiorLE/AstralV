@@ -1,4 +1,6 @@
-from main import handle_logs
+from bot_utils.logger import (
+    handle_logs
+)
 
 import discord
 
@@ -454,6 +456,20 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
         except Exception as e:
             await handle_logs(interaction, e)
 
+    async def context_randomize_callback(self, interaction: discord.Interaction, message: discord.Message):
+        if not message.attachments:
+            await interaction.response.send_message("This message doesn't contain any images!", ephemeral=True)
+            return
+            
+        image = next((attachment for attachment in message.attachments 
+                    if attachment.content_type and attachment.content_type.startswith('image/')), None)
+                    
+        if not image:
+            await interaction.response.send_message("No valid image found in this message!", ephemeral=True)
+            return
+            
+        await self.randomize_image(interaction, image=image, amount=3, ephemeral=False)
+
     @app_commands.command(name="random", description="Apply random effects to an uploaded image")
     @app_commands.describe(
         image="The image file you want to apply random effects to.",
@@ -461,6 +477,9 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
         amount="The amount of random effects",
         ephemeral="If the message is hidden (Useful if no perms)"
     )
+    async def direct_randomize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, amount: int = 3, ephemeral: bool = True):
+        await self.randomize_image(interaction, image, link, amount, ephemeral)
+
     async def randomize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, amount: int = 3, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -592,6 +611,13 @@ class FileCog(commands.Cog):
 
         self.bot.tree.add_command(ConvertGroup())
         self.bot.tree.add_command(ImageGroup())
+
+        self.context_randomize = app_commands.ContextMenu(
+            name="Randomize Image",
+            callback=ImageGroup().context_randomize_callback
+        )
+
+        self.bot.tree.add_command(self.context_randomize)
 
 async def setup(bot):
     await bot.add_cog(FileCog(bot))

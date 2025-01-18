@@ -1,4 +1,16 @@
-from main import open_file, save_file, handle_logs, create_account, check_user_stat, process_transaction, convert_number, update_stats, gambling_stats, RestrictedView, items, eco_path
+from bot_utils import (
+    open_file,
+    save_file,
+    convert_number,
+    RestrictedView,
+    create_account,
+    check_user_stat,
+    process_transaction,
+    update_stats,
+    gambling_stats,
+    eco_path,
+    handle_logs
+)
 
 import discord
 from discord.ext import commands, tasks
@@ -10,6 +22,7 @@ from datetime import datetime, timezone
 
 # Hourly shop system
 
+items = open_file("storage/economy/items.json")
 SHOP = []
 
 @tasks.loop(hours=1)

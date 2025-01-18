@@ -1,4 +1,10 @@
-from main import handle_logs, get_clan_data, get_player_data, open_file, save_file
+from bot_utils import (
+    open_file,
+    save_file,
+    get_clan_data,
+    get_player_data,
+    handle_logs
+)
 
 import discord
 from discord.ext import commands

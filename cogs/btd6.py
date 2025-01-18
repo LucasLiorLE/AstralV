@@ -1,9 +1,12 @@
-from main import open_file, save_file, handle_logs
+from bot_utils import (
+    open_file,
+    save_file,
+    handle_logs
+)
 
 import discord
 from discord.ext import commands
 from discord import app_commands
-
 
 import requests
 import re

@@ -1,4 +1,11 @@
-from main import open_file, save_file, handle_logs, GetRobloxID, fetch_roblox_bio, check_user
+from bot_utils import (
+    open_file,
+    save_file,
+    GetRobloxID,
+    fetch_roblox_bio,
+    check_user,
+    handle_logs
+)
 
 import discord
 from discord.ext import commands
