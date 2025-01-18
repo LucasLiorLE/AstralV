@@ -74,7 +74,37 @@ intents.guilds = True
 intents.dm_messages = True
 intents.members = True
 
-bot = commands.Bot(command_prefix=">", intents=intents)
+class APEYEBot(commands.Bot):
+    def __init__(self):
+        super().__init__(
+            command_prefix=commands.when_mentioned_or('>'),
+            intents=intents,
+            case_insensitive=True
+        )
+        self.status_manager = StatusManager(self)
+
+    async def setup_hook(self):
+        # import logging
+        # logging.basicConfig(level=logging.INFO)
+        # logger = logging.getLogger('discord')
+        try:
+            print("Loading cogs...\n-----------------")
+            await load_cogs()
+            print("-----------------\nCogs loaded successfully.")
+            try:
+                # print("Clearing existing commands...")
+                # for guild in bot.guilds:
+                #     bot.tree.clear_commands(guild=guild)
+                print("Syncing commands...")
+                await bot.tree.sync()
+                print("Commands successfully synced.")
+            except Exception as e:
+                print(f"An error occurred when syncing commands: {e}")
+        except Exception as e:
+            print(f"An error occurred when loading cogs: {e}")
+        print("Bot is ready.")
+
+bot = APEYEBot()
 
 secrets = Path('storage/secrets.env')
 load_dotenv(dotenv_path=secrets)
@@ -111,6 +141,8 @@ user_last_message_time = {}
 async def on_message(message):
     if message.author == bot.user:
         return
+
+    await bot.process_commands(message)
 
     if isinstance(message.channel, discord.DMChannel):
         return
@@ -174,28 +206,6 @@ async def on_message(message):
         save_file("info/member_info.json", member_data)
         save_file("info/server_info.json", server_info)
 
-@bot.event
-async def on_ready():
-    # import logging
-    # logging.basicConfig(level=logging.INFO)
-    # logger = logging.getLogger('discord')
-    try:
-        print("Loading cogs...\n-----------------")
-        await load_cogs()
-        print("-----------------\nCogs loaded successfully.")
-        try:
-            # print("Clearing existing commands...")
-            # for guild in bot.guilds:
-            #     bot.tree.clear_commands(guild=guild)
-            print("Syncing commands...")
-            await bot.tree.sync()
-            print("Commands successfully synced.")
-        except Exception as e:
-            print(f"An error occurred when syncing commands: {e}")
-    except Exception as e:
-        print(f"An error occurred when loading cogs: {e}")
-    print("Bot is ready.")
-
 async def load_cogs():
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
@@ -205,54 +215,66 @@ async def load_cogs():
             except Exception as e:
                 print(f"Failed to load {filename}: {e}")
 
-async def main():
+async def check_apis():
+    # Check Hypixel API
+    if not await test_hy_key():
+        print("Hypixel API check failed")
+        return False
+    print("Hypixel API key is valid.")
+
+    # Check Clash Royale API
+    if not await get_player_data(None):
+        print("Invalid Clash Royale API key. Please check secrets.env.")
+        print("If your key is there, consider checking if your IP is authorized.")
+        return False
+    
+    # Check Osu API
     try:
-        if not await test_hy_key():
-            await bot.close()
-        print("Hypixel API key is valid.")
-        if not await get_player_data(None):
-            print("Invalid Clash Royale API key. Please check secrets.env.")
-            print("If your key is there, consider checking if your IP is authorized.")
-            await bot.close()
-        else:
-            print("The bot is starting, please give it a minute.")
-            await bot.start(token)
+        osu_api = Ossapi(int(osu_api), osu_secret)
+        print("Osu API key is valid.")
+    except ValueError:
+        print("Invalid API keys; Are you sure you entered your osu api correctly?")
+        return False
+
+    # Check Reddit API
+    try:
+        reddit = asyncpraw.Reddit(
+            client_id=client_id,
+            client_secret=client_secret,
+            user_agent=user_agent,
+        ) 
+        print("Reddit API is valid.")
+    except Exception as e:
+        print(f"An error occured when checking reddit API: {e}")
+        print("Are you sure you entered secrets.env correctly?")
+        return False
+    
+    return True
+
+async def main():
+    print("Script loaded.")
+    print(f"Current Version: {__version__}")
+
+    if not await check_apis():
+        return
+
+    print("The bot is starting, please give it a minute.")
+    try:
+        await bot.start(token)
     except discord.errors.LoginFailure:
         print("Possible incorrect bot token has been passed. Please check secrets.env, otherwise restart.")
-    except KeyboardInterrupt: # Ctrl + C
-        print("Ctrl + C Detected. If it was on accident, Ctrl + C is KeyboardInterrupt error, which shuts this down.")
-        await bot.close()
+    except KeyboardInterrupt:
+        print("Ctrl + C detected. Shutting down gracefully...")
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
     finally:
         print("Bot is shutting down. If an error occurs, you can ignore it.")
+        await bot.close()
 
 if __name__ == "__main__":
     try:
-        print("Script loaded.")
-        print(f"Current Version: {__version__}")
-
-        try:
-            osu_api = Ossapi(int(osu_api), osu_secret)
-            print("Osu API key is valid.")
-        except ValueError:
-            print("Invalid API keys; Are you sure you entered your osu api correctly?")
-            sys.exit()
-
-        try:
-            reddit = asyncpraw.Reddit(
-                client_id=client_id,
-                client_secret=client_secret,
-                user_agent=user_agent,
-            ) 
-            print("Reddit API is valid.")
-        except Exception as e:
-            print(f"An error occured when checking reddit API: {e}")
-            print("Are you sure you entered secrets.env correctly?")
-            sys.exit()
-
         asyncio.run(main())
     except KeyboardInterrupt:
-        pass
+        print("Keyboard interrupt detected. Shutting down...")
     except Exception as e:
         print(f"An unexpected error occurred during bot execution: {e}")
