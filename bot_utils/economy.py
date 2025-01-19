@@ -54,6 +54,16 @@ def create_account(id):
             "damage": 0,
             "speed": 0,
             "extra": 0
+        },
+        "cooldowns": {
+            "daily": "2000-01-01T00:00:00+00:00",
+            "weekly": "2000-01-01T00:00:00+00:00",
+            "monthly": "2000-01-01T00:00:00+00:00"
+        },
+        "streaks": {
+            "daily": 0,
+            "weekly": 0,
+            "monthly": 0
         }
     }
 

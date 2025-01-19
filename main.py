@@ -4,7 +4,7 @@ Major.Release.Push
 
 Major - Everything a major update happens; Change of code, rework of everything, etc.
 Release - Every release that happens, usually involving finally having a ton of fixes/new commands
-Push - Every push that happens, or commit that is big enough.
+Push - Every push that happens, or commit that is big enough (Or if I forget something).
 """
 
 """
@@ -251,8 +251,8 @@ async def on_message(message):
 async def main():
     print(f"Script loaded. Version: v{__version__}")
 
-    if not await check_apis():
-        return
+    # if not await check_apis():
+    #     return
 
     print("The bot is starting, please give it a minute.")
     try:

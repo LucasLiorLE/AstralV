@@ -1,29 +1,29 @@
 {
-    "testing": {
-        "price": 5000,
+    "fishing_rod": {
+        "price": 50000,
         "appearInShop": {
-            "buyPrice": 5000,
-            "amount": -1
+            "buyPrice": 50000,
+            "amount": -1,
+            "description": "Required for fishing! Has a 10% chance to break."
         },
-        "description": "Example description",
-        "type": null
+        "type": "tool"
     },
-    "example": {
-        "price": 2500,
+    "rifle": {
+        "price": 50000,
         "appearInShop": {
-            "buyPrice": 2500,
-            "amount": 5
+            "buyPrice": 50000,
+            "amount": -1,
+            "description": "Required for hunting! Has a 10% chance to break."
         },
-        "description": "Example description",
-        "type": null
+        "type": "tool"
     },
-    "another_item": {
-        "price": 1500,
+    "shovel": {
+        "price": 50000,
         "appearInShop": {
-            "buyPrice": 1500,
-            "amount": 20
+            "buyPrice": 50000,
+            "amount": -1,
+            "description": "Required for digging! Has a 10% chance to break."
         },
-        "description": "Example description",
-        "type": null
+        "type": "tool"
     }
 }

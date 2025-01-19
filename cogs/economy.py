@@ -18,7 +18,7 @@ from discord import app_commands, ButtonStyle
 from discord.ui import Button, View, button, Modal, TextInput
 
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # Hourly shop system
 
@@ -37,228 +37,10 @@ async def handle_eco_shop():
                 "item": name,
                 "price": appear_data.get("buyPrice", 0),
                 "amount": appear_data.get("amount", 0),
-                "description": appear_data.get("description", "No description yet...")
+                "description": appear_data.get("description", "No description yet..."),
+                "type": data.get("type", "No type")  # Add this line to include the type
             })
     
-class BlackjackView(View):
-    def __init__(self, player, deck, player_hand, dealer_hand, bot, amount=0):
-        super().__init__(timeout=30 if not bot else None)
-        self.player = player
-        self.deck = deck
-        self.player_hand = player_hand
-        self.dealer_hand = dealer_hand
-        self.bot = bot
-        self.result = None
-        self.amount = amount
-
-    def get_game_state(self):
-        embed = discord.Embed(title="Blackjack Game")
-        embed.add_field(name="Your Hand", value=f"{self.player_hand} (Total: {sum(self.player_hand)})")
-        
-        if self.result is None:
-            embed.add_field(name="Dealer's Hand", value=f"{self.dealer_hand[0]}, ?")
-        else:
-            embed.add_field(name="Dealer's Hand", value=f"{self.dealer_hand} (Total: {sum(self.dealer_hand)})")
-            embed.add_field(name="Result", value=self.result, inline=False)
-        
-        return embed
-
-    @button(label="Hit", style=ButtonStyle.green)
-    async def hit(self, interaction, button):
-        if interaction.user != self.player:
-            await interaction.response.send_message("It's not your turn!", ephemeral=True)
-            return
-
-        self.player_hand.append(self.deck.pop())
-        if sum(self.player_hand) > 21:
-            self.result = "You busted! Dealer wins."
-            update_stats(str(self.player.id), "blackjack", "loss", self.amount)
-            await interaction.response.edit_message(embed=self.get_game_state(), view=None)
-            self.stop()
-            return
-
-        await interaction.response.edit_message(embed=self.get_game_state())
-
-    @button(label="Stand", style=ButtonStyle.red)
-    async def stand(self, interaction, button):
-        if interaction.user != self.player:
-            await interaction.response.send_message("It's not your turn!", ephemeral=True)
-            return
-
-        while sum(self.dealer_hand) < 17:
-            self.dealer_hand.append(self.deck.pop())
-
-        dealer_total = sum(self.dealer_hand)
-        player_total = sum(self.player_hand)
-
-        if dealer_total > 21 or player_total > dealer_total:
-            self.result = "You win!"
-            update_stats(str(self.player.id), "blackjack", "win", self.amount)
-        elif player_total < dealer_total:
-            self.result = "Dealer wins!"
-            update_stats(str(self.player.id), "blackjack", "loss", self.amount)
-        else:
-            self.result = "It's a tie!"
-            update_stats(str(self.player.id), "blackjack", "draw")
-
-        await interaction.response.edit_message(embed=self.get_game_state(), view=None)
-        self.stop()
-
-class ChallengeView(View):
-    def __init__(self, challenger, opponent, amount):
-        super().__init__(timeout=30)
-        self.challenger = challenger
-        self.opponent = opponent
-        self.amount = amount
-        self.response = None
-
-    @button(label="Accept", style=ButtonStyle.green)
-    async def accept(self, interaction, button):
-        if interaction.user != self.opponent:
-            await interaction.response.send_message("You are not the challenged user!", ephemeral=True)
-            return
-
-        self.response = True
-        self.stop()
-
-    @button(label="Decline", style=ButtonStyle.red)
-    async def decline(self, interaction, button):
-        if interaction.user != self.opponent:
-            await interaction.response.send_message("You are not the challenged user!", ephemeral=True)
-            return
-
-        self.response = False
-        self.stop()
-
-    async def on_timeout(self):
-        self.response = False
-
-class BlackjackGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="blackjack", description="Not coming soon")
-
-    @app_commands.command(name="wager", description="Wager in a blackjack game")
-    @app_commands.describe(amount="The amount you want to wager", member="User you want to wager against (Or bot if none)")
-    async def bjwager(self, interaction: discord.Interaction, amount: int, member: discord.User = None):
-        try:
-            if member == interaction.user:
-                await interaction.response.send_message("You can't go against yourself!", ephemeral=True)
-                return
-            if member is None:
-                await self.start_game(interaction, amount, bot=True)
-            else:
-                await self.challenge_user(interaction, amount, member=member)
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @app_commands.command(name="casual", description="Play a casual game of blackjack")
-    @app_commands.describe(member="The user you want to play against")
-    async def bjcasual(self, interaction: discord.Interaction, member: discord.User = None):
-        try:
-            if member == interaction.user:
-                await interaction.response.send_message("You can't go against yourself!!", ephemeral=True)
-                return
-            if member is None:
-                await self.start_game(interaction, amount=0, bot=True)
-            else:
-                await self.challenge_user(interaction, amount=0, member=member)
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    async def challenge_user(self, interaction, amount, user):
-        view = ChallengeView(interaction.user, user, amount)
-        await interaction.response.send_message(
-            f"{user.mention}, you have been challenged by {interaction.user.mention} to a blackjack game! Do you accept?",
-            view=view
-        )
-        await view.wait()
-        if view.response is None:  
-            await interaction.followup.send("The challenge timed out!", ephemeral=True)
-        elif view.response:  
-            await self.start_game(interaction, amount=amount, bot=False)
-        else:  
-            await interaction.followup.send(f"{user.mention} declined the challenge.", ephemeral=True)
-
-    async def start_game(self, interaction, amount, bot):
-        deck = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11] * 4
-        random.shuffle(deck)
-
-        player_hand = [deck.pop(), deck.pop()]
-        dealer_hand = [deck.pop(), deck.pop()]
-
-        view = BlackjackView(interaction.user, deck, player_hand, dealer_hand, bot, amount)
-        await interaction.followup.send(
-            embed=view.get_game_state(),
-            view=view
-        )
-        
-    @app_commands.command(name="stats", description="View a user's stats for blackjack")
-    @app_commands.describe(user="The user you want to view the stats for.")
-    async def bjstats(self, interaction: discord.Interaction, user: discord.User = None):
-        user = user or interaction.user
-        stats = gambling_stats(str(user.id), "blackjack")
-
-        embed = discord.Embed(title=f"{user.name}'s Blackjack Stats")
-        embed.add_field(name="Wins", value=stats["wins"])
-        embed.add_field(name="Losses", value=stats["losses"])
-        embed.add_field(name="Draws", value=stats["draws"])
-        embed.add_field(name="Coins Won", value=stats["coinsWon"])
-        embed.add_field(name="Coins Lost", value=stats["coinsLost"])
-
-        await interaction.response.send_message(embed=embed)
-        
-class TicTacToeGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="tictactoe", description="Not coming soon")
-
-    @app_commands.command(name="wager", description="Wager in a tic tac toe game")
-    @app_commands.describe(amount="The amount you want to wager")
-    async def tttwager(self, interaction: discord.Interaction, amount: int):
-        pass
-
-    @app_commands.command(name="casual", description="Play a casual gane of tic tac toe")
-    async def tttcasual(self, interaction: discord.Interaction):
-        pass
-
-    @app_commands.command(name="stats", description="View a user's stats for tic tac toe")
-    @app_commands.describe(user="The user you want to view the stats for.")
-    async def tttstats(self, interaction: discord.Interaction, user: str = None):
-        pass
-
-
-class connect4Group(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="connect4", description="Not coming soon")
-
-    @app_commands.command(name="wager", description="Wager in a connect 4 game")
-    @app_commands.describe(amount="The amount you want to wager")
-    async def c4wager(self, interaction: discord.Interaction, amount: int):
-        pass
-
-    @app_commands.command(name="casual", description="Play a casual gane of connect 4")
-    async def c4casual(self, interaction: discord.Interaction):
-        pass
-
-    @app_commands.command(name="stats", description="View a user's stats for connect 4")
-    @app_commands.describe(user="The user you want to view the stats for.")
-
-    async def c4stats(self, interaction: discord.Interaction, user: str = None):
-        pass
-
-class slotsGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="slots", description="Not coming soon")
-
-    @app_commands.command(name="wager", description="Gamble in slots")
-    @app_commands.describe(amount="The amount you want to wager")
-    async def slotwager(self, interaction: discord.Interaction, amount: int):
-        pass
-
-    @app_commands.command(name="stats", description="View a user's stats for slots")
-    @app_commands.describe(user="The user you want to view the stats for.")
-    async def slotstats(self, interaction: discord.Interaction, user: str = None):
-        pass
-
 # Currency system
 class MarketGroup(app_commands.Group):
     def __init__(self):
@@ -268,8 +50,8 @@ class ShopGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="shop", description="Shop commands.")
 
-    @app_commands.command(name="show", description="View the shop.")
-    async def show(self, interaction: discord.Interaction):
+    @app_commands.command(name="view", description="View the shop.")
+    async def view(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
             if not SHOP:
@@ -279,8 +61,8 @@ class ShopGroup(app_commands.Group):
             for item in SHOP:
                 amount = "Infinity" if item["amount"] == -1 else item["amount"]
                 embed.add_field(
-                    name=f"{item['item']}",
-                    value=f"**Price**: {item['price']}\n**Amount Left**: {amount}\n**Description**: {item['description']}]n**Type**: {item['type']}",
+                    name=f"{item['item'].title()}",
+                    value=f"**Price**: {item['price']}\n**Amount Left**: {amount}\n**Description**: {item['description']}\n**Type**: {item['type']}",
                     inline=False
                 )
 
@@ -289,21 +71,47 @@ class ShopGroup(app_commands.Group):
             handle_logs(interaction, e)
 
     @app_commands.command(name="buy", description="Buy an item from the shop.")
-    async def buy(self, interaction: discord.Interaction, item_name: str, quantity: int):
+    async def buy(self, interaction: discord.Interaction, item_name: str, quantity: int = 1):
         await interaction.response.defer()
         try:
             if not SHOP:
                 await handle_eco_shop()
-        
+
+            user_id = str(interaction.user.id)
+            eco = open_file(eco_path)
+            
+            if user_id not in eco:
+                create_account(user_id)
+                eco = open_file(eco_path)
+            
             for item in SHOP:
                 if item["item"].lower() == item_name.lower():
-                    if item["amount"] == -1 or item["amount"] >= quantity:
-                        item["amount"] = item["amount"] - quantity if item["amount"] != -1 else -1
-                        await interaction.followup.send(f"You bought {quantity}x {item_name} for {item['price'] * quantity} coins.")
+                    total_cost = item["price"] * quantity
+                    
+                    if eco[user_id]["balance"]["purse"] < total_cost:
+                        await interaction.followup.send("You don't have enough coins!", ephemeral=True)
                         return
+                        
+                    if item["amount"] != -1 and item["amount"] < quantity:
+                        await interaction.followup.send(f"Not enough {item_name} in stock!", ephemeral=True)
+                        return
+
+                    if "inventory" not in eco[user_id]:
+                        eco[user_id]["inventory"] = {}
+
+                    if item["item"] in eco[user_id]["inventory"]:
+                        eco[user_id]["inventory"][item["item"]] += quantity
                     else:
-                        await interaction.followup.send(f"Not enough {item_name} in stock.", ephemeral=True)
-                        return
+                        eco[user_id]["inventory"][item["item"]] = quantity
+
+                    eco[user_id]["balance"]["purse"] -= total_cost
+                    
+                    if item["amount"] != -1:
+                        item["amount"] -= quantity
+
+                    save_file(eco_path, eco)
+                    await interaction.followup.send(f"You bought {quantity}x {item_name} for {total_cost:,} coins.")
+                    return
 
             await interaction.followup.send(f"Item {item_name} not found in the shop.", ephemeral=True)
         except Exception as e:
@@ -316,23 +124,28 @@ class AuctionGroup(app_commands.Group):
 class EconomyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-        bot.tree.add_command(BlackjackGroup())
-        bot.tree.add_command(TicTacToeGroup())
-        bot.tree.add_command(connect4Group())
-        bot.tree.add_command(slotsGroup())
-
+        handle_eco_shop.start()
         bot.tree.add_command(MarketGroup())
         bot.tree.add_command(ShopGroup())
         bot.tree.add_command(AuctionGroup())
 
+    def cog_unload(self):
+        handle_eco_shop.cancel()
+
+    async def cog_app_command_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CommandOnCooldown):
+            retry_after = int(error.retry_after)
+            retry_time = int((discord.utils.utcnow() + timedelta(seconds=retry_after)).timestamp())
+            await interaction.response.send_message(f"Command on cooldown. Try again <t:{retry_time}:R>", ephemeral=True)
+        else:
+            await handle_logs(interaction, error)
 
     @app_commands.command(name="balance", description="Check a user's purse and bank balance!")
     @app_commands.describe(member="The user whose balance you want to check.")
     async def balance(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            user = user or interaction.user
+            user = member or interaction.user
             user_id = str(user.id)
 
             eco = open_file(eco_path)
@@ -466,6 +279,7 @@ class EconomyCog(commands.Cog):
 
     # Basic ways to get money
     @app_commands.command(name="beg", description="Beg for money on the streets.")
+    @app_commands.checks.cooldown(1, 30)
     async def beg(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -473,11 +287,11 @@ class EconomyCog(commands.Cog):
             user_id = str(interaction.user.id)
             if user_id not in eco:
                 create_account(user_id)
-            eco = open_file(eco_path)
+                eco = open_file(eco_path)
             
-            purse = eco[user_id]['balance']['purse']
             coin_boost = eco[user_id]['boosts']['coins']
-            amount = int(random.randint(80, 150) * (coin_boost / 100))
+            base_amount = random.randint(80, 150)
+            total_amount = int(base_amount * (coin_boost / 100))
             r = random.randint(1, 4)
 
             t = {
@@ -491,14 +305,14 @@ class EconomyCog(commands.Cog):
                     "don't beg in the alley"
                 ],
                 "y": [
-                    f"Sure hon, here have {amount} coins.", 
-                    f"God felt bad so he gave you {amount} coins...",
-                    f"a dog took pity on you and gave you {amount} coins.",
-                    f"Spend {amount} coins well...",
-                    f"{amount} coins appeared out of thin air!",
+                    f"Sure hon, here have {total_amount} coins.", 
+                    f"God felt bad so he gave you {total_amount} coins...",
+                    f"a dog took pity on you and gave you {total_amount} coins.",
+                    f"Spend {total_amount} coins well...",
+                    f"{total_amount} coins appeared out of thin air!",
                     f"you got some coins but im evil so i won't tell you how much",
-                    f"the criminals felt so bad they gave you {amount} coins",
-                    f"You got paied {amount} coins to stop begging"
+                    f"the criminals felt so bad they gave you {total_amount} coins",
+                    f"You got paied {total_amount} coins to stop begging"
                 ]
             }
 
@@ -508,63 +322,343 @@ class EconomyCog(commands.Cog):
                 embed.description = random.choice(t["n"])
                 embed.footer = "begging is for losers!"
             else:
-                purse += amount
+                eco[user_id]['balance']['purse'] += total_amount
                 save_file(eco_path, eco)
                 embed.color = discord.Color.green()
                 embed.description = random.choice(t["y"])
                 embed.footer = f"With a coin multiplier of {coin_boost}%"
 
-                if amount == 143: # little reference :)
+                if base_amount == 143: # little reference :)
                     embed.footer = "i love you"
 
             await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
-
-
-    @app_commands.command(name="fish", description="Not coming soon.")
+    @app_commands.command(name="fish", description="Fish for some coins! Requires a fishing rod.")
+    @app_commands.checks.cooldown(1, 30)
     async def fish(self, interaction: discord.Interaction):
-        pass
-    @app_commands.command(name="hunt", description="Not coming soon.")
-    async def hunt(self, interaction: discord.Interaction):
-        pass
-    @app_commands.command(name="dig", description="Not coming soon.")
-    async def dig(self, interaction: discord.Interaction):
-        pass
-    @app_commands.command(name="search", description="Not coming soon.")
-    async def search(self, interaction: discord.Interaction):
-        pass
-    @app_commands.command(name="crime", description="Not coming soon.")
-    async def crime(self, interaction: discord.Interaction):
-        pass
-
-    # Other ways to get money
-    @app_commands.command(name="daily", description="Not coming soon.")
-    async def daily(self, interaction: discord.Interaction):
-        pass
-    '''
         await interaction.response.defer()
         try:
-            eco = open_file(eco_path)
             user_id = str(interaction.user.id)
+            eco = open_file(eco_path)
+
             if user_id not in eco:
                 create_account(user_id)
+                eco = open_file(eco_path)
+
+            if 'fishing_rod' not in eco[user_id].get('inventory', {}):
+                await interaction.followup.send("You need a fishing rod to fish! Buy one from the shop.")
+                return
+
+            base_amount = random.randint(500, 1200)
+            coin_boost = eco[user_id]['boosts']['coins']
+            total_amount = int(base_amount * (coin_boost / 100))
+
+            if random.random() < 0.1:
+                eco[user_id]['inventory'].pop('fishing_rod')
+                break_msg = f"\nYour fishing rod broke! (Would have earned {total_amount} coins)"
+            else:
+                eco[user_id]['balance']['purse'] += total_amount
+                break_msg = f"\nWith coin boost: {coin_boost}% (Base: {base_amount} → Total: {total_amount})"
+
+            save_file(eco_path, eco)
+            await interaction.followup.send(f"You went fishing!{break_msg}")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="hunt", description="Hunt for some coins! Requires a rifle.")
+    @app_commands.checks.cooldown(1, 30)
+    async def hunt(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
             eco = open_file(eco_path)
 
-            purse = eco[user_id]['balance']['purse']
+            if user_id not in eco:
+                create_account(user_id)
+                eco = open_file(eco_path)
+
+            if 'rifle' not in eco[user_id].get('inventory', {}):
+                await interaction.followup.send("You need a rifle to hunt! Buy one from the shop.")
+                return
+
+            base_amount = random.randint(500, 1200)
             coin_boost = eco[user_id]['boosts']['coins']
-            streak = eco[user_id]['streaks']['daily']
-    '''
+            total_amount = int(base_amount * (coin_boost / 100))
 
+            if random.random() < 0.1:
+                eco[user_id]['inventory'].pop('rifle')
+                break_msg = f"\nYour rifle broke! (Would have earned {total_amount} coins)"
+            else:
+                eco[user_id]['balance']['purse'] += total_amount
+                break_msg = f"\nWith coin boost: {coin_boost}% (Base: {base_amount} → Total: {total_amount})"
 
+            save_file(eco_path, eco)
+            await interaction.followup.send(f"You went hunting!{break_msg}")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="dig", description="Dig for some coins! Requires a shovel.")
+    @app_commands.checks.cooldown(1, 30)
+    async def dig(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            eco = open_file(eco_path)
+
+            if user_id not in eco:
+                create_account(user_id)
+                eco = open_file(eco_path)
+
+            if 'shovel' not in eco[user_id].get('inventory', {}):
+                await interaction.followup.send("You need a shovel to dig! Buy one from the shop.")
+                return
+
+            base_amount = random.randint(500, 1200)
+            coin_boost = eco[user_id]['boosts']['coins']
+            total_amount = int(base_amount * (coin_boost / 100))
+
+            if random.random() < 0.1:
+                eco[user_id]['inventory'].pop('shovel')
+                break_msg = f"\nYour shovel broke! (Would have earned {total_amount} coins)"
+            else:
+                eco[user_id]['balance']['purse'] += total_amount
+                break_msg = f"\nWith coin boost: {coin_boost}% (Base: {base_amount} → Total: {total_amount})"
+
+            save_file(eco_path, eco)
+            await interaction.followup.send(f"You went digging!{break_msg}")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="search", description="Search for some coins!")
+    @app_commands.checks.cooldown(1, 30)
+    async def search(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            eco = open_file(eco_path)
+
+            if user_id not in eco:
+                create_account(user_id)
+                eco = open_file(eco_path)
+
+            base_amount = random.randint(80, 150)
+            coin_boost = eco[user_id]['boosts']['coins']
+            total_amount = int(base_amount * (coin_boost / 100))
+
+            locations = {
+                "success": [
+                    f"You found {total_amount} coins in an old coat! (Base: {base_amount})",
+                    f"You searched the couch cushions and found {total_amount} coins! (Base: {base_amount})",
+                    f"Someone dropped {total_amount} coins on the street! (Base: {base_amount})",
+                    f"You found {total_amount} coins in a vending machine return slot! (Base: {base_amount})"
+                ],
+                "fail": [
+                    "You searched but found nothing...",
+                    "Better luck next time!",
+                    "Nothing here but dust.",
+                    "Maybe try searching somewhere else?"
+                ]
+            }
+
+            success = random.random() < 0.75
+            if success:
+                eco[user_id]['balance']['purse'] += total_amount
+                message = f"{random.choice(locations['success'])}\nCoin boost: {coin_boost}%"
+            else:
+                message = random.choice(locations["fail"])
+
+            save_file(eco_path, eco)
+            await interaction.followup.send(message)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="crime", description="Commit a crime for coins!")
+    @app_commands.checks.cooldown(1, 30)
+    async def crime(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            eco = open_file(eco_path)
+
+            if user_id not in eco:
+                create_account(user_id)
+                eco = open_file(eco_path)
+
+            base_amount = random.randint(80, 150)
+            coin_boost = eco[user_id]['boosts']['coins']
+            total_amount = int(base_amount * (coin_boost / 100))
+
+            crimes = {
+                "success": [
+                    f"You successfully pickpocketed {total_amount} coins! (Base: {base_amount})",
+                    f"You hacked an ATM and got {total_amount} coins! (Base: {base_amount})",
+                    f"You robbed a store and got away with {total_amount} coins! (Base: {base_amount})",
+                    f"Your heist was successful! You got {total_amount} coins! (Base: {base_amount})"
+                ],
+                "fail": [
+                    "You got caught and had to run away!",
+                    "The police were nearby, better luck next time!",
+                    "Your target was too difficult to rob.",
+                    "Someone saw you and you had to abort!"
+                ]
+            }
+
+            success = random.random() < 0.6
+            if success:
+                eco[user_id]['balance']['purse'] += total_amount
+                message = f"{random.choice(crimes['success'])}\nCoin boost: {coin_boost}%"
+            else:
+                message = random.choice(crimes["fail"])
+
+            save_file(eco_path, eco)
+            await interaction.followup.send(message)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="daily", description="Claim your daily reward!")
+    async def daily(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
             
-    @app_commands.command(name="weekly", description="Not coming soon.")
+            check_user_stat(['cooldowns'], user_id)
+            check_user_stat(['cooldowns', 'daily'], user_id, str)
+            check_user_stat(['streaks'], user_id)
+            check_user_stat(['streaks', 'daily'], user_id, int)
+            
+            eco = open_file(eco_path)
+            
+            now = datetime.now(timezone.utc)
+            cooldown = eco[user_id]['cooldowns']['daily']
+            last_daily = datetime.fromisoformat(cooldown if cooldown else '2000-01-01T00:00:00+00:00')
+
+            days_passed = (now - last_daily).days
+
+            if days_passed < 1:
+                time_left = last_daily + timedelta(days=1) - now
+                hours, remainder = divmod(int(time_left.total_seconds()), 3600)
+                minutes, seconds = divmod(remainder, 60)
+                await interaction.followup.send(f"You can claim your daily reward in {hours}h {minutes}m {seconds}s")
+                return
+
+            streak = eco[user_id]['streaks']['daily']
+            
+            if days_passed > 3:
+                streak = 0
+            elif days_passed > 1:
+                streak = max(0, streak - (days_passed - 1))
+
+            base_amount = 10000
+            streak_multiplier = 1 + (streak * 0.05)
+            total_amount = int(base_amount * streak_multiplier * (eco[user_id]['boosts']['coins'] / 100))
+
+            eco[user_id]['balance']['purse'] += total_amount
+            eco[user_id]['streaks']['daily'] = streak + 1 
+            eco[user_id]['cooldowns']['daily'] = now.isoformat()
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="Daily Reward!",
+                description=(
+                    f"You received {total_amount:,} coins!\n"
+                    f"Streak: {streak + 1} days (+{(streak_multiplier - 1) * 100:.1f}% bonus)\n"
+                    f"Next streak bonus: +{((streak + 1) * 0.05) * 100:.1f}%"
+                ),
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="weekly", description="Claim your weekly reward!")
     async def weekly(self, interaction: discord.Interaction):
-        pass
-    @app_commands.command(name="monthly", description="Not coming soon.")
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            
+            check_user_stat(['cooldowns'], user_id)
+            check_user_stat(['cooldowns', 'weekly'], user_id, str)
+            check_user_stat(['streaks'], user_id)
+            check_user_stat(['streaks', 'weekly'], user_id, int)
+            
+            eco = open_file(eco_path)
+            
+            now = datetime.now(timezone.utc)
+            cooldown = eco[user_id]['cooldowns']['weekly']
+            last_weekly = datetime.fromisoformat(cooldown if cooldown else '2000-01-01T00:00:00+00:00')
+
+            if (now - last_weekly).days < 7:
+                time_left = last_weekly + timedelta(days=7) - now
+                days = time_left.days
+                hours = time_left.seconds // 3600
+                await interaction.followup.send(f"You can claim your weekly reward in {days}d {hours}h")
+                return
+
+            coin_boost = eco[user_id]['boosts']['coins']
+            streak = eco[user_id]['streaks']['weekly']
+            base_amount = 100000
+            streak_bonus = min(streak * 500, 900000)
+            total_amount = int((base_amount + streak_bonus) * (coin_boost / 100))
+
+            eco[user_id]['balance']['purse'] += total_amount
+            eco[user_id]['streaks']['weekly'] += 1
+            eco[user_id]['cooldowns']['weekly'] = now.isoformat()
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="Weekly Reward!",
+                description=f"You received {total_amount} coins!\nStreak: {streak + 1} weeks (+{streak_bonus} bonus)",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="monthly", description="Claim your monthly reward!")
     async def monthly(self, interaction: discord.Interaction):
-        pass
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            
+            check_user_stat(['cooldowns'], user_id)
+            check_user_stat(['cooldowns', 'monthly'], user_id, str)
+            check_user_stat(['streaks'], user_id)
+            check_user_stat(['streaks', 'monthly'], user_id, int)
+            
+            eco = open_file(eco_path)
+            
+            now = datetime.now(timezone.utc)
+            cooldown = eco[user_id]['cooldowns']['monthly']
+            last_monthly = datetime.fromisoformat(cooldown if cooldown else '2000-01-01T00:00:00+00:00')
+
+            if (now - last_monthly).days < 30:
+                time_left = last_monthly + timedelta(days=30) - now
+                days = time_left.days
+                hours = time_left.seconds // 3600
+                await interaction.followup.send(f"You can claim your monthly reward in {days}d {hours}h")
+                return
+
+            coin_boost = eco[user_id]['boosts']['coins']
+            streak = eco[user_id]['streaks']['monthly']
+            base_amount = 5000000
+            streak_bonus = min(streak * 5000, 20000000) 
+            total_amount = int((base_amount + streak_bonus) * (coin_boost / 100))
+
+            eco[user_id]['balance']['purse'] += total_amount
+            eco[user_id]['streaks']['monthly'] += 1
+            eco[user_id]['cooldowns']['monthly'] = now.isoformat()
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="Monthly Reward!",
+                description=f"You received {total_amount} coins!\nStreak: {streak + 1} months (+{streak_bonus} bonus)",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     """
     GAME COMMANDS (PART OF ECO)
@@ -632,6 +726,53 @@ class EconomyCog(commands.Cog):
 
             await interaction.followup.send(f"The coin landed on {coin.lower()}!")
 
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="inventory", description="Check your inventory!")
+    @app_commands.describe(member="The user whose inventory you want to check.")
+    async def inventory(self, interaction: discord.Interaction, member: discord.Member = None):
+        await interaction.response.defer()
+        try:
+            user = member or interaction.user
+            user_id = str(user.id)
+            eco = open_file(eco_path)
+
+            if user_id not in eco:
+                if user_id == str(interaction.user.id):
+                    create_account(user_id)
+                    eco = open_file(eco_path)
+                else:
+                    await interaction.followup.send("This user doesn't have an account!")
+                    return
+
+            inventory = eco[user_id].get('inventory', {})
+            
+            if not inventory:
+                await interaction.followup.send(f"{user.display_name}'s inventory is empty!")
+                return
+
+            embed = discord.Embed(
+                title=f"{user.display_name}'s Inventory",
+                color=discord.Color.blue()
+            )
+
+            grouped_items = {}
+            for item_name, amount in inventory.items():
+                if item_name in items:
+                    item_type = items[item_name].get('type', 'Misc')
+                    if item_type not in grouped_items:
+                        grouped_items[item_type] = []
+                    grouped_items[item_type].append(f"{item_name.title()}: {amount}x")
+
+            for item_type, item_list in grouped_items.items():
+                embed.add_field(
+                    name=f"📦 {item_type.title()}",
+                    value="\n".join(item_list) or "Empty",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
