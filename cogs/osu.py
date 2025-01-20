@@ -1,4 +1,4 @@
-from bot_utils.logger import (
+from bot_utils import (
     handle_logs
 )
 

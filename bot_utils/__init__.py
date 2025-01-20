@@ -8,7 +8,8 @@ from .file_handler import (
 
 from .logger import (
     store_log,
-    handle_logs
+    handle_logs,
+    logs
 )
 
 from .utils import (
@@ -50,6 +51,7 @@ __all__ = [
     # Logging
     'store_log',
     'handle_logs',
+    'logs',
     
     # Utility functions
     'parse_duration',

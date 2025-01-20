@@ -6,8 +6,6 @@ from bot_utils import (
     create_account,
     check_user_stat,
     process_transaction,
-    update_stats,
-    gambling_stats,
     eco_path,
     handle_logs
 )

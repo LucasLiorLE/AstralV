@@ -1,5 +1,5 @@
 """
-v2.0.7
+v2.0.8
 Major.Release.Push
 
 Major - Everything a major update happens; Change of code, rework of everything, etc.
@@ -16,9 +16,13 @@ Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
 
 Release Notes:
     - Organized main.py
+    - Minor economy update
+        - Deleted gambling commands for now.
+    - Organized some other files.
+    - Userphone command, which allows you to talk to others from across servers!
 
 
-This was last updated: 1/19/2025 2:12 AM
+This was last updated: 1/19/2025 6:49 PM
 """
 
 import os
@@ -251,8 +255,8 @@ async def on_message(message):
 async def main():
     print(f"Script loaded. Version: v{__version__}")
 
-    # if not await check_apis():
-    #     return
+    if not await check_apis():
+        return
 
     print("The bot is starting, please give it a minute.")
     try:
