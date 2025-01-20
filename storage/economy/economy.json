@@ -11,11 +11,13 @@
         },
         "balance": {
             "bank": 5000,
-            "purse": 5062067,
+            "purse": 4969088,
             "maxBank": 25000
         },
         "inventory": {
-            "shovel": 1
+            "shovel": 1,
+            "rifle": 1,
+            "fishing_rod": 1
         },
         "pets": {},
         "gear": {

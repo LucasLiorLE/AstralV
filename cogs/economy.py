@@ -36,7 +36,7 @@ async def handle_eco_shop():
                 "price": appear_data.get("buyPrice", 0),
                 "amount": appear_data.get("amount", 0),
                 "description": appear_data.get("description", "No description yet..."),
-                "type": data.get("type", "No type")  # Add this line to include the type
+                "type": data.get("type", "No type")
             })
     
 # Currency system
@@ -58,8 +58,10 @@ class ShopGroup(app_commands.Group):
             embed = discord.Embed(title="Shop Items", color=discord.Color.blue())
             for item in SHOP:
                 amount = "Infinity" if item["amount"] == -1 else item["amount"]
+                # Replace underscores with spaces in display name
+                display_name = item['item'].replace("_", " ").title()
                 embed.add_field(
-                    name=f"{item['item'].title()}",
+                    name=f"{display_name}",
                     value=f"**Price**: {item['price']}\n**Amount Left**: {amount}\n**Description**: {item['description']}\n**Type**: {item['type']}",
                     inline=False
                 )
@@ -118,6 +120,9 @@ class ShopGroup(app_commands.Group):
 class AuctionGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="auction", description="Not coming soon.")
+
+def normalize_item_name(item_name):
+    return item_name.lower().replace(" ", "_")
 
 class EconomyCog(commands.Cog):
     def __init__(self, bot):
@@ -314,20 +319,20 @@ class EconomyCog(commands.Cog):
                 ]
             }
 
-            embed = discord.Embed(title="plzs moneys im pour", timestamp=datetime.now(timezone.utc))
+            embed = discord.Embed(title="plzs moneys im pour")
             if r == 1:
                 embed.color = discord.Color.red()
                 embed.description = random.choice(t["n"])
-                embed.footer = "begging is for losers!"
+                embed.set_footer(text="begging is for losers!")
             else:
                 eco[user_id]['balance']['purse'] += total_amount
                 save_file(eco_path, eco)
                 embed.color = discord.Color.green()
                 embed.description = random.choice(t["y"])
-                embed.footer = f"With a coin multiplier of {coin_boost}%"
+                embed.set_footer(text=f"With a coin multiplier of {coin_boost}%")
 
                 if base_amount == 143: # little reference :)
-                    embed.footer = "i love you"
+                    embed.set_footer(text="i love you")
 
             await interaction.followup.send(embed=embed)
         except Exception as e:
@@ -345,7 +350,10 @@ class EconomyCog(commands.Cog):
                 create_account(user_id)
                 eco = open_file(eco_path)
 
-            if 'fishing_rod' not in eco[user_id].get('inventory', {}):
+            # Check for either 'fishing_rod' or 'fishing rod' in inventory
+            has_rod = 'fishing_rod' in eco[user_id].get('inventory', {})
+            
+            if not has_rod:
                 await interaction.followup.send("You need a fishing rod to fish! Buy one from the shop.")
                 return
 
@@ -355,13 +363,22 @@ class EconomyCog(commands.Cog):
 
             if random.random() < 0.1:
                 eco[user_id]['inventory'].pop('fishing_rod')
-                break_msg = f"\nYour fishing rod broke! (Would have earned {total_amount} coins)"
+                d = f"Your fishing rod broke :("
+                f = f"Would have earned {total_amount} coins..."
             else:
                 eco[user_id]['balance']['purse'] += total_amount
-                break_msg = f"\nWith coin boost: {coin_boost}% (Base: {base_amount} → Total: {total_amount})"
+                d = f"Nice catch! You got {total_amount} coins!"
+                f = f"With coin boost: {coin_boost}%"
+
+            embed = discord.Embed(
+                title="Fishie fishie :)",
+                description=d,
+                color=discord.Color.blue()
+            )
+            embed.set_footer(text=f)
 
             save_file(eco_path, eco)
-            await interaction.followup.send(f"You went fishing!{break_msg}")
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -377,7 +394,9 @@ class EconomyCog(commands.Cog):
                 create_account(user_id)
                 eco = open_file(eco_path)
 
-            if 'rifle' not in eco[user_id].get('inventory', {}):
+            has_rifle = 'rifle' in eco[user_id].get('inventory', {})
+            
+            if not has_rifle:
                 await interaction.followup.send("You need a rifle to hunt! Buy one from the shop.")
                 return
 
@@ -385,15 +404,20 @@ class EconomyCog(commands.Cog):
             coin_boost = eco[user_id]['boosts']['coins']
             total_amount = int(base_amount * (coin_boost / 100))
 
+            embed = discord.Embed(title="Gone Hunting!")
             if random.random() < 0.1:
                 eco[user_id]['inventory'].pop('rifle')
-                break_msg = f"\nYour rifle broke! (Would have earned {total_amount} coins)"
+                embed.color = discord.Color.red()
+                embed.description = "Your rifle broke :("
+                embed.set_footer(text=f"Would have earned {total_amount} coins...")
             else:
                 eco[user_id]['balance']['purse'] += total_amount
-                break_msg = f"\nWith coin boost: {coin_boost}% (Base: {base_amount} → Total: {total_amount})"
+                embed.color = discord.Color.green()
+                embed.description = f"Nice shot! You got {total_amount} coins!"
+                embed.set_footer(text=f"With coin boost: {coin_boost}%")
 
             save_file(eco_path, eco)
-            await interaction.followup.send(f"You went hunting!{break_msg}")
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -409,7 +433,9 @@ class EconomyCog(commands.Cog):
                 create_account(user_id)
                 eco = open_file(eco_path)
 
-            if 'shovel' not in eco[user_id].get('inventory', {}):
+            has_shovel = 'shovel' in eco[user_id].get('inventory', {})
+            
+            if not has_shovel:
                 await interaction.followup.send("You need a shovel to dig! Buy one from the shop.")
                 return
 
@@ -417,19 +443,24 @@ class EconomyCog(commands.Cog):
             coin_boost = eco[user_id]['boosts']['coins']
             total_amount = int(base_amount * (coin_boost / 100))
 
+            embed = discord.Embed(title="Time to Dig!")
             if random.random() < 0.1:
                 eco[user_id]['inventory'].pop('shovel')
-                break_msg = f"\nYour shovel broke! (Would have earned {total_amount} coins)"
+                embed.color = discord.Color.red()
+                embed.description = "Your shovel broke :("
+                embed.set_footer(text=f"Would have earned {total_amount} coins...")
             else:
                 eco[user_id]['balance']['purse'] += total_amount
-                break_msg = f"\nWith coin boost: {coin_boost}% (Base: {base_amount} → Total: {total_amount})"
+                embed.color = discord.Color.green()
+                embed.description = f"Found something valuable! You got {total_amount} coins!"
+                embed.set_footer(text=f"With coin boost: {coin_boost}%")
 
             save_file(eco_path, eco)
-            await interaction.followup.send(f"You went digging!{break_msg}")
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="search", description="Search for some coins!")
+    @app_commands.command(name="search", description="Search for some coins! Requires a shovel.")
     @app_commands.checks.cooldown(1, 30)
     async def search(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -445,34 +476,45 @@ class EconomyCog(commands.Cog):
             coin_boost = eco[user_id]['boosts']['coins']
             total_amount = int(base_amount * (coin_boost / 100))
 
-            locations = {
+            t = {
                 "success": [
-                    f"You found {total_amount} coins in an old coat! (Base: {base_amount})",
-                    f"You searched the couch cushions and found {total_amount} coins! (Base: {base_amount})",
-                    f"Someone dropped {total_amount} coins on the street! (Base: {base_amount})",
-                    f"You found {total_amount} coins in a vending machine return slot! (Base: {base_amount})"
+                    f"You found {total_amount} coins in an old coat!", 
+                    f"You searched the couch cushions and found {total_amount} coins!",
+                    f"Someone dropped {total_amount} coins on the street!",
+                    f"You found {total_amount} coins in a vending machine!",
+                    f"There was {total_amount} coins under your pillow!",
+                    f"You dug through trash and found {total_amount} coins!",
+                    f"A kind stranger gave you {total_amount} coins!"
                 ],
                 "fail": [
                     "You searched but found nothing...",
                     "Better luck next time!",
                     "Nothing here but dust.",
-                    "Maybe try searching somewhere else?"
+                    "Maybe try searching somewhere else?",
+                    "All you found was pocket lint.",
+                    "The search was unsuccessful.",
+                    "You wasted time searching for nothing."
                 ]
             }
 
+            embed = discord.Embed(title="Searching...")
             success = random.random() < 0.75
             if success:
                 eco[user_id]['balance']['purse'] += total_amount
-                message = f"{random.choice(locations['success'])}\nCoin boost: {coin_boost}%"
+                save_file(eco_path, eco)
+                embed.color = discord.Color.green()
+                embed.description = random.choice(t["success"])
+                embed.set_footer(text=f"With coin boost: {coin_boost}%")
             else:
-                message = random.choice(locations["fail"])
+                embed.color = discord.Color.red()
+                embed.description = random.choice(t["fail"])
+                embed.set_footer(text="Keep searching!")
 
-            save_file(eco_path, eco)
-            await interaction.followup.send(message)
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="crime", description="Commit a crime for coins!")
+    @app_commands.command(name="crime", description="Commit a crime for coins! Requires a shovel.")
     @app_commands.checks.cooldown(1, 30)
     async def crime(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -488,30 +530,41 @@ class EconomyCog(commands.Cog):
             coin_boost = eco[user_id]['boosts']['coins']
             total_amount = int(base_amount * (coin_boost / 100))
 
-            crimes = {
+            t = {
                 "success": [
-                    f"You successfully pickpocketed {total_amount} coins! (Base: {base_amount})",
-                    f"You hacked an ATM and got {total_amount} coins! (Base: {base_amount})",
-                    f"You robbed a store and got away with {total_amount} coins! (Base: {base_amount})",
-                    f"Your heist was successful! You got {total_amount} coins! (Base: {base_amount})"
+                    f"You successfully pickpocketed {total_amount} coins!", 
+                    f"You hacked an ATM and got {total_amount} coins!",
+                    f"You robbed a store and got away with {total_amount} coins!",
+                    f"Your heist was successful! You got {total_amount} coins!",
+                    f"You scammed someone and got {total_amount} coins!",
+                    f"Your crime spree earned you {total_amount} coins!",
+                    f"The perfect crime netted you {total_amount} coins!"
                 ],
                 "fail": [
                     "You got caught and had to run away!",
-                    "The police were nearby, better luck next time!",
+                    "The police were nearby!",
                     "Your target was too difficult to rob.",
-                    "Someone saw you and you had to abort!"
+                    "Someone saw you and you had to abort!",
+                    "The security was too tight!",
+                    "Your plan failed miserably!",
+                    "Crime doesn't pay today!"
                 ]
             }
 
+            embed = discord.Embed(title="Time for Crime!")
             success = random.random() < 0.6
             if success:
                 eco[user_id]['balance']['purse'] += total_amount
-                message = f"{random.choice(crimes['success'])}\nCoin boost: {coin_boost}%"
+                save_file(eco_path, eco)
+                embed.color = discord.Color.green()
+                embed.description = random.choice(t["success"])
+                embed.set_footer(text=f"With coin boost: {coin_boost}%")
             else:
-                message = random.choice(crimes["fail"])
+                embed.color = discord.Color.red()
+                embed.description = random.choice(t["fail"])
+                embed.set_footer(text="Better luck next crime!")
 
-            save_file(eco_path, eco)
-            await interaction.followup.send(message)
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 

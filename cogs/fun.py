@@ -14,39 +14,13 @@ class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.command(name="ccp", description="Ping a user and send a message.")
-    @app_commands.describe(choice="Select whether to increase or decrease the Social Credit Score", user_id="The ID of the user to mention",)
-    @app_commands.choices(
-        choice=[
-            app_commands.Choice(name="Increase", value="increase"),
-            app_commands.Choice(name="Decrease", value="decrease"),
-        ]
-    )
-    async def ccp(self, interaction: discord.Interaction, choice: str, user_id: str):
-        await interaction.response.defer()
-        try:
-            if choice == "increase":
-                message = f"<@{user_id}> (我们的) Good work citizen, and glory to the CCP! Remember to redeem your food units after 12:00 P.M."
-            elif choice == "decrease":
-                message = (
-                    f"<@{user_id}> (我们的) :arrow_double_down: Your Social Credit Score has decreased "
-                    ":arrow_double_down:. Please refrain from making more of these comments or we will have "
-                    "to send a Reeducation Squad to your location. Thank you! Glory to the CCP! :flag_cn: (我们的)"
-                )
-
-            await interaction.followup.send(message)
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @app_commands.command(name="say", description="Say a message in a channel")
+    @app_commands.command(name="say", description="Say a message in a channel.")
     @app_commands.describe(
-        channel="The user to talk in",
+        channel="The channel to send the message to.",
         message="The message to send",
-        attachment="An optional attachment to include",
-        message_id="An optional message to reply to",
-        ephemeral="Whether the message will be ephemeral for others or not"
+        attachment="An optional attachment to include.",
+        message_id="An optional message to reply to.",
+        ephemeral="Whether the interaction will be ephemeral or not.."
     )
     @commands.has_permissions(manage_messages=True)
     async def say(
@@ -87,9 +61,9 @@ class FunCog(commands.Cog):
 
     @app_commands.command(name="dm", description="Directly message a person.")
     @app_commands.describe(
-        member="The user to DM",
-        message="The message to send to them",
-        attachment="An optional attachment to include",
+        member="The member to DM.",
+        message="The message to send to them.",
+        attachment="An optional attachment to include.",
     )
     async def dm(
         self,

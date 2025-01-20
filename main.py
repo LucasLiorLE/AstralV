@@ -1,13 +1,4 @@
 """
-v2.0.8
-Major.Release.Push
-
-Major - Everything a major update happens; Change of code, rework of everything, etc.
-Release - Every release that happens, usually involving finally having a ton of fixes/new commands
-Push - Every push that happens, or commit that is big enough (Or if I forget something).
-"""
-
-"""
 Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
     - This is just my bot I made for fun, mostly during my free time.
     - Feel free to "steal" or take portions of my code.
@@ -16,6 +7,7 @@ Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
 
 Release Notes:
     - Organized main.py
+        - Also minor organization to other files.
     - Minor economy update
         - Deleted gambling commands for now.
     - Organized some other files.
@@ -23,22 +15,18 @@ Release Notes:
     - Reminder command group, basic reminder add, list and remove.
 
 
-This was last updated: 1/19/2025 7:12 PM
+This was last updated: 1/19/2025 10:27 PM
 """
 
-import os
-import random
-import math
-import asyncio
+import os, random, math, asyncio, asyncpraw
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import discord
 from discord.ext import commands
-import asyncpraw
-from aiohttp import ClientSession
-from dotenv import load_dotenv
-from ossapi import Ossapi
+from aiohttp import ClientSession # I just don't want to use aiohttp.ClientSession()
+from dotenv import load_dotenv # To load secrets.env
+from ossapi import Ossapi # Osu API
 
 from bot_utils import (
     open_file,
@@ -60,9 +48,12 @@ class StatusManager:
     def __init__(self, bot):
         self.bot = bot
         self.status_messages = [
-            "noob",
+            "https://lucasliorle.github.io",
             "Glory to the CCP! (我们的)",
             "https://www.nohello.com/",
+            "https://github.com/LucasLiorLE/APEYE",
+            "I really need to sleep...",
+            "Do people even read these?"
         ]
 
     async def change_status(self):
@@ -86,7 +77,7 @@ class APEYEBot(commands.Bot):
         intents.members = True
 
         super().__init__(
-            command_prefix=commands.when_mentioned_or('>'),
+            command_prefix=commands.when_mentioned_or(">"),
             intents=intents,
             case_insensitive=True
         )
@@ -95,7 +86,7 @@ class APEYEBot(commands.Bot):
     async def setup_hook(self):
         # import logging
         # logging.basicConfig(level=logging.INFO)
-        # logger = logging.getLogger('discord')
+        # logger = logging.getLogger("discord")
         try:
             print("Loading cogs...\n-----------------")
             await load_cogs()
@@ -169,7 +160,7 @@ async def check_apis():
 bot = APEYEBot()
 user_last_message_time = {}
 
-secrets = Path('storage/secrets.env')
+secrets = Path("storage/secrets.env")
 load_dotenv(dotenv_path=secrets)
 
 # Load env var
@@ -256,8 +247,8 @@ async def on_message(message):
 async def main():
     print(f"Script loaded. Version: v{__version__}")
 
-    if not await check_apis():
-        return
+    # if not await check_apis():
+    #     return
 
     print("The bot is starting, please give it a minute.")
     try:
