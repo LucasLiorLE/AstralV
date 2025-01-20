@@ -20,9 +20,10 @@ Release Notes:
         - Deleted gambling commands for now.
     - Organized some other files.
     - Userphone command, which allows you to talk to others from across servers!
+    - Reminder command group, basic reminder add, list and remove.
 
 
-This was last updated: 1/19/2025 6:49 PM
+This was last updated: 1/19/2025 7:12 PM
 """
 
 import os
