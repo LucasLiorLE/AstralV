@@ -31,21 +31,26 @@ async def dmbed(
     2. Attempt to DM the affected user with details
     3. Note in server embed if DM failed
     """
-    embed = discord.Embed(title=f"Member {action}.", color=discord.Color.orange())
-    embed.add_field(name="Action", value=action.title())
-    embed.add_field(name="Reason", value=reason)
+    embed = discord.Embed(
+        title=f"Member {action}.", 
+        color=discord.Color.orange()
+    )
+
+    embed.add_field(name="Action", value=action.title(), inline=False)
+    embed.add_field(name="Reason", value=reason, inline=False)
     if duration:
-        embed.add_field(name="Duration", value=duration)
+        embed.add_field(name="Duration", value=duration, inline=False)
 
     try:
         MemberEmbed = discord.Embed(
             title=f"You have been {action} in {interaction.guild.name}.", 
-            color=discord.Color.orange()
+            color=discord.Color.orange(),
+            timestamp=datetime.now(timezone.utc)
         )
-        MemberEmbed.add_field(name="Moderator", value=interaction.user.mention)
-        MemberEmbed.add_field(name="Reason", value=reason)
+        MemberEmbed.add_field(name="Moderator", value=interaction.user.mention, inline=False)
+        MemberEmbed.add_field(name="Reason", value=reason, inline=False)
         if duration:
-            MemberEmbed.add_field(name="Duration", value=duration)
+            MemberEmbed.add_field(name="Duration", value=duration, inline=False)
         MemberEmbed.set_footer(text="If you think this is a mistake, please contact a staff user.")
         await user.send(embed=MemberEmbed)
     except discord.Forbidden:
@@ -272,14 +277,18 @@ async def send_modlog_embed(
         await interaction.followup.send(f"No logs found for {user}.", ephemeral=True)
         return None, total_logs, 0
 
-    logs_per_page = 10
+    logs_per_page = 10 # Could be a max of 25 because discord.py can handle up to 25 at once.
     total_pages = (total_logs // logs_per_page) + (1 if total_logs % logs_per_page > 0 else 0)
 
     if page < 1 or page > total_pages:
         await interaction.followup.send(f"Invalid page number. Please provide a page between 1 and {total_pages}.", ephemeral=True)
         return None, total_logs, total_pages
 
-    embed = discord.Embed(title=f"Modlogs for {user}", color=discord.Color.blue())
+    embed = discord.Embed(
+        title=f"Modlogs for {user}", 
+        color=discord.Color.blue(),
+        timestamp=datetime.now(timezone.utc)
+    )
     start_index = (page - 1) * logs_per_page
     end_index = start_index + logs_per_page
     logs_to_display = list(user_logs.items())[start_index:end_index]

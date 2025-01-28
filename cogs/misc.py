@@ -12,10 +12,10 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-import asyncio, random, time, traceback
+import asyncio, random, time
 from datetime import datetime, timezone
 
-async def end_giveaway(self, interaction: discord.Interaction, giveaway_id: str, server_id: str):
+async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, server_id: str):
     try:
         server_info = open_file("info/server_info.json")
         giveaway = server_info.get(server_id, {}).get("giveaways", {}).get(giveaway_id)
@@ -267,18 +267,27 @@ class AlertGroup(app_commands.Group):
                 await interaction.followup.send("You do not have permission to use this command.")
                 return
 
-
             alertIDs = []
+            successess = 0
             member_info = open_file("info/member_info.json")
             for member in member_info:
                 if member_info[member]["subscribed"] == 1:
                     alertIDs.append(member)
 
-
             embed=discord.Embed(
-                title="New update!" if type.value == "alert" else "ALERT" if type.value == "alert" else "WARNING",
+                title="New update!" if type.value == "update" else "ALERT" if type.value == "alert" else "WARNING",
                 description=description
             )
+
+            for id in alertIDs:
+                try:
+                    user = await self.bot.fetch_user(id)
+                    await user.send(embed=embed)
+                    successess += 1
+                except Exception as e:
+                    pass
+
+            await interaction.response.send_message(f"Sent alert to {successess}/{len(alertIDs)} users.")
         except Exception as e:
             await handle_logs(interaction, e)
 

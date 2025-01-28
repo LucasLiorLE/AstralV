@@ -126,45 +126,34 @@ class LogSelect(discord.ui.Select):
         await interaction.message.edit(view=self.view)
 
 class MessageCheck:
-    """
-    I need to read the docs more bro I never knew delete_messages was a thing and I spent like an hour with a headache researching
-    Suprisingly didn't find anything on stackoverflow that said you can do this as well
-    """
-
     @staticmethod
     def cleanCommand(message: discord.Message) -> bool:
-        """Check if the message is from the bot or starts with '?'."""
         is_bot_message = message.author == message.guild.me
         starts_with_question = message.content.startswith('>')  
         return is_bot_message or starts_with_question
 
     @staticmethod
     def is_text_only(message: discord.Message) -> bool:
-        """Check if a message contains only text (no embeds or attachments)."""
         has_embeds = bool(message.embeds)
         has_attachments = bool(message.attachments)
         return not has_embeds and not has_attachments and bool(message.content.strip())
 
     @staticmethod
     def is_from_user(message: discord.Message, user: discord.User) -> bool:
-        """Check if the message is from a specific user."""        
         return message.author == user
 
     @staticmethod
     def has_embeds(message: discord.Message) -> bool:
-        """Check if the message contains embeds."""
         return bool(message.embeds)
 
     @staticmethod
     def has_attachments(message: discord.Message) -> bool:
-        """Check if the message contains attachments."""
         return bool(message.attachments)
 
     @staticmethod
     async def purge_messages(channel: discord.TextChannel, amount: int, check_func, interaction: discord.Interaction = None, reason: str = None) -> list:
-        """Purge messages based on a given check function and return the deleted messages."""
         messages_to_delete = []
-        async for message in channel.history(limit=1000):
+        async for message in channel.history(limit=100):
             if len(messages_to_delete) >= amount:
                 break
             if check_func(message):
@@ -209,7 +198,6 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                server_id=interaction.guild_id,
                 bot=self.bot
             )
         except Exception as e:
@@ -231,7 +219,6 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                server_id=interaction.guild_id,
                 bot=self.bot
             )
 
@@ -254,7 +241,6 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                server_id=interaction.guild_id,
                 bot=self.bot
             )
         except Exception as e:
@@ -276,7 +262,6 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                server_id=interaction.guild_id,
                 bot=self.bot
             )
         except Exception as e:
@@ -299,7 +284,6 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                server_id=interaction.guild_id,
                 bot=self.bot
             )
         except Exception as e:
@@ -391,11 +375,12 @@ class ModerationCog(commands.Cog):
         reason = f"Deleted {len(messages_to_delete)} message(s)"
 
         await store_modlog(
-            "Purge",
-            ctx.guild.id,
-            ctx.author,
-            reason,
-            server_id=ctx.guild.id
+            modlog_type="Purge",
+            moderator=ctx.author,
+            channel=ctx.channel,
+            arguments=reason,
+            server_id=ctx.guild.id,
+            bot=self.bot
         )
 
     @commands.command(name="clean")
@@ -413,7 +398,7 @@ class ModerationCog(commands.Cog):
         except discord.Forbidden:
             await ctx.send("I don't have permission to delete messages.", delete_after=5)
         except Exception as e:
-            print(f"Error in clean command: {e}")  # Debug log
+            print(f"Error in clean command: {e}")
             await ctx.send("An error occurred while cleaning messages.", delete_after=5)
 
     @app_commands.command(name="clean", description="Clean the bot's messages")
@@ -451,15 +436,16 @@ class ModerationCog(commands.Cog):
         
             if role in member.roles:
                 await member.remove_roles(role)
-                task = "removed"
+                task = "removed from"
             else:
                 await member.add_roles(role)
-                task = "added"
+                task = "added to"
 
             embed = discord.Embed(
                     title=f"Role {task}.",
-                    description=f"{role.mention} was successfully {task} to {member.mention}",
-                    color=discord.Color.orange
+                    description=f"{role.mention} was successfully {task} {member.mention}",
+                    color=discord.Color.orange(),
+                    timestamp=datetime.now(timezone.utc)
                 )
             await interaction.followup.send(embed=embed)
 
@@ -483,12 +469,12 @@ class ModerationCog(commands.Cog):
     async def lock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
+            if not await check_mod(interaction, "manage_messages"):
+                return
+
             channel = channel or interaction.channel
             server_info = open_file("info/server_info.json")
             guild_id = str(interaction.guild_id)
-            
-            if not await check_mod(interaction, "manage_messages"):
-                return
             
             if role is None:
                 role_id = server_info["preferences"].get(guild_id, {}).get("member")
@@ -504,6 +490,19 @@ class ModerationCog(commands.Cog):
             else:
                 await channel.set_permissions(role, send_messages=False)
 
+            embed = discord.Embed(
+                title="Channel Locked",
+                description=f"{channel.mention} has been locked for {role.name}.",
+                color=discord.Color.red(),
+                timestamp=datetime.now(timezone.utc)
+            )
+
+            embed.add_field(
+                name="Reason",
+                value=reason,
+                inline=False
+            )
+
             await store_modlog(
                 modlog_type="Lock",
                 moderator=interaction.user,
@@ -512,7 +511,8 @@ class ModerationCog(commands.Cog):
                 server_id=interaction.guild_id,
                 bot=self.bot
             )
-            await interaction.followup.send(f"{channel.mention} has been locked for {role.name}.\nReason: {reason}")
+        
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -525,12 +525,12 @@ class ModerationCog(commands.Cog):
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
+            if not await check_mod(interaction, "manage_messages"):
+                return
+            
             channel = channel or interaction.channel
             server_info = open_file("info/server_info.json")
             guild_id = str(interaction.guild_id)
-            
-            if not await check_mod(interaction, "manage_messages"):
-                return
             
             if role is None:
                 role_id = server_info["preferences"].get(guild_id, {}).get("member")
@@ -543,6 +543,19 @@ class ModerationCog(commands.Cog):
             if role in channel.overwrites:
                 await channel.set_permissions(role, send_messages=True)
 
+            embed = discord.Embed(
+                title="Channel Unlocked",
+                description=f"{channel.mention} has been unlocked for {role.name}.",
+                color=discord.Color.red(),
+                timestamp=datetime.now(timezone.utc)
+            )
+
+            embed.add_field(
+                name="Reason",
+                value=reason,
+                inline=False
+            )
+
             await store_modlog(
                 modlog_type="Unlock",
                 moderator=interaction.user,
@@ -551,7 +564,8 @@ class ModerationCog(commands.Cog):
                 server_id=interaction.guild_id,
                 bot=self.bot
             )
-            await interaction.followup.send(f"{channel.mention} has been unlocked for {role.name}.\nReason: {reason}")
+
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -564,15 +578,33 @@ class ModerationCog(commands.Cog):
             channel = channel or interaction.channel
             if not await check_mod(interaction, "manage_messages"):
                 return
-            if delay is None:
+            if delay is None or 0:
                 await channel.edit(slowmode_delay=0)
-                await interaction.followup.send(embed=discord.Embed(title="Slowmode", description="Slowmode has been removed.", color=0x00FF00))
-            elif 0 <= delay <= 21600:
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Slowmode", 
+                        description="Slowmode has been removed.",
+                        color=discord.Color.green()
+                    )
+                )
+            elif 0 < delay <= 21600:
                 await channel.edit(slowmode_delay=delay)
-                await interaction.followup.send(embed=discord.Embed(title="Slowmode", description=f"Slowmode set to {delay} seconds.", color=0x00FF00))
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Slowmode", 
+                        description=f"Slowmode set to {delay} seconds.", 
+                        color=discord.Color.yellow()
+                    )
+                )
             else:
-                await interaction.followup.send(embed=discord.Embed(title="Slowmode Error", description="Please provide a delay between 0 and 21600 seconds.", color=0xFF0000))
-                return
+                await interaction.followup.send(
+                    embed=discord.Embed(
+                        title="Slowmode Error", 
+                        description="Please provide a delay between 0 and 21600 seconds.", 
+                        color=discord.Color.red()
+                    )
+                )
+                return # Don't store modlog if it's not 0-21600
 
             await store_modlog(
                 modlog_type="Slowmode",
@@ -592,11 +624,18 @@ class ModerationCog(commands.Cog):
         try:
             if not await check_mod(interaction, "manage_messages"):
                 return
+            
             old_nick = member.display_name
             await member.edit(nick=new_nick)
 
-            arguments = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} for {member.display_name}"
-            await interaction.followup.send(embed=discord.Embed(title="Nickname Changed", description=arguments, color=0x32A852))
+            arguments = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} for {member.display_name}."
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="Nickname Changed", 
+                    description=arguments, 
+                    color=0x32A852
+                )
+            )
 
             await store_modlog(
                 modlog_type="Nickname",
@@ -633,6 +672,7 @@ class ModerationCog(commands.Cog):
             hours, remainder = divmod(duration.total_seconds(), 3600)
             minutes, seconds = divmod(remainder, 60)
             human_readable_time = (f"{int(hours)} hour(s) {int(minutes)} minute(s) {int(seconds)} second(s)")
+
             await dmbed(interaction, member, "muted", reason, human_readable_time)
 
             await store_modlog(
@@ -644,6 +684,7 @@ class ModerationCog(commands.Cog):
                 server_id=interaction.guild_id,
                 bot=self.bot
             )
+
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -655,6 +696,7 @@ class ModerationCog(commands.Cog):
                 return
             
             await member.timeout(None, reason=reason)
+
             await dmbed(interaction, member, "unmuted", reason)
 
             await store_modlog(
@@ -675,7 +717,9 @@ class ModerationCog(commands.Cog):
         try:
             if not await check_mod(interaction, "kick_members"):
                 return
+            
             await member.kick(reason=reason)
+
             await dmbed(interaction, member, "kicked", reason)
 
             await store_modlog(
@@ -691,10 +735,13 @@ class ModerationCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="warn", description="Warns a user.")
-    @app_commands.describe(member="The member to warn.", reason="Reason for the warn.")
-    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+    @app_commands.describe(
+        member="The member to warn.", 
+        reason="Reason for the warn.",
+        auto_mute="If the member will be automatically muted (3+ warnings)."
+    )
+    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str, auto_mute: bool = False):
         await interaction.response.defer()
-
         try:
             if not await check_mod(interaction, "manage_messages"):
                 return
@@ -733,30 +780,37 @@ class ModerationCog(commands.Cog):
                 bot=self.bot
             )
 
-            mute_duration = 0
-            if len(member_warnings) > 2:
-                mute_duration = (len(member_warnings) - 2) * 60 * 60
+            if auto_mute == True: # TODO: Will become a server-set function later.
+                mute_duration = 0
+                if len(member_warnings) > 2:
+                    mute_duration = (len(member_warnings) - 2) * 60 * 30
 
-            if mute_duration > 0:
-                try:
-                    await member.timeout(timedelta(seconds=mute_duration))
-                    await interaction.followup.send(embed=discord.Embed(
-                        title="Member Muted",
-                        description=f"{member.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings) + 1} warnings.",
-                        color=0xFF0000
-                    ))
-                except discord.Forbidden:
-                    await interaction.followup.send(embed=discord.Embed(
-                        title="Mute Failed",
-                        description=f"Failed to mute {member.mention} due to insufficient permissions.",
-                        color=0xFF0000
-                    ))
+                if mute_duration > 0:
+                    try:
+                        await member.timeout(timedelta(seconds=mute_duration))
+                        await interaction.followup.send(embed=discord.Embed(
+                            title="Member Muted",
+                            description=f"{member.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings) + 1} warnings.",
+                            color=0xFF0000
+                        ))
+                    except discord.Forbidden:
+                        await interaction.followup.send(embed=discord.Embed(
+                            title="Mute Failed",
+                            description=f"Failed to mute {member.mention} due to insufficient permissions.",
+                            color=0xFF0000
+                        ))
+
         except Exception as e:
             await handle_logs(interaction, e)
 
+    # TODO:
+    # Member warns & notes display past 25. 
+    # Currently it returns an error (Since over 25 fields)
 
     @app_commands.command(name="warns", description="Displays the warnings for a user.")
-    @app_commands.describe(member="The member whose warnings you want to view.")
+    @app_commands.describe(
+        member="The member whose warnings you want to check."
+    )
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -809,7 +863,7 @@ class ModerationCog(commands.Cog):
             await interaction.followup.send(embed=discord.Embed(
                 title="Note Added",
                 description=f"Added note to: {member.mention}\nCase #{case_number}\n{note}",
-                color=0xFFA500
+                color=discord.Color.yellow()
             ))
         except Exception as e:
             await handle_logs(interaction, e)
@@ -825,7 +879,10 @@ class ModerationCog(commands.Cog):
             member = member or interaction.user
             server_info = open_file("info/server_info.json")
             member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(member.id), {})
-            embed = discord.Embed(title=f"Notes for {member.display_name}", color=0xFFA500)
+            embed = discord.Embed(
+                title=f"Notes for {member.display_name}", 
+                color=discord.Color.yellow()
+            )
 
             if member_notes:
                 for case_number, note in sorted(member_notes.items(), key=lambda x: int(x[0])):
@@ -944,6 +1001,10 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    # TODO: 
+    # Fix errors.
+
+
     @commands.command(name="warn")
     @commands.has_permissions(manage_messages=True)
     async def manual_warn(self, ctx, member: discord.Member, *, reason: str):
@@ -1036,47 +1097,55 @@ class ModerationCog(commands.Cog):
 
     async def create_interaction(self, ctx):
         """Creates a pseudo-interaction from a command context"""
-        message = await ctx.message.add_reaction('⏳')
-        
-        class Response:
-            def __init__(self, ctx):
-                self.ctx = ctx
-                self._deferred = False
+        async with ctx.typing():
+            class Response:
+                def __init__(self, ctx):
+                    self.ctx = ctx
+                    self._deferred = False
+                    self._responded = False  # Add tracking for response state
 
-            async def defer(self, ephemeral=False):
-                self._deferred = True
+                async def defer(self, ephemeral=False):
+                    self._deferred = True
 
-            async def send_message(self, *args, **kwargs):
-                return await self.ctx.send(*args, **kwargs)
+                async def send_message(self, *args, **kwargs):
+                    self._responded = True
+                    return await self.ctx.send(*args, **kwargs)
 
-            def is_done(self):
-                return self._deferred
+                def is_done(self):
+                    return self._deferred
 
-        class Followup:
-            def __init__(self, ctx):
-                self.ctx = ctx
+            class Followup:
+                def __init__(self, ctx):
+                    self.ctx = ctx
+                    self._last_message = None
 
-            async def send(self, content=None, **kwargs):
-                try:
-                    await ctx.message.clear_reactions()
-                except (discord.Forbidden, discord.NotFound):
-                    pass
+                async def send(self, content=None, **kwargs):
+                    # Delete previous message if it exists
+                    if self._last_message:
+                        try:
+                            await self._last_message.delete()
+                        except (discord.NotFound, discord.Forbidden):
+                            pass
+
+                    # Send new message
+                    if isinstance(content, discord.Embed):
+                        self._last_message = await self.ctx.send(embed=content, **kwargs)
+                    else:
+                        self._last_message = await self.ctx.send(content, **kwargs)
                     
-                if isinstance(content, discord.Embed):
-                    return await self.ctx.send(embed=content, **kwargs)
-                return await self.ctx.send(content, **kwargs)
+                    return self._last_message
 
-        class PseudoInteraction:
-            def __init__(self, ctx):
-                self.user = ctx.author
-                self.guild = ctx.guild
-                self.guild_id = ctx.guild.id
-                self.channel = ctx.channel
-                self.response = Response(ctx)
-                self.followup = Followup(ctx)
-                self.message = ctx.message
+            class PseudoInteraction:
+                def __init__(self, ctx):
+                    self.user = ctx.author
+                    self.guild = ctx.guild
+                    self.guild_id = ctx.guild.id
+                    self.channel = ctx.channel
+                    self.response = Response(ctx)
+                    self.followup = Followup(ctx)
+                    self.message = ctx.message
 
-        return PseudoInteraction(ctx)
+            return PseudoInteraction(ctx)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):

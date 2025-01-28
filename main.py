@@ -1,24 +1,37 @@
-"""
-Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)
-    - This is just my bot I made for fun, mostly during my free time.
-    - Feel free to "steal" or take portions of my code.
-    - Has a lot of usefull utilities!
-    - /help for more info!
+# Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)#
+#    - This is just my bot I made for fun, mostly during my free time.
+#    - Feel free to "steal" or take portions of my code.
+#    - Has a lot of usefull utilities!
+#    - /help for more info!
+#
+# Release Notes:
+#    - Organized main.py
+#        - Also minor organization to other files.
+#    - Minor economy update
+#        - Deleted gambling commands for now.#
+#    - Organized some other files.
+#    - Userphone command, which allows you to talk to others from across servers!
+#    - Reminder command group, basic reminder add, list and remove.
+#    - dmbed now has inline=False, looks better.
+#    - btd6.py uses aiohttp instead of requests (I don't know how I missed that)
+#
+#    Known bugs fixed (Actually got people using commands now!):
+#        - Fix beg (just embed.set_footer instead of embed.footer I think)
+#        - Other eco commands have the same timer.
+#        - Level exp gain cd (1 min)
+#        - Except block for 400 bad request code 50007 for commands
+#        - Except block for 403 Forbidden code 50013 for commands
+#        - "Cannot access local variable 'server_info' where it is not associated with a value fix 
+#            - Pretty sure this was for deleting a warn? Guessing I forgot to reassign a variable?
+#        - Get rid of inline=True for most of the embds cause it looks bad
+#        - Specify the effected channel/role/user upon moderation command
+#        - Fix the bot being able to warn itself
+#        - Fix 400 bad request code 50006 for say & dm command
+#
+# This was last updated: 1/19/2025 10:27 PM
 
-Release Notes:
-    - Organized main.py
-        - Also minor organization to other files.
-    - Minor economy update
-        - Deleted gambling commands for now.
-    - Organized some other files.
-    - Userphone command, which allows you to talk to others from across servers!
-    - Reminder command group, basic reminder add, list and remove.
-
-
-This was last updated: 1/19/2025 10:27 PM
-"""
-
-import os, random, math, asyncio, asyncpraw
+import os, random, math, asyncio
+# import asyncpraw
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -40,7 +53,7 @@ botAdmins = [721151215010054165]
 botMods = []
 botTesters = []
 
-# Other stuff 
+# Custom exception/s
 class InvalidKeyError(Exception): ...
 
 # Bot status management
@@ -92,9 +105,9 @@ class APEYEBot(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
-                # print("Clearing existing commands...")
-                # for guild in bot.guilds:
-                #     bot.tree.clear_commands(guild=guild)
+                print("Clearing existing commands...")
+                for guild in bot.guilds:
+                    bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
                 await bot.tree.sync()
                 print("Commands successfully synced.")
@@ -143,13 +156,13 @@ async def check_apis():
         print("Invalid Osu API keys")
         return False
 
-    try:
-        reddit = asyncpraw.Reddit(
-            client_id=client_id,
-            client_secret=client_secret,
-            user_agent=user_agent,
-        ) 
-        print("Reddit API is valid.")
+    # try:
+    #     reddit = asyncpraw.Reddit(
+    #         client_id=client_id,
+    #         client_secret=client_secret,
+    #         user_agent=user_agent,
+    #     ) 
+    #     print("Reddit API is valid.")
     except Exception as e:
         print(f"Reddit API error: {e}")
         return False

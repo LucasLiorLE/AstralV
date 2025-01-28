@@ -384,7 +384,7 @@ class RobloxCog(commands.Cog):
                 glove_embed = discord.Embed(
                     title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
                     description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
-                    color=0xFF0000,
+                    color=interaction.user.top_role.color or 0xFF0000,
                 )
                 glove_embed.add_field(
                     name="OWNED", 

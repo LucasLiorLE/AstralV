@@ -47,7 +47,7 @@ class OsuCommandGroup(app_commands.Group):
                 value=f"{user.statistics.play_time // 3600:,} hours" if user.statistics.play_time is not None else "N/A",
                 inline=True,
             )
-            embed.set_footer(text="osu! profile data fetched using ossapi")
+            embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
             
             await interaction.followup.send(embed=embed)
         except Exception as e:

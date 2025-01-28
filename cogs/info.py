@@ -110,7 +110,7 @@ class InfoCog(commands.Cog):
                     await interaction.response.send_message(embed=embed, ephemeral=True)
                     return
 
-        await interaction.response.send_message(f"Command `{command}` not found. Please check your input and try again.", ephemeral=True)
+        await interaction.response.send_message(f"Command `{command}` not found. This command is not done.", ephemeral=True)
         
     @app_commands.command(name="level", description="View your level globally or in your guild.")
     @app_commands.describe(where="Where you want to view your level.")
@@ -221,16 +221,19 @@ class InfoCog(commands.Cog):
         try:
             required_exp = self.exp_required(target_level) - (self.exp_required(current_level) + current_exp)
 
+            # Mee6 grants 15-25 exp per minute, or 20 average.
+            # And 20 x 60 = 1200 exp per hour average.
+            # You could also simulate using random.
             embed = discord.Embed(
                 title="Mee6 Level Calculator",
-                description=f"Based on {hours_per_day} hours of chatting per day and gaining {hours_per_day * 1200} EXP.",
+                description=f"Based on {hours_per_day} hours of chatting per day and gaining {hours_per_day * 1200} EXP (Average 1.2k per hour).",
                 color=discord.Color.blue()
             )
             embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}", inline=False)
             embed.add_field(name="Required EXP", value=f"{required_exp:,}", inline=False)
-            embed.add_field(name="Minimum Messages/Estimated Messages", value=f"{int(required_exp / 20):,}/{int((required_exp / 20) * 1.8):,}", inline=False)
+            embed.add_field(name="Minimum Messages/Estimated Messages", value=f"{int(required_exp / 20):,}/{int((required_exp / 20) * 1.8):,}", inline=False) # Some people spam messages, will vary.
             embed.add_field(name="Estimated Days", value=f"{round(required_exp / (hours_per_day * 1200)):,}", inline=False)
-            embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+            embed.set_footer(text=f"Estimated messages varies. Depends how often you send messages.", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)
         except Exception as error:
@@ -272,7 +275,7 @@ class InfoCog(commands.Cog):
             embed.add_field(name="Version", value=f"v{__version__}")
             embed.add_field(name="Server Count", value=len(self.bot.guilds))
             embed.add_field(name="Library", value="Discord.py")
-            embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 200 hours+")
+            embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 300+ hours")
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
             view = View()

@@ -1,5 +1,6 @@
 from bot_utils import (
-    handle_logs
+    handle_logs,
+    check_mod
 )
 
 import discord
@@ -20,9 +21,8 @@ class FunCog(commands.Cog):
         message="The message to send",
         attachment="An optional attachment to include.",
         message_id="An optional message to reply to.",
-        ephemeral="Whether the interaction will be ephemeral or not.."
+        ephemeral="Whether the interaction will be ephemeral or not."
     )
-    @commands.has_permissions(manage_messages=True)
     async def say(
         self,
         interaction: discord.Interaction,
@@ -30,10 +30,13 @@ class FunCog(commands.Cog):
         message: str = None,
         attachment: discord.Attachment = None,
         message_id: str = None,
-        ephemeral: bool = False
+        ephemeral: bool = True 
     ):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
+            if not await check_mod(interaction, "manage_messages"):
+                return
+
             reference_message = None
 
             if message_id:
@@ -47,13 +50,6 @@ class FunCog(commands.Cog):
                     return
                 
             await channel.send(content=message, file=await attachment.to_file() if attachment else None, reference=reference_message)
-
-            '''
-            if attachment:
-                await channel.send(content=message, file=await attachment.to_file(), reference=reference_message)
-            else:
-                await channel.send(content=message, reference=reference_message)
-            '''
 
             await interaction.followup.send(f"Sent '{message}' to {channel.mention}")
         except Exception as e:
@@ -75,13 +71,16 @@ class FunCog(commands.Cog):
         await interaction.response.defer()
         try:
             await member.send(content=message, file=await attachment.to_file() if attachment else None)
-            await interaction.followup.send(f"Sent '{message}' to {member}")              
+            await interaction.followup.send(f"Sent '{message}' to {member}")   
+
+        except discord.Forbidden:
+            await interaction.followup.send("I cannot send messages to this user.")           
         except Exception as e:
             await handle_logs(interaction, e)
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="fact", description="Fetches a random fact.")
     async def fact(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -100,7 +99,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="joke", description="Fetches a random joke.")
     async def joke(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -122,7 +121,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="cat", description="Fetches a cute cat picture.")
     async def cat(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -142,7 +141,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="dog", description="Fetches an adorable dog picture.")
     async def dog(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -162,7 +161,7 @@ class FunCog(commands.Cog):
             
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="duck", description="Fetches a random duck GIF.")
     async def duck(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -185,7 +184,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="quote", description="Fetches an inspirational quote.")
     async def quote(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -204,7 +203,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="meme", description="Fetches a funny meme!")
     async def meme(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -256,7 +255,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms)")
+    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
     @app_commands.command(name="xkcd", description="Fetches a random xkcd comic.")
     async def xkcd(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)

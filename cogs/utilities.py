@@ -16,25 +16,25 @@ class ReminderGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="reminder", description="Set and manage reminders")
 
-    @app_commands.command(name="add", description="Set a new reminder")
+    @app_commands.command(name="add", description="Set a new reminder.")
     @app_commands.describe(
-        duration="Time until reminder (format: 1d2h3m4s)",
-        reminder="What to remind you about"
+        duration="Time until reminder (format: 1d2h3m4s).",
+        reminder="What to remind you about."
     )
     async def add(self, interaction: discord.Interaction, duration: str, reminder: str):
         await interaction.response.defer()
         try:
             duration_delta = parse_duration(duration)
             if not duration_delta:
-                await interaction.followup.send("Invalid time format. Use format like: 1d2h3m4s", ephemeral=True)
+                await interaction.followup.send("Invalid time format. Use format like: 1d2h3m4s")
                 return
 
             if duration_delta.total_seconds() < 1:
-                await interaction.followup.send("Reminder time must be greater than 0 seconds.", ephemeral=True)
+                await interaction.followup.send("Reminder time must be greater than 0 seconds.")
                 return
 
             if duration_delta.total_seconds() > 2592000:  # 30 days
-                await interaction.followup.send("Reminder time cannot be longer than 30 days.", ephemeral=True)
+                await interaction.followup.send("Reminder time cannot be longer than 30 days.")
                 return
 
             member_info = open_file("info/member_info.json")
@@ -57,7 +57,7 @@ class ReminderGroup(app_commands.Group):
             
             save_file("info/member_info.json", member_info)
             
-            await interaction.followup.send(f"✅ Reminder set! I'll remind you about: {reminder} <t:{end_time}:R>")
+            await interaction.followup.send(f"<:check:1292269189536682004> Reminder set! I'll remind you about: {reminder} <t:{end_time}:R>")
             
             await asyncio.sleep(duration_delta.total_seconds())
             
@@ -77,7 +77,7 @@ class ReminderGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="list", description="List all your active reminders")
+    @app_commands.command(name="list", description="List all your active reminders.")
     async def list(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -85,7 +85,7 @@ class ReminderGroup(app_commands.Group):
             user_id = str(interaction.user.id)
             
             if user_id not in member_info or "reminders" not in member_info[user_id] or not member_info[user_id]["reminders"]:
-                await interaction.followup.send("You have no active reminders.", ephemeral=True)
+                await interaction.followup.send("You have no active reminders.")
                 return
 
             embed = discord.Embed(title="Your Active Reminders", color=discord.Color.blue())
@@ -97,13 +97,13 @@ class ReminderGroup(app_commands.Group):
                     inline=False
                 )
 
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed)
 
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="remove", description="Remove a reminder by its ID")
-    @app_commands.describe(id="The ID of the reminder to remove")
+    @app_commands.command(name="remove", description="Remove a reminder by its ID.")
+    @app_commands.describe(id="The ID of the reminder to remove.")
     async def remove(self, interaction: discord.Interaction, id: str):
         await interaction.response.defer()
         try:
@@ -113,7 +113,7 @@ class ReminderGroup(app_commands.Group):
             if (user_id not in member_info or 
                 "reminders" not in member_info[user_id] or 
                 id not in member_info[user_id]["reminders"]):
-                await interaction.followup.send("Reminder not found.", ephemeral=True)
+                await interaction.followup.send("Reminder not found.")
                 return
 
             reminder = member_info[user_id]["reminders"][id]
@@ -121,8 +121,7 @@ class ReminderGroup(app_commands.Group):
             save_file("info/member_info.json", member_info)
 
             await interaction.followup.send(
-                f"✅ Removed reminder: {reminder['message']}", 
-                ephemeral=True
+                f"<:check:1292269189536682004> Removed reminder: {reminder['message']}", 
             )
 
         except Exception as e:
@@ -133,9 +132,8 @@ class UtilCog(commands.Cog):
         self.bot = bot
         self.bot.tree.add_command(ReminderGroup())
 
-
     @app_commands.command(name="afk", description="AFK and set a status of why.")
-    @app_commands.describe(reason="Your reason to AFK")
+    @app_commands.describe(reason="Your reason to AFK.")
     async def afk(self, interaction: discord.Interaction, reason: str = None):
         await interaction.response.defer(ephemeral=True)
         try:
