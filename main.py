@@ -14,8 +14,9 @@
 #    - Reminder command group, basic reminder add, list and remove.
 #    - dmbed now has inline=False, looks better.
 #    - btd6.py uses aiohttp instead of requests (I don't know how I missed that)
+#    - mlevel update so it's generally better.
 #
-#    Known bugs fixed (Actually got people using commands now!):
+#    To fix:
 #        - Fix beg (just embed.set_footer instead of embed.footer I think)
 #        - Other eco commands have the same timer.
 #        - Level exp gain cd (1 min)

@@ -214,25 +214,26 @@ class InfoCog(commands.Cog):
         current_level="Your current level",
         current_exp="Your current EXP in that level",
         target_level="The level you want to achieve",
-        hours_per_day="Hours you will chat every day"
+        exp_per_day="EXP you will earn each day (20 EXP per message average)"
     )
-    async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, hours_per_day: int):
+    async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, exp_per_day: int):
         await interaction.response.defer()
         try:
+            if target_level <= current_level:
+                await interaction.followup.send("Target level must be higher than current level!", ephemeral=True)
+                return
+
             required_exp = self.exp_required(target_level) - (self.exp_required(current_level) + current_exp)
 
-            # Mee6 grants 15-25 exp per minute, or 20 average.
-            # And 20 x 60 = 1200 exp per hour average.
-            # You could also simulate using random.
             embed = discord.Embed(
                 title="Mee6 Level Calculator",
-                description=f"Based on {hours_per_day} hours of chatting per day and gaining {hours_per_day * 1200} EXP (Average 1.2k per hour).",
+                description=f"Based on gaining {exp_per_day:,} EXP per day.",
                 color=discord.Color.blue()
             )
-            embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp}\nTarget Level: {target_level}", inline=False)
+            embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}", inline=False)
             embed.add_field(name="Required EXP", value=f"{required_exp:,}", inline=False)
-            embed.add_field(name="Minimum Messages/Estimated Messages", value=f"{int(required_exp / 20):,}/{int((required_exp / 20) * 1.8):,}", inline=False) # Some people spam messages, will vary.
-            embed.add_field(name="Estimated Days", value=f"{round(required_exp / (hours_per_day * 1200)):,}", inline=False)
+            embed.add_field(name="Minimum Messages/Estimated Messages", value=f"{int(required_exp / 20):,}/{int((required_exp / 20) * 1.8):,}", inline=False)
+            embed.add_field(name="Estimated Days", value=f"{round(required_exp / exp_per_day):,}", inline=False)
             embed.set_footer(text=f"Estimated messages varies. Depends how often you send messages.", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)
