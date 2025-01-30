@@ -214,9 +214,10 @@ class InfoCog(commands.Cog):
         current_level="Your current level",
         current_exp="Your current EXP in that level",
         target_level="The level you want to achieve",
-        exp_per_day="EXP you will earn each day (20 EXP per message average)"
+        exp_per_day="EXP you will earn each day (20 EXP per message average)",
+        mee6_pro="Do you have Mee6 Pro? (50% EXP boost)"
     )
-    async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, exp_per_day: int):
+    async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, exp_per_day: int, mee6_pro: bool = False):
         await interaction.response.defer()
         try:
             if target_level <= current_level:
@@ -224,10 +225,13 @@ class InfoCog(commands.Cog):
                 return
 
             required_exp = self.exp_required(target_level) - (self.exp_required(current_level) + current_exp)
+            
+            if mee6_pro:
+                required_exp = int(required_exp / 1.5)
 
             embed = discord.Embed(
                 title="Mee6 Level Calculator",
-                description=f"Based on gaining {exp_per_day:,} EXP per day.",
+                description=f"Based on gaining {exp_per_day:,} EXP per day{' with Mee6 Pro boost' if mee6_pro else ''}.",
                 color=discord.Color.blue()
             )
             embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}", inline=False)
