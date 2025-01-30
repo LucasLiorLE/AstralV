@@ -297,34 +297,6 @@ class MiscCog(commands.Cog):
 
         self.bot.tree.add_command(AlertGroup())
         self.bot.tree.add_command(GiveawayGroup())
-
-    @app_commands.command(name="afk", description="AFK and set a status of why.")
-    @app_commands.describe(reason="Your reason to AFK")
-    async def afk(self, interaction: discord.Interaction, reason: str = None):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            user_id = str(interaction.user.id)
-            server_id = str(interaction.guild.id)
-
-            server_info = open_file("info/server_info.json")
-            afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
-
-            if user_id in afk_data:
-                await interaction.followup.send("You are already AFK! Talk if you want to unAFK!")
-                return
-
-            afk_data[user_id] = {
-                "reason": reason,
-                "time": datetime.now(timezone.utc).isoformat(),
-                "original_name": interaction.user.display_name
-            }
-            
-            save_file("info/server_info.json", server_info)
-
-            await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
-            await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
-        except Exception as e:
-            await handle_logs(interaction, e)
             
 async def setup(bot):
     await bot.add_cog(MiscCog(bot))

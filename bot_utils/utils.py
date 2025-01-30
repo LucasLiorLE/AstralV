@@ -101,3 +101,53 @@ class RestrictedView(discord.ui.View, Generic[T]):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Verifies if the interaction user matches the original user."""
         return check_user(interaction, self.original_user)
+
+async def create_interaction(ctx):
+    """Creates a pseudo-interaction from a command context"""
+    async with ctx.typing():
+        class Response:
+            def __init__(self, ctx):
+                self.ctx = ctx
+                self._deferred = False
+                self._responded = False
+
+            async def defer(self, ephemeral=False):
+                self._deferred = True
+
+            async def send_message(self, *args, **kwargs):
+                self._responded = True
+                return await self.ctx.send(*args, **kwargs)
+
+            def is_done(self):
+                return self._deferred
+
+        class Followup:
+            def __init__(self, ctx):
+                self.ctx = ctx
+                self._last_message = None
+
+            async def send(self, content=None, **kwargs):
+                if self._last_message:
+                    try:
+                        await self._last_message.delete()
+                    except (discord.NotFound, discord.Forbidden):
+                        pass
+
+                if isinstance(content, discord.Embed):
+                    self._last_message = await self.ctx.send(embed=content, **kwargs)
+                else:
+                    self._last_message = await self.ctx.send(content, **kwargs)
+                
+                return self._last_message
+
+        class PseudoInteraction:
+            def __init__(self, ctx):
+                self.user = ctx.author
+                self.guild = ctx.guild
+                self.guild_id = ctx.guild.id
+                self.channel = ctx.channel
+                self.response = Response(ctx)
+                self.followup = Followup(ctx)
+                self.message = ctx.message
+
+        return PseudoInteraction(ctx)

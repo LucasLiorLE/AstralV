@@ -29,7 +29,7 @@
 #        - Fix the bot being able to warn itself
 #        - Fix 400 bad request code 50006 for say & dm command
 #
-# This was last updated: 1/19/2025 10:27 PM
+# This was last updated: 1/30/2025 2:31 PM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -46,6 +46,9 @@ from bot_utils import (
     open_file,
     save_file,
     get_player_data,
+    debug,
+    error,
+    warn,
     __version__
 )
 
@@ -106,16 +109,13 @@ class APEYEBot(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
-                print("Clearing existing commands...")
-                for guild in bot.guilds:
-                    bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
                 await bot.tree.sync()
                 print("Commands successfully synced.")
             except Exception as e:
-                print(f"An error occurred when syncing commands: {e}")
+                error(f"An error occurred when syncing commands: {e}")
         except Exception as e:
-            print(f"An error occurred when loading cogs: {e}")
+            error(f"An error occurred when loading cogs: {e}")
         print("Bot is ready.")
 
 # Util functions
@@ -126,7 +126,7 @@ async def load_cogs():
                 await bot.load_extension(f"cogs.{filename[:-3]}")
                 print(f"Loaded {filename}")
             except Exception as e:
-                print(f"Failed to load {filename}: {e}")
+                error(f"Failed to load {filename}: {e}")
 
 async def test_hy_key() -> bool:
     async with ClientSession() as session:
@@ -140,21 +140,21 @@ async def test_hy_key() -> bool:
                 print("Hypixel API key is valid.")
                 return True
             else:
-                print(f"Request failed with status code: {response.status}")
+                error(f"Request failed with status code: {response.status}")
                 return False
 
 async def check_apis():
     if not await test_hy_key():
         return False
     if not await get_player_data(None):
-        print("Invalid Clash Royale API key. Please check secrets.env.")
+        error("Invalid Clash Royale API key. Please check secrets.env.")
         return False
     
     try:
         osu_api = Ossapi(int(osu_api), osu_secret)
         print("Osu API key is valid.")
     except ValueError:
-        print("Invalid Osu API keys")
+        error("Invalid Osu API keys")
         return False
 
     # try:
@@ -268,11 +268,11 @@ async def main():
     try:
         await bot.start(token)
     except discord.errors.LoginFailure:
-        print("Incorrect bot token. Please check secrets.env")
+        warn("Incorrect bot token. Please check secrets.env")
     except KeyboardInterrupt:
         print("Shutting down gracefully...")
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        error(f"Unexpected error: {e}")
     finally:
         print("Bot is shutting down.")
         await bot.close()
@@ -283,4 +283,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("Keyboard interrupt detected. Shutting down...")
     except Exception as e:
-        print(f"An unexpected error occurred during bot execution: {e}")
+        error(f"An unexpected error occurred during bot execution: {e}")

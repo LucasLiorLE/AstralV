@@ -7,6 +7,8 @@ from bot_utils import (
     dmbed,
     check_user,
     parse_duration,
+    create_interaction,
+    error,
     handle_logs
 )
 
@@ -383,24 +385,6 @@ class ModerationCog(commands.Cog):
             bot=self.bot
         )
 
-    @commands.command(name="clean")
-    @commands.has_permissions(manage_messages=True)
-    async def clean_messages(self, ctx, amount: int = 10):
-        try:
-            await ctx.message.delete()
-            deleted = await MessageCheck.purge_messages(ctx.channel, amount, MessageCheck.cleanCommand, None, "Clean command")
-            
-            await ctx.send(f"Successfully deleted {len(deleted)} messages", delete_after=5
-    )
-
-            await store_modlog(modlog_type="Clean", moderator=ctx.author, channel=ctx.channel, arguments=f"Cleaned {len(deleted)} messages", server_id=ctx.guild.id, bot=self.bot)
-
-        except discord.Forbidden:
-            await ctx.send("I don't have permission to delete messages.", delete_after=5)
-        except Exception as e:
-            print(f"Error in clean command: {e}")
-            await ctx.send("An error occurred while cleaning messages.", delete_after=5)
-
     @app_commands.command(name="clean", description="Clean the bot's messages")
     @app_commands.describe(amount="Amount to delete (Default: 10)")
     async def clean(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
@@ -422,7 +406,7 @@ class ModerationCog(commands.Cog):
                 bot=self.bot
             )
 
-            await interaction.followup.send(text)
+            await interaction.followup.send(text, delete_after=5)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -1004,154 +988,115 @@ class ModerationCog(commands.Cog):
     # TODO: 
     # Fix errors.
 
+    @commands.command(name="clean")
+    @commands.has_permissions(manage_messages=True)
+    async def manual_clean(self, ctx, amount: int = 10, reason: str = "No reason provided"):
+        try:
+            await ctx.message.delete()
+            interaction = await create_interaction(ctx)
+            await self.clean.callback(self, interaction, amount, reason)
+        except Exception as e:
+            error(e)
 
     @commands.command(name="warn")
     @commands.has_permissions(manage_messages=True)
     async def manual_warn(self, ctx, member: discord.Member, *, reason: str):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.warn.callback(self, interaction, member, reason)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="mute")
     @commands.has_permissions(moderate_members=True)
     async def manual_mute(self, ctx, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.mute.callback(self, interaction, member, duration, reason)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="unmute")
     @commands.has_permissions(moderate_members=True)
     async def manual_unmute(self, ctx, member: discord.Member, *, reason: str = "No reason provided"):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.unmute.callback(self, interaction, member, reason)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="kick")
     @commands.has_permissions(kick_members=True)
     async def manual_kick(self, ctx, member: discord.Member, *, reason: str = "No reason provided"):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.kick.callback(self, interaction, member, reason)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="notes")
     @commands.has_permissions(manage_messages=True)
     async def manual_notes(self, ctx, member: discord.Member = None):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.notes.callback(self, interaction, member or ctx.author)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="note")
     @commands.has_permissions(manage_messages=True)
     async def manual_note(self, ctx, member: discord.Member, *, note: str):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.note.callback(self, interaction, member, note)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="warns")
     @commands.has_permissions(manage_messages=True)
     async def manual_warns(self, ctx, member: discord.Member = None):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.warns.callback(self, interaction, member or ctx.author)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="modlogs")
     @commands.has_permissions(manage_messages=True)
     async def manual_modlogs(self, ctx, member: discord.Member, page: int = 1):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.modlogs.callback(self, interaction, member, page)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="slowmode")
     @commands.has_permissions(manage_messages=True)
     async def manual_slowmode(self, ctx, delay: int = None):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.slowmode.callback(self, interaction, ctx.channel, delay)
         except Exception as e:
-            print(e)
+            error(e)
 
     @commands.command(name="role")
     @commands.has_permissions(manage_roles=True)
     async def manual_role(self, ctx, member: discord.Member, role: discord.Role, *, reason: str = "No reason provided"):
         try:
-            interaction = await self.create_interaction(ctx)
+            interaction = await create_interaction(ctx)
             await self.role.callback(self, interaction, member, role, reason)
         except Exception as e:
-            print(e)
+            error(e)
 
-    async def create_interaction(self, ctx):
-        """Creates a pseudo-interaction from a command context"""
-        async with ctx.typing():
-            class Response:
-                def __init__(self, ctx):
-                    self.ctx = ctx
-                    self._deferred = False
-                    self._responded = False  # Add tracking for response state
-
-                async def defer(self, ephemeral=False):
-                    self._deferred = True
-
-                async def send_message(self, *args, **kwargs):
-                    self._responded = True
-                    return await self.ctx.send(*args, **kwargs)
-
-                def is_done(self):
-                    return self._deferred
-
-            class Followup:
-                def __init__(self, ctx):
-                    self.ctx = ctx
-                    self._last_message = None
-
-                async def send(self, content=None, **kwargs):
-                    # Delete previous message if it exists
-                    if self._last_message:
-                        try:
-                            await self._last_message.delete()
-                        except (discord.NotFound, discord.Forbidden):
-                            pass
-
-                    # Send new message
-                    if isinstance(content, discord.Embed):
-                        self._last_message = await self.ctx.send(embed=content, **kwargs)
-                    else:
-                        self._last_message = await self.ctx.send(content, **kwargs)
-                    
-                    return self._last_message
-
-            class PseudoInteraction:
-                def __init__(self, ctx):
-                    self.user = ctx.author
-                    self.guild = ctx.guild
-                    self.guild_id = ctx.guild.id
-                    self.channel = ctx.channel
-                    self.response = Response(ctx)
-                    self.followup = Followup(ctx)
-                    self.message = ctx.message
-
-            return PseudoInteraction(ctx)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """Handle errors from prefix commands"""
         try:
-            interaction = await self.create_interaction(ctx)
+            if isinstance(error, discord.ext.commands.errors.CommandNotFound):
+                return
+            
+            interaction = await create_interaction(ctx)
             await handle_logs(interaction, error)
         except Exception as e:
             await ctx.send(f"An error occurred: {str(e)}", delete_after=5)

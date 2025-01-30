@@ -47,6 +47,48 @@ def store_log(log_type: str, message: str) -> int:
 
     return current_id
 
+def warn(
+        *values: object,
+    ) -> None:
+    """
+    Prints a warning message to the console.
+    
+    Parameters:
+        *values (object): The values to be printed
+    
+    Returns:
+        None
+    """
+    print("[WARNING]", *values)
+
+def debug(
+        *values: object,
+    ) -> None:
+    """
+    Prints a debug message to the console.
+    
+    Parameters:
+        *values (object): The values to be printed
+    
+    Returns:
+        None
+    """
+    print("[DEBUG]", *values)
+
+def error(
+        *values: object,
+    ) -> None:
+    """
+    Prints an error message to the console.
+    
+    Parameters:
+        *values (object): The values to be printed
+    
+    Returns:
+        None
+    """
+    print("[ERROR]", *values)
+
 async def handle_logs(
         interaction: discord.Interaction, 
         error: Exception, 
