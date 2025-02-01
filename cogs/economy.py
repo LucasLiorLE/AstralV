@@ -7,6 +7,8 @@ from bot_utils import (
     check_user_stat,
     process_transaction,
     eco_path,
+    create_interaction,
+    error,
     handle_logs
 )
 
@@ -122,7 +124,29 @@ class AuctionGroup(app_commands.Group):
         super().__init__(name="auction", description="Not coming soon.")
 
 def normalize_item_name(item_name):
+    """Normalize item name to underscore format used in storage"""
     return item_name.lower().replace(" ", "_")
+
+def display_item_name(item_name):
+    """Convert stored item name format to display format"""
+    return item_name.replace("_", " ").title()
+
+def find_closest_item(search_term: str, shop_items: list) -> str:
+    """Find closest matching item name from search term"""
+    normalized_search = "".join(search_term.lower().split())
+    normalized_items = [(item["item"], "".join(item["item"].lower().split())) for item in shop_items]
+    
+    # Return exact match if found
+    for orig, norm in normalized_items:
+        if norm == normalized_search:
+            return orig
+            
+    # Find closest match alphabetically
+    matches = [orig for orig, norm in normalized_items if norm.startswith(normalized_search)]
+    if matches:
+        return min(matches)  # Return alphabetically first match
+    
+    return None
 
 class EconomyCog(commands.Cog):
     def __init__(self, bot):
@@ -350,7 +374,6 @@ class EconomyCog(commands.Cog):
                 create_account(user_id)
                 eco = open_file(eco_path)
 
-            # Check for either 'fishing_rod' or 'fishing rod' in inventory
             has_rod = 'fishing_rod' in eco[user_id].get('inventory', {})
             
             if not has_rod:
@@ -814,7 +837,7 @@ class EconomyCog(commands.Cog):
                     item_type = items[item_name].get('type', 'Misc')
                     if item_type not in grouped_items:
                         grouped_items[item_type] = []
-                    grouped_items[item_type].append(f"{item_name.title()}: {amount}x")
+                    grouped_items[item_type].append(f"{display_item_name(item_name)}: {amount}x")
 
             for item_type, item_list in grouped_items.items():
                 embed.add_field(
@@ -826,6 +849,154 @@ class EconomyCog(commands.Cog):
             await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
+
+    # Add these manual commands after the existing slash commands:
+
+    @commands.command(name="balance", aliases=["bal"])
+    async def manual_balance(self, ctx, member: discord.Member = None):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.balance.callback(self, interaction, member)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="withdraw", aliases=["with"])
+    async def manual_withdraw(self, ctx, amount: int):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.withdraw.callback(self, interaction, amount)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="deposit", aliases=["dep"])
+    async def manual_deposit(self, ctx, amount: int):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.deposit.callback(self, interaction, amount)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="beg")
+    async def manual_beg(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.beg.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="fish")
+    async def manual_fish(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.fish.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="hunt")
+    async def manual_hunt(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.hunt.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="dig")
+    async def manual_dig(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.dig.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="search")
+    async def manual_search(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.search.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="crime")
+    async def manual_crime(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.crime.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="daily")
+    async def manual_daily(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.daily.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="weekly")
+    async def manual_weekly(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.weekly.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="monthly")
+    async def manual_monthly(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.monthly.callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="coinflip")
+    async def manual_coinflip(self, ctx, guess: str = None, amount: str = None):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.coinflip.callback(self, interaction, guess, amount)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="inventory", aliases=["inv"])
+    async def manual_inventory(self, ctx, member: discord.Member = None):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.inventory.callback(self, interaction, member)
+        except Exception as e:
+            error(e)
+
+    @commands.group(name="shop", invoke_without_command=True)
+    async def manual_shop(self, ctx):
+        """Shop commands"""
+        await ctx.send("Available commands: shop view, shop buy <item> [quantity]")
+
+    @manual_shop.command(name="view")
+    async def manual_shop_view(self, ctx):
+        try:
+            interaction = await create_interaction(ctx) 
+            shop_cmd = self.bot.tree.get_command("shop")
+            await shop_cmd.get_command("view").callback(self, interaction)
+        except Exception as e:
+            error(e)
+
+    @manual_shop.command(name="buy")
+    async def manual_shop_buy(self, ctx, item_name: str, quantity: int = 1):
+        try:
+            interaction = await create_interaction(ctx)
+            
+            if not SHOP:
+                await handle_eco_shop()
+
+            # Find closest matching item
+            closest_item = find_closest_item(item_name, SHOP)
+            if not closest_item:
+                await ctx.send(f"No item found matching '{item_name}'")
+                return
+
+            shop_cmd = self.bot.tree.get_command("shop")
+            await shop_cmd.get_command("buy").callback(self, interaction, closest_item, quantity)
+            
+        except Exception as e:
+            error(e)
 
 async def setup(bot):
     await bot.add_cog(EconomyCog(bot))

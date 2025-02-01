@@ -1,6 +1,7 @@
 from bot_utils import (
     handle_logs,
     open_file,
+    parse_duration,
     __version__
 )
 
@@ -11,7 +12,7 @@ from discord import app_commands
 
 import time, asyncio, os, tempfile
 from aiohttp import ClientSession, ClientError
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from moviepy.editor import VideoFileClip, AudioFileClip
 from PIL import Image
 
@@ -115,10 +116,7 @@ class InfoCog(commands.Cog):
     @app_commands.command(name="level", description="View your level globally or in your guild.")
     @app_commands.describe(where="Where you want to view your level.")
     @app_commands.choices(
-        where=[
-            app_commands.Choice(name="Local (Server)", value="guild"), 
-            app_commands.Choice(name="Global", value="global")
-        ]
+        where=[app_commands.Choice(name="Local (Server)", value="guild"), app_commands.Choice(name="Global", value="global")]
     )
     async def level(self, interaction: discord.Interaction, where: str = "guild"):
         await interaction.response.defer()
@@ -214,11 +212,23 @@ class InfoCog(commands.Cog):
         current_level="Your current level",
         current_exp="Your current EXP in that level",
         target_level="The level you want to achieve",
-        exp_per_day="EXP you will earn each day (20 EXP per message average)",
-        mee6_pro="Do you have Mee6 Pro? (50% EXP boost)"
+        target_date="The date you want to achieve it by (MM/DD/YYYY)",
+        exp_per_day="Optional: Daily EXP goal (if not using target date)",
+        mee6_pro="Do you have Mee6 Pro? (50% EXP boost)",
+        ephemeral="Should the response be ephemeral (Hidden)?"
     )
-    async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, target_level: int, exp_per_day: int, mee6_pro: bool = False):
-        await interaction.response.defer()
+    async def mlevel(
+        self, 
+        interaction: discord.Interaction, 
+        current_level: int, 
+        current_exp: int, 
+        target_level: int, 
+        target_date: str = None,
+        exp_per_day: int = None, 
+        mee6_pro: bool = False,
+        ephemeral: bool = True,
+    ):
+        await interaction.response.defer(ephemeral=ephemeral)
         try:
             if target_level <= current_level:
                 await interaction.followup.send("Target level must be higher than current level!", ephemeral=True)
@@ -231,14 +241,52 @@ class InfoCog(commands.Cog):
 
             embed = discord.Embed(
                 title="Mee6 Level Calculator",
-                description=f"Based on gaining {exp_per_day:,} EXP per day{' with Mee6 Pro boost' if mee6_pro else ''}.",
                 color=discord.Color.blue()
             )
+            
+            if target_date:
+                try:
+                    target = datetime.strptime(target_date, "%m/%d/%Y")
+                    days_until = (target - datetime.now()).days
+                    
+                    if days_until <= 0:
+                        await interaction.followup.send("Target date must be in the future!", ephemeral=True)
+                        return
+                    
+                    required_daily_exp = required_exp / days_until
+                    chat_hours_needed = required_daily_exp / 1200  # 1.2k exp per hour average
+                    
+                    target_timestamp = int(target.timestamp())
+                    embed.description = (
+                        f"Calculation based on reaching the target by {target_date}\n"
+                        f"Estimated completion: <t:{target_timestamp}:F> (<t:{target_timestamp}:R>)"
+                    )
+                    embed.add_field(name="Days Until Target", value=f"{days_until:,}", inline=True)
+                    embed.add_field(name="Required Daily EXP", value=f"{required_daily_exp:,.0f}", inline=True)
+                    embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=True)
+                except ValueError:
+                    await interaction.followup.send("Invalid date format! Use MM/DD/YYYY", ephemeral=True)
+                    return
+            else:
+                if not exp_per_day:
+                    await interaction.followup.send("Either target_date or exp_per_day must be provided!", ephemeral=True)
+                    return
+                days_needed = round(required_exp / exp_per_day)
+                completion_date = datetime.now() + timedelta(days=days_needed)
+                completion_timestamp = int(completion_date.timestamp())
+                
+                embed.description = (
+                    f"Based on gaining {exp_per_day:,} EXP per day{' with Mee6 Pro boost' if mee6_pro else ''}\n"
+                    f"Estimated completion: <t:{completion_timestamp}:F> (<t:{completion_timestamp}:R>)"
+                )
+                embed.add_field(name="Estimated Days", value=f"{days_needed:,}", inline=True)
+                chat_hours_needed = exp_per_day / 1200
+                embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=True)
+
             embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}", inline=False)
-            embed.add_field(name="Required EXP", value=f"{required_exp:,}", inline=False)
-            embed.add_field(name="Minimum Messages/Estimated Messages", value=f"{int(required_exp / 20):,}/{int((required_exp / 20) * 1.8):,}", inline=False)
-            embed.add_field(name="Estimated Days", value=f"{round(required_exp / exp_per_day):,}", inline=False)
-            embed.set_footer(text=f"Estimated messages varies. Depends how often you send messages.", icon_url=interaction.user.avatar.url)
+            embed.add_field(name="Required Total EXP", value=f"{required_exp:,}", inline=False)
+            embed.add_field(name="Minimum Messages", value=f"{int(required_exp / 20):,}", inline=True)
+            embed.set_footer(text=f"Estimates based on 1.2k EXP per hour of chatting", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)
         except Exception as error:

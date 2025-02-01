@@ -985,9 +985,6 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    # TODO: 
-    # Fix errors.
-
     @commands.command(name="clean")
     @commands.has_permissions(manage_messages=True)
     async def manual_clean(self, ctx, amount: int = 10, reason: str = "No reason provided"):
