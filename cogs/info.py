@@ -239,16 +239,13 @@ class InfoCog(commands.Cog):
             total_current_exp = self.exp_required(current_level) + current_exp
             
             if target_exp is not None:
-                # Calculate what level the target_exp would reach
-                calculated_level = 1
-                while self.exp_required(calculated_level + 1) <= target_exp:
-                    calculated_level += 1
-                target_level = target_level or current_level  # Use current_level if target_level not provided
+                target_level = target_level or current_level
+                total_target_exp = self.exp_required(target_level) + target_exp
                 
-                if target_exp <= total_current_exp:
+                if total_target_exp <= total_current_exp:
                     await interaction.followup.send("Target EXP must be higher than current total EXP!", ephemeral=True)
                     return
-                required_exp = target_exp - total_current_exp
+                required_exp = total_target_exp - total_current_exp
             else:
                 target_exp = self.exp_required(target_level)
                 if target_exp <= total_current_exp:
