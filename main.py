@@ -12,6 +12,10 @@
 #   
 # Bug Fixes:
 #    - You should no longer be able to warn the bot (Still able to give notes).
+#    - moderation.py fixed
+#    - Fix 400 bad request code 50006 for say & dm command
+#    - Member warns & notes display past 25. 
+#    - Currently it returns an error (Since over 25 fields).
 #
 # Other info:
 #    - Organized some other files.
@@ -26,16 +30,9 @@
 #    - Other eco commands have the same timer.
 #    - Level exp gain cd (1 min) cause for some reason it doesn't work when testing?
 #    - Except block for 400 bad request code 50007 for commands
-#    - Except block for 403 Forbidden code 50013 for commands
-#    - "Cannot access local variable 'server_info' where it is not associated with a value fix 
-#        - Pretty sure this was for deleting a warn? Guessing I forgot to reassign a variable?
-#    - Specify the effected channel/role/user upon moderation command
-#    - Fix 400 bad request code 50006 for say & dm command
-#    - Member warns & notes display past 25. 
-#    - Currently it returns an error (Since over 25 fields).
 #    - Make auto mute a server set function.
 #
-# This was last updated: 2/1/2025 10:59 PM
+# This was last updated: 2/2/2025 10:35 AM
 
 import os, random, math, asyncio
 # import asyncpraw

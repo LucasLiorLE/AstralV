@@ -33,9 +33,11 @@ async def dmbed(
     """
     embed = discord.Embed(
         title=f"Member {action}.", 
-        color=discord.Color.orange()
+        color=discord.Color.orange(),
+        timestamp=datetime.now(timezone.utc)
     )
 
+    embed.add_field(name="Member", value=user.mention, inline=False)
     embed.add_field(name="Action", value=action.title(), inline=False)
     embed.add_field(name="Reason", value=reason, inline=False)
     if duration:
@@ -53,8 +55,12 @@ async def dmbed(
             MemberEmbed.add_field(name="Duration", value=duration, inline=False)
         MemberEmbed.set_footer(text="If you think this is a mistake, please contact a staff user.")
         await user.send(embed=MemberEmbed)
-    except discord.Forbidden:
-        embed.set_footer(text="I could not DM them.")
+    except (discord.Forbidden, discord.HTTPException):
+        embed.add_field(
+            name="Note",
+            value="❌ I was unable to DM this user.",
+            inline=False
+        )
 
     await interaction.followup.send(embed=embed)
 

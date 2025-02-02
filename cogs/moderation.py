@@ -56,27 +56,30 @@ class DelLog(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         try:
             selected_index = self.values[0]
+            server_info = open_file("storage/server_info.json")
 
             if selected_index in self.logs:
                 del self.logs[selected_index]
 
                 if not self.logs:
                     if self.log_type == "warn":
-                        server_info = open_file("storage/server_info.json")
                         server_info["warnings"].get(str(interaction.guild.id), {}).pop(str(self.member.id), None)
                     elif self.log_type == "note":
-                        server_info = open_file("storage/server_info.json")
                         server_info["notes"].get(str(interaction.guild.id), {}).pop(str(self.member.id), None)
+                else:
+                    if self.log_type == "warn":
+                        server_info["warnings"][str(interaction.guild.id)][str(self.member.id)] = self.logs
+                    elif self.log_type == "note":
+                        server_info["notes"][str(interaction.guild.id)][str(self.member.id)] = self.logs
 
                 save_file("storage/server_info.json", server_info)
 
                 self.embed.clear_fields()
-                updated_logs = self.logs.get(str(self.member.id), {})
-
-                if updated_logs:
-                    for index, log in sorted(updated_logs.items(), key=lambda x: int(x[0])):
+                if self.logs:
+                    for index, log in sorted(self.logs.items(), key=lambda x: int(x[0])):
                         time_str = f"<t:{log['time']}:R>"
-                        moderator = self.interaction.guild.get_member(int(log["moderator"]))
+                        moderator_id = int(log["moderator"])
+                        moderator = interaction.guild.get_member(moderator_id)
                         moderator_name = moderator.display_name if moderator else "Unknown"
                         self.embed.add_field(
                             name=f"Case #{index} - {self.log_type.capitalize()} by {moderator_name}",
@@ -90,15 +93,16 @@ class DelLog(discord.ui.Select):
                             description=log["reason"],
                             value=str(index)
                         )
-                        for index, log in sorted(updated_logs.items(), key=lambda x: int(x[0]))
+                        for index, log in sorted(self.logs.items(), key=lambda x: int(x[0]))
                     ]
                 else:
-                    self.embed.description = f"No {self.log_type} left for {self.member.display_name}."
+                    self.embed.description = f"No {self.log_type}s left for {self.member.display_name}."
 
                 await interaction.response.edit_message(embed=self.embed, view=self.view)
                 await interaction.followup.send(f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.", ephemeral=True)
             else:
                 await interaction.response.send_message("Invalid selection. Please choose a valid log to delete.", ephemeral=True)
+
         except ValueError:
             await interaction.response.send_message("Invalid selection. Please try again.", ephemeral=True)
         except Exception as e:
@@ -352,6 +356,66 @@ class SetCommandGroup(app_commands.Group):
             await interaction.followup.send(f"The role '{role.name}' has been set for members.")
         except Exception as e:
             await handle_logs(interaction, e)
+class LogPaginator:
+    def __init__(self, log_type: str, logs: dict, member: discord.Member, items_per_page: int = 25):
+        self.log_type = log_type
+        self.logs = logs
+        self.member = member
+        self.items_per_page = items_per_page
+        self.total_pages = max(1, (len(logs) + items_per_page - 1) // items_per_page)
+
+    def get_page(self, page: int) -> discord.Embed:
+        embed = discord.Embed(
+            title=f"{self.log_type.capitalize()}s for {self.member.display_name}",
+            color=0xFFA500 if self.log_type == "warning" else discord.Color.yellow()
+        )
+
+        start_idx = (page - 1) * self.items_per_page
+        end_idx = start_idx + self.items_per_page
+        current_logs = dict(list(sorted(self.logs.items(), key=lambda x: int(x[0])))[start_idx:end_idx])
+
+        for case_number, log_data in current_logs.items():
+            time_str = f"<t:{log_data['time']}:R>"
+            try:
+                moderator_id = int(log_data['moderator'])
+                moderator = self.member.guild.get_member(moderator_id)
+                moderator_name = moderator.display_name if moderator else "Unknown"
+            except (ValueError, KeyError):
+                moderator_name = log_data['moderator']
+            
+            embed.add_field(
+                name=f"Case #{case_number} - By {moderator_name}",
+                value=f"Reason: {log_data['reason']}\nTime: {time_str}",
+                inline=False
+            )
+
+        embed.set_footer(text=f"Page {page}/{self.total_pages}")
+        return embed
+
+class LogPageSelect(discord.ui.Select):
+    def __init__(self, paginator: LogPaginator, current_page: int):
+        options = [
+            discord.SelectOption(
+                label=f"Page {i}",
+                value=str(i),
+                default=(i == current_page)
+            )
+            for i in range(1, paginator.total_pages + 1)
+        ]
+        super().__init__(
+            placeholder=f"Page {current_page}/{paginator.total_pages}",
+            options=options,
+            min_values=1,
+            max_values=1
+        )
+        self.paginator = paginator
+
+    async def callback(self, interaction: discord.Interaction):
+        page = int(self.values[0])
+        embed = self.paginator.get_page(page)
+        self.placeholder = f"Page {page}/{self.paginator.total_pages}"
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
 class ModerationCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -762,6 +826,13 @@ class ModerationCog(commands.Cog):
                 except ValueError as e:
                     pass
 
+            warning_case_number = str(max(map(int, member_warnings.keys()), default=0) + 1)
+            server_info["warnings"][str(server_id)][str(member.id)][str(warning_case_number)] = {
+                "reason": reason,
+                "moderator": str(interaction.user.id),
+                "time": int(time.time())
+            }
+
             await dmbed(interaction, member, "warn", reason)
             await store_modlog(
                 modlog_type="Warn",
@@ -797,10 +868,8 @@ class ModerationCog(commands.Cog):
 
 
     @app_commands.command(name="warns", description="Displays the warnings for a user.")
-    @app_commands.describe(
-        member="The member whose warnings you want to check."
-    )
-    async def warns(self, interaction: discord.Interaction, member: discord.Member = None):
+    @app_commands.describe(member="The member whose warnings you want to check.", page="The page number to view")
+    async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
             if not await check_mod(interaction, "manage_messages"):
@@ -811,21 +880,19 @@ class ModerationCog(commands.Cog):
             server_id = str(interaction.guild.id)
             
             member_warnings = server_info["warnings"].get(server_id, {}).get(str(member.id), {})
-            embed = discord.Embed(title=f"Warnings for {member.display_name}", color=0xFFA500)
 
             if member_warnings:
-                for case_number, warning_data in sorted(member_warnings.items(), key=lambda x: int(x[0])):
-                    time_str = f"<t:{warning_data['time']}:R>"
-                    moderator_name = warning_data.get("moderator")
-                    embed.add_field(
-                        name=f"Case #{case_number} - Warned by {moderator_name}",
-                        value=f"Reason: {warning_data['reason']}\nTime: {time_str}",
-                        inline=False
-                    )
-
+                paginator = LogPaginator("warning", member_warnings, member)
+                if not 1 <= page <= paginator.total_pages:
+                    page = 1
+                
+                embed = paginator.get_page(page)
+                
                 view = discord.ui.View()
-                del_log_dropdown = DelLog("warn", member, embed, interaction)
-                view.add_item(del_log_dropdown)
+                if paginator.total_pages > 1:
+                    view.add_item(LogPageSelect(paginator, page))
+                view.add_item(DelLog("warn", member, embed, interaction))
+                
                 await interaction.followup.send(embed=embed, view=view)
             else:
                 await interaction.followup.send(f"No warnings found for {member.display_name}.", ephemeral=True)
@@ -858,8 +925,8 @@ class ModerationCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="notes", description="Displays the notes for a member")
-    @app_commands.describe(member="The member whose notes you want to view.")
-    async def notes(self, interaction: discord.Interaction, member: discord.Member = None):
+    @app_commands.describe(member="The member whose notes you want to view.", page="The page number to view")
+    async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
             if not await check_mod(interaction, "manage_messages"):
@@ -868,26 +935,19 @@ class ModerationCog(commands.Cog):
             member = member or interaction.user
             server_info = open_file("storage/server_info.json")
             member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(member.id), {})
-            embed = discord.Embed(
-                title=f"Notes for {member.display_name}", 
-                color=discord.Color.yellow()
-            )
 
             if member_notes:
-                for case_number, note in sorted(member_notes.items(), key=lambda x: int(x[0])):
-                    time_str = f"<t:{note['time']}:R>"
-                    moderator = interaction.guild.get_member(int(note["moderator"]))
-                    moderator_name = moderator.display_name if moderator else "Unknown"
-                    embed.add_field(
-                        name=f"Case #{case_number} by {moderator_name}",
-                        value=f"Note: {note['reason']}\nTime: {time_str}",
-                        inline=False
-                    )
-
+                paginator = LogPaginator("note", member_notes, member)
+                if not 1 <= page <= paginator.total_pages:
+                    page = 1
+                
+                embed = paginator.get_page(page)
+                
                 view = discord.ui.View()
-                del_log_dropdown = DelLog("note", member, embed, interaction)
-                view.add_item(del_log_dropdown)
-
+                if paginator.total_pages > 1:
+                    view.add_item(LogPageSelect(paginator, page))
+                view.add_item(DelLog("note", member, embed, interaction))
+                
                 await interaction.followup.send(embed=embed, view=view)
             else:
                 await interaction.followup.send(f"No notes found for {member.display_name}.", ephemeral=True)

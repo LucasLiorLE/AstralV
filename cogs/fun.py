@@ -37,6 +37,10 @@ class FunCog(commands.Cog):
             if not await check_mod(interaction, "manage_messages"):
                 return
 
+            if not channel.permissions_for(channel.guild.me).send_messages:
+                await interaction.followup.send(f"I don't have permission to send messages in {channel.mention}")
+                return
+
             reference_message = None
 
             if message_id:
@@ -70,11 +74,17 @@ class FunCog(commands.Cog):
     ):
         await interaction.response.defer()
         try:
+            try:
+                await member.send()
+            except discord.Forbidden:
+                await interaction.followup.send(f"I cannot send messages to {member.mention}. They might have their DMs closed.")
+                return
+            except:
+                pass
+            
             await member.send(content=message, file=await attachment.to_file() if attachment else None)
             await interaction.followup.send(f"Sent '{message}' to {member}")   
 
-        except discord.Forbidden:
-            await interaction.followup.send("I cannot send messages to this user.")           
         except Exception as e:
             await handle_logs(interaction, e)
 
