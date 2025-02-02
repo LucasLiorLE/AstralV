@@ -111,9 +111,8 @@ async def handle_logs(
     log_type = log_type.title()
 
     if log_type == "Error" and isinstance(error, Exception):
-        embed = discord.Embed(title="An error occurred", color=discord.Color.red())
+        embed = discord.Embed(title=f"An error occurred ({log_id_counter})", color=discord.Color.red())
         embed.add_field(name="Error", value=str(error), inline=False)
-        embed.add_field(name="ID", value=log_id_counter)
 
         if interaction.response.is_done():
             await interaction.followup.send(embed=embed, ephemeral=True)

@@ -1,8 +1,7 @@
 from bot_utils import (
-    handle_logs
+    handle_logs,
+    osuAPI
 )
-
-from main import osu_api
 
 import discord
 from discord.ext import commands
@@ -19,7 +18,7 @@ class OsuCommandGroup(app_commands.Group):
     async def osuprofile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
-            user = osu_api.user(username, key=UserLookupKey.USERNAME)
+            user = osuAPI.user(username, key=UserLookupKey.USERNAME)
             
             embed = discord.Embed(
                 title=f"osu! Profile: {user.username}",

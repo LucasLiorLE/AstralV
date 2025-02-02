@@ -1,8 +1,8 @@
 from bot_utils import (
     open_file,
     save_file,
-    get_clan_data,
-    get_player_data,
+    cr_fetchClanData,
+    cr_fetchPlayerData,
     handle_logs
 )
 
@@ -188,7 +188,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
             if not tag.startswith("#"):
                 tag = f"#{tag}"
 
-            player_data = await get_player_data(tag.replace("#", "%23"))
+            player_data = await cr_fetchPlayerData(tag.replace("#", "%23"))
             if not player_data:
                 await interaction.followup.send("Failed to retrieve data for the provided player tag.", ephemeral=True)
                 return
@@ -202,7 +202,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
 
             end_time = datetime.now() + timedelta(minutes=15)
             while datetime.now() < end_time:
-                player_data = await get_player_data(tag.replace("#", "%23"))
+                player_data = await cr_fetchPlayerData(tag.replace("#", "%23"))
                 current_deck = player_data.get("currentDeck", [])
                 player_deck_names = [card.get("name", "Unknown") for card in current_deck]
 
@@ -245,7 +245,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
                 if not tag.startswith("#"):
                     tag = "#" + tag.strip()
 
-            player_data = await get_player_data(tag.replace("#", "%23"))
+            player_data = await cr_fetchPlayerData(tag.replace("#", "%23"))
 
             if player_data:
                 view = ProfileView(player_data)
@@ -264,7 +264,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
             if not clantag.startswith("#"):
                 clantag = "#" + clantag.strip()
 
-            clan_data = await get_clan_data(clantag.replace("#", "%23"))
+            clan_data = await cr_fetchClanData(clantag.replace("#", "%23"))
 
             if clan_data:
                 embed = discord.Embed(title=f"Clan Data for {clan_data['name']}", color=discord.Color.blue())

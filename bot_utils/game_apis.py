@@ -1,9 +1,33 @@
 import discord
 from aiohttp import ClientSession
 from typing import Optional, Union, Dict, Any, TypedDict
+from dotenv import load_dotenv
+from pathlib import Path
 import os
 
-cr_api = os.getenv("cr_api")
+# Find and load secrets.env from the storage folder
+root_dir = Path(__file__).parent.parent  # Go up one level from bot_utils
+secrets_path = root_dir / "storage" / "secrets.env"
+
+if not secrets_path.exists():
+    raise FileNotFoundError(f"secrets.env not found at {secrets_path}")
+
+load_dotenv(secrets_path)
+
+token = os.getenv("token")
+clientID = os.getenv("client_id")
+clientSecret = os.getenv("client_secret")
+userAgent = os.getenv("user_agent")
+crAPI = os.getenv("cr_api")
+osuAPI = os.getenv("osu_api")
+osuSecret = os.getenv("osu_secret")
+hypixelAPI = os.getenv("hypixel_api")
+
+# Add error checking for required token
+if not token:
+    print(f"ERROR: Token not found in {secrets_path}")
+    print("Please ensure your secrets.env file contains a line with: token=your_bot_token_here")
+    raise ValueError("Discord bot token not found in environment variables")
 
 class ClanData(TypedDict):
     """Type definition for Clash Royale clan data"""
@@ -21,7 +45,7 @@ class ClanData(TypedDict):
 CLASH ROYALE COMMANDS
 """
 
-async def get_player_data(tag: str) -> Optional[Dict[str, Any]]:
+async def cr_fetchPlayerData(tag: str) -> Optional[Dict[str, Any]]:
     """
     Fetches Clash Royale player data from the official API.
     
@@ -35,7 +59,7 @@ async def get_player_data(tag: str) -> Optional[Dict[str, Any]]:
         aiohttp.ClientError: On API connection issues
     """
     api_url = f"https://api.clashroyale.com/v1/players/{tag}"  
-    headers = {"Authorization": f"Bearer {cr_api}"}
+    headers = {"Authorization": f"Bearer {crAPI}"}
 
     async with ClientSession() as session:
         async with session.get(api_url, headers=headers) as response:
@@ -46,7 +70,7 @@ async def get_player_data(tag: str) -> Optional[Dict[str, Any]]:
             if response.status == 400:
                 return True
 
-async def get_clan_data(clan_tag: str) -> Optional[ClanData]:
+async def cr_fetchClanData(clan_tag: str) -> Optional[ClanData]:
     """
     Fetches Clash Royale clan data from the official API.
     
@@ -57,7 +81,7 @@ async def get_clan_data(clan_tag: str) -> Optional[ClanData]:
         Optional[ClanData]: Structured clan data if found, None if not found
     """
     api_url = f"https://api.clashroyale.com/v1/clans/{clan_tag}"
-    headers = {"Authorization": f"Bearer {cr_api}"}
+    headers = {"Authorization": f"Bearer {crAPI}"}
 
     async with ClientSession() as session:
         async with session.get(api_url, headers=headers) as response:
@@ -82,7 +106,7 @@ async def get_clan_data(clan_tag: str) -> Optional[ClanData]:
 ROBLOX COMMANDS
 """
 
-async def fetch_roblox_bio(roblox_user_id) -> Optional[str]:
+async def rbx_fetchUserBio(roblox_user_id) -> Optional[str]:
     """
     Fetches a Roblox user bio based on user ID.
     
@@ -98,7 +122,7 @@ async def fetch_roblox_bio(roblox_user_id) -> Optional[str]:
             data = await response.json()
             return data.get("description", "")
 
-async def GetRobloxID(roblox_username) -> Optional[int]:
+async def rbx_fetchUserID(roblox_username) -> Optional[int]:
     """
     Fetches a Roblox user ID based on username via API.
     
@@ -124,7 +148,7 @@ async def GetRobloxID(roblox_username) -> Optional[int]:
 MINECRAFT COMMANDS
 """
 
-async def getUUID(interaction: discord.Interaction, username: str) -> Union[str, False]:
+async def mc_fetchUUID(interaction: discord.Interaction, username: str) -> Union[str, False]:
     """
     Fetches a Minecraft UUID based on username via API.
     

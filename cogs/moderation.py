@@ -291,13 +291,13 @@ class PurgeCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-class ModerationCog(commands.Cog):
+class SetCommandGroup(app_commands.Group):
     def __init__(self, bot):
+        super().__init__(name="set", description="Set the server's preferences.")
+
         self.bot = bot
 
-        self.bot.tree.add_command(PurgeCommandGroup(self.bot))
-
-    @app_commands.command(name="setlogs", description="Changes the log channels of your server")
+    @app_commands.command(name="selogs", description="Changes the log channels of your server")
     @app_commands.describe(option="Choose the type of log (Message Logs, DM Logs, Mod Logs)", channel="The channel to send logs to")
     @app_commands.choices(
         option=[
@@ -325,7 +325,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="setroles", description="Allows you to set the server roles")
+    @app_commands.command(name="seroles", description="Allows you to set the server roles")
     @app_commands.describe(option="Choose the role to set", role="The role to set for members")
     @app_commands.choices(
         option=[
@@ -352,6 +352,11 @@ class ModerationCog(commands.Cog):
             await interaction.followup.send(f"The role '{role.name}' has been set for members.")
         except Exception as e:
             await handle_logs(interaction, e)
+class ModerationCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+        self.bot.tree.add_command(PurgeCommandGroup(self.bot))
 
     @commands.command(name="purge")
     @commands.has_permissions(manage_messages=True)
@@ -588,7 +593,7 @@ class ModerationCog(commands.Cog):
                         color=discord.Color.red()
                     )
                 )
-                return # Don't store modlog if it's not 0-21600
+                return
 
             await store_modlog(
                 modlog_type="Slowmode",

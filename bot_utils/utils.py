@@ -139,7 +139,7 @@ async def create_interaction(ctx):
                     self._last_message = await self.ctx.send(content, **kwargs)
                 
                 return self._last_message
-
+            
         class PseudoInteraction:
             def __init__(self, ctx):
                 self.user = ctx.author

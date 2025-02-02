@@ -1,9 +1,8 @@
 from bot_utils import (
     handle_logs,
-    getUUID
+    mc_fetchUUID,
+    hypixelAPI
 )
-
-from main import hypixel_api
 
 import discord
 from discord.ext import commands
@@ -324,9 +323,9 @@ class HypixelCommandsGroup(app_commands.Group):
         if not interaction.response.is_done():
             await interaction.response.defer()
         try:
-            uuid = await getUUID(interaction, username)
+            uuid = await mc_fetchUUID(interaction, username)
             async with ClientSession() as session:
-                async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}&uuid={uuid}") as response:
+                async with session.get(f"https://api.hypixel.net/player?key={hypixelAPI}&uuid={uuid}") as response:
                     if response.status == 200:
                         message = await interaction.followup.send("Fetching profile...")
                         data = await response.json()
@@ -729,9 +728,9 @@ class SkyblockCommandsGroup(app_commands.Group):
     async def sbprofile(self, interaction: discord.Interaction, username: str, profile_id: int = None):
         await interaction.response.defer()
         try:
-            uuid = await getUUID(interaction, username)
+            uuid = await mc_fetchUUID(interaction, username)
             async with ClientSession() as session:
-                async with session.get(f"https://api.hypixel.net/v2/skyblock/profiles?key={hypixel_api}&uuid={uuid}") as response:
+                async with session.get(f"https://api.hypixel.net/v2/skyblock/profiles?key={hypixelAPI}&uuid={uuid}") as response:
                     if response.status == 200:
                         message = await interaction.followup.send("Fetching profiles...")
                         data = await response.json()

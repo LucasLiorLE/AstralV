@@ -1,8 +1,8 @@
 from bot_utils import (
     open_file,
     save_file,
-    GetRobloxID,
-    fetch_roblox_bio,
+    rbx_fetchUserID,
+    rbx_fetchUserBio,
     check_user,
     handle_logs
 )
@@ -36,12 +36,12 @@ class RobloxGroup(app_commands.Group):
 
             await asyncio.sleep(60)
 
-            roblox_user_id = await GetRobloxID(username)
+            roblox_user_id = await rbx_fetchUserID(username)
             if roblox_user_id is None:
                 await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                 return
 
-            bio = await fetch_roblox_bio(roblox_user_id)
+            bio = await rbx_fetchUserBio(roblox_user_id)
 
             if color_sequence in bio:
                 member_info = open_file("info/member_info.json")
@@ -67,7 +67,7 @@ class RobloxGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             if username:
-                roblox_user_id = await GetRobloxID(username)
+                roblox_user_id = await rbx_fetchUserID(username)
                 if roblox_user_id is None:
                     await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return
@@ -81,7 +81,7 @@ class RobloxGroup(app_commands.Group):
 
                 roblox_user_id = member_info[discord_user_id]["roblox_id"]
 
-            bio = await fetch_roblox_bio(roblox_user_id)
+            bio = await rbx_fetchUserBio(roblox_user_id)
             embed = discord.Embed(title=f"User Description for {roblox_user_id}", description=bio, color=0x808080)
             await interaction.followup.send(embed=embed)
         except Exception as error:
@@ -93,7 +93,7 @@ class RobloxGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             if username:
-                roblox_user_id = await GetRobloxID(username)
+                roblox_user_id = await rbx_fetchUserID(username)
                 if roblox_user_id is None:
                     await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return
@@ -165,7 +165,7 @@ class RobloxGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             if username:
-                roblox_user_id = await GetRobloxID(username)
+                roblox_user_id = await rbx_fetchUserID(username)
                 if roblox_user_id is None:
                     await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return
@@ -327,7 +327,7 @@ class RobloxCog(commands.Cog):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             if username:
-                roblox_id = await GetRobloxID(username)
+                roblox_id = await rbx_fetchUserID(username)
                 if roblox_id is None:
                     await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
                     return

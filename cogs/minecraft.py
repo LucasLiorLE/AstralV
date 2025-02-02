@@ -1,6 +1,6 @@
 from bot_utils import (
     handle_logs,
-    getUUID
+    mc_fetchUUID
 )
 
 import discord
@@ -16,7 +16,7 @@ class MinecraftCommandsGroup(app_commands.Group):
     async def uuid(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
-            uuid = await getUUID(interaction, username)
+            uuid = await mc_fetchUUID(interaction, username)
             if uuid:
                 await interaction.followup.send(f"The UUID for {username} is {uuid}")
         except Exception as e:
@@ -27,7 +27,7 @@ class MinecraftCommandsGroup(app_commands.Group):
     async def minecraftavatar(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
-            uuid = await getUUID(interaction, username)
+            uuid = await mc_fetchUUID(interaction, username)
             if uuid:
                 image_url = f"https://api.mineatar.io/body/full/{uuid}"
 

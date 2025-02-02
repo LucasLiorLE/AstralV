@@ -10,4 +10,4 @@ Pillow==11.0.0
 moviepy==1.0.3
 pet-pet-gif==1.0.2
 ossapi==5.0.1
-python-dotenv
+python-dotenv==1.0.1

@@ -850,8 +850,6 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    # Add these manual commands after the existing slash commands:
-
     @commands.command(name="balance", aliases=["bal"])
     async def manual_balance(self, ctx, member: discord.Member = None):
         try:
@@ -948,7 +946,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             error(e)
 
-    @commands.command(name="coinflip")
+    @commands.command(name="coinflip", aliases=["cf"])
     async def manual_coinflip(self, ctx, guess: str = None, amount: str = None):
         try:
             interaction = await create_interaction(ctx)
@@ -986,7 +984,6 @@ class EconomyCog(commands.Cog):
             if not SHOP:
                 await handle_eco_shop()
 
-            # Find closest matching item
             closest_item = find_closest_item(item_name, SHOP)
             if not closest_item:
                 await ctx.send(f"No item found matching '{item_name}'")

@@ -211,7 +211,8 @@ class InfoCog(commands.Cog):
     @app_commands.describe( 
         current_level="Your current level",
         current_exp="Your current EXP in that level",
-        target_level="The level you want to achieve",
+        target_level="The level you want to achieve (optional if target_exp provided)",
+        target_exp="The total EXP you want to achieve (optional if target_level provided)",
         target_date="The date you want to achieve it by (MM/DD/YYYY)",
         exp_per_day="Optional: Daily EXP goal (if not using target date)",
         mee6_pro="Do you have Mee6 Pro? (50% EXP boost)",
@@ -222,7 +223,8 @@ class InfoCog(commands.Cog):
         interaction: discord.Interaction, 
         current_level: int, 
         current_exp: int, 
-        target_level: int, 
+        target_level: int = None,
+        target_exp: int = None, 
         target_date: str = None,
         exp_per_day: int = None, 
         mee6_pro: bool = False,
@@ -230,11 +232,33 @@ class InfoCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
-            if target_level <= current_level:
-                await interaction.followup.send("Target level must be higher than current level!", ephemeral=True)
+            if target_level is None and target_exp is None:
+                await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
                 return
 
-            required_exp = self.exp_required(target_level) - (self.exp_required(current_level) + current_exp)
+            total_current_exp = self.exp_required(current_level) + current_exp
+            
+            if target_exp is not None:
+                # Calculate what level the target_exp would reach
+                calculated_level = 1
+                while self.exp_required(calculated_level + 1) <= target_exp:
+                    calculated_level += 1
+                target_level = target_level or current_level  # Use current_level if target_level not provided
+                
+                if target_exp <= total_current_exp:
+                    await interaction.followup.send("Target EXP must be higher than current total EXP!", ephemeral=True)
+                    return
+                required_exp = target_exp - total_current_exp
+            else:
+                target_exp = self.exp_required(target_level)
+                if target_exp <= total_current_exp:
+                    await interaction.followup.send("Target level must result in higher EXP than current!", ephemeral=True)
+                    return
+                required_exp = target_exp - total_current_exp
+
+            if required_exp == 0:
+                await interaction.followup.send("You have already reached or exceeded this target!", ephemeral=True)
+                return
             
             if mee6_pro:
                 required_exp = int(required_exp / 1.5)
@@ -244,33 +268,48 @@ class InfoCog(commands.Cog):
                 color=discord.Color.blue()
             )
             
+            if target_exp is not None:
+                embed.add_field(
+                    name="Info", 
+                    value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}\nTarget Total EXP: {target_exp:,}", 
+                    inline=False
+                )
+            else:
+                embed.add_field(
+                    name="Info", 
+                    value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}", 
+                    inline=False
+                )
+
             if target_date:
                 try:
                     target = datetime.strptime(target_date, "%m/%d/%Y")
-                    days_until = (target - datetime.now()).days
+                    now = datetime.now()
+                    days_until = (target - now).days + 1
                     
                     if days_until <= 0:
-                        await interaction.followup.send("Target date must be in the future!", ephemeral=True)
+                        await interaction.followup.send("Target date must be in the future!")
                         return
                     
                     required_daily_exp = required_exp / days_until
-                    chat_hours_needed = required_daily_exp / 1200  # 1.2k exp per hour average
+                    chat_hours_needed = required_daily_exp / 1200
                     
                     target_timestamp = int(target.timestamp())
                     embed.description = (
                         f"Calculation based on reaching the target by {target_date}\n"
                         f"Estimated completion: <t:{target_timestamp}:F> (<t:{target_timestamp}:R>)"
                     )
-                    embed.add_field(name="Days Until Target", value=f"{days_until:,}", inline=True)
-                    embed.add_field(name="Required Daily EXP", value=f"{required_daily_exp:,.0f}", inline=True)
-                    embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=True)
+                    embed.add_field(name="Days Until Target", value=f"{days_until:,}", inline=False)
+                    embed.add_field(name="Required Daily EXP", value=f"{required_daily_exp:,.0f}", inline=False)
+                    embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=False)
                 except ValueError:
-                    await interaction.followup.send("Invalid date format! Use MM/DD/YYYY", ephemeral=True)
+                    await interaction.followup.send("Invalid date format! Use MM/DD/YYYY")
                     return
             else:
                 if not exp_per_day:
-                    await interaction.followup.send("Either target_date or exp_per_day must be provided!", ephemeral=True)
+                    await interaction.followup.send("Either target_date or exp_per_day must be provided!")
                     return
+                
                 days_needed = round(required_exp / exp_per_day)
                 completion_date = datetime.now() + timedelta(days=days_needed)
                 completion_timestamp = int(completion_date.timestamp())
@@ -279,13 +318,12 @@ class InfoCog(commands.Cog):
                     f"Based on gaining {exp_per_day:,} EXP per day{' with Mee6 Pro boost' if mee6_pro else ''}\n"
                     f"Estimated completion: <t:{completion_timestamp}:F> (<t:{completion_timestamp}:R>)"
                 )
-                embed.add_field(name="Estimated Days", value=f"{days_needed:,}", inline=True)
+                embed.add_field(name="Estimated Days", value=f"{days_needed:,}", inline=False)
                 chat_hours_needed = exp_per_day / 1200
-                embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=True)
+                embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=False)
 
-            embed.add_field(name="Info", value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}", inline=False)
             embed.add_field(name="Required Total EXP", value=f"{required_exp:,}", inline=False)
-            embed.add_field(name="Minimum Messages", value=f"{int(required_exp / 20):,}", inline=True)
+            embed.add_field(name="Minimum Messages", value=f"{int(required_exp / 20):,}", inline=False)
             embed.set_footer(text=f"Estimates based on 1.2k EXP per hour of chatting", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)
@@ -328,7 +366,7 @@ class InfoCog(commands.Cog):
             embed.add_field(name="Version", value=f"v{__version__}")
             embed.add_field(name="Server Count", value=len(self.bot.guilds))
             embed.add_field(name="Library", value="Discord.py")
-            embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 300+ hours")
+            embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 310+ hours")
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
             view = View()

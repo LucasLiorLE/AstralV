@@ -1,14 +1,14 @@
-# Made by LucasLiorLE (https://github.com/LucasLiorLE/APEYE)#
+# Made by LucasLiorLE (https://github.com/LucasLiorLE/AstralV) (https://lucasliorle.github.io)
 #    - This is just my bot I made for fun, mostly during my free time.
 #    - Feel free to "steal" or take portions of my code.
 #    - Has a lot of usefull utilities!
-#    - /help for more info!
+#    - /help for more info! (Ok tbh rn it doesn't crap :sob:)
 #
 # Release Notes:
 #    - Organized main.py
 #        - Also minor organization to other files.
 #    - Minor economy update
-#        - Deleted gambling commands for now.#
+#        - Deleted gambling commands for now.
 #    - Organized some other files.
 #    - Userphone command, which allows you to talk to others from across servers!
 #    - Reminder command group, basic reminder add, list and remove.
@@ -39,16 +39,24 @@ from pathlib import Path
 import discord
 from discord.ext import commands
 from aiohttp import ClientSession # I just don't want to use aiohttp.ClientSession()
-from dotenv import load_dotenv # To load secrets.env
 from ossapi import Ossapi # Osu API
 
 from bot_utils import (
     open_file,
     save_file,
-    get_player_data,
-    debug,
+    cr_fetchPlayerData,
+    # debug,
     error,
     warn,
+
+    token,
+    # client_id,
+    # client_secret,
+    # userAgent,
+    # crAPI,
+    # osuAPI,
+    osuSecret,
+    hypixelAPI,
     __version__
 )
 
@@ -68,7 +76,7 @@ class StatusManager:
             "https://lucasliorle.github.io",
             "Glory to the CCP! (我们的)",
             "https://www.nohello.com/",
-            "https://github.com/LucasLiorLE/APEYE",
+            "https://github.com/LucasLiorLE/AstralV",
             "I really need to sleep...",
             "Do people even read these?"
         ]
@@ -84,7 +92,7 @@ class StatusManager:
             await asyncio.sleep(600)
 
 # Bot def 
-class APEYEBot(commands.Bot):
+class _botMain(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         intents.message_content = True
@@ -130,7 +138,7 @@ async def load_cogs():
 
 async def test_hy_key() -> bool:
     async with ClientSession() as session:
-        async with session.get(f"https://api.hypixel.net/player?key={hypixel_api}") as response:
+        async with session.get(f"https://api.hypixel.net/player?key={hypixelAPI}") as response:
             if response.status == 403:
                 data = await response.json()
                 if data.get("success") == False and data.get("cause") == "Invalid API key":
@@ -146,12 +154,12 @@ async def test_hy_key() -> bool:
 async def check_apis():
     if not await test_hy_key():
         return False
-    if not await get_player_data(None):
+    if not await cr_fetchPlayerData(None):
         error("Invalid Clash Royale API key. Please check secrets.env.")
         return False
     
     try:
-        osu_api = Ossapi(int(osu_api), osu_secret)
+        osu_api = Ossapi(int(osu_api), osuSecret)
         print("Osu API key is valid.")
     except ValueError:
         error("Invalid Osu API keys")
@@ -171,21 +179,8 @@ async def check_apis():
     return True
 
 # Bot setup and other stuff
-bot = APEYEBot()
+bot = _botMain()
 user_last_message_time = {}
-
-secrets = Path("storage/secrets.env")
-load_dotenv(dotenv_path=secrets)
-
-# Load env var
-client_id = os.getenv("client_id")
-client_secret = os.getenv("client_secret")
-user_agent = os.getenv("user_agent")
-cr_api = os.getenv("cr_api")
-token = os.getenv("token")
-osu_api = os.getenv("osu_api")
-osu_secret = os.getenv("osu_secret")
-hypixel_api = os.getenv("hypixel_api")
 
 # Event handling stuff
 @bot.event

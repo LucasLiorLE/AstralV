@@ -23,10 +23,10 @@ def open_file(filename: str) -> Dict[str, Any]:
             file_data = json.load(f)
         return file_data
     except FileNotFoundError:
-        print(f"Error: The file '{filename}' was not found.")
+        print(f"[ERROR]: The file '{filename}' was not found.")
         return {}
     except json.JSONDecodeError:
-        print(f"Error: The file '{filename}' contains invalid JSON.")
+        print(f"[ERROR]: The file '{filename}' contains invalid JSON.")
         return {}
 
 def save_file(filename: str, data: JsonData) -> None:
