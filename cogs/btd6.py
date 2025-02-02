@@ -48,37 +48,58 @@ class BloonsTD6CommandGroup(app_commands.Group):
 
         
     @app_commands.command(name="racedata", description="Get race data for a specific BT6 race ID.")
-    @app_commands.describe(race_id="ID of the race you want to view the data for.")
+    @app_commands.describe(race_id="ID or name of the race you want to view the data for.")
     async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
-            url = f"https://data.ninjakiwi.com/btd6/races/{race_id}/leaderboard"
+            # First, fetch the list of races to get the correct ID
             async with ClientSession() as session:
-                async with session.get(url) as response:
+                async with session.get("https://data.ninjakiwi.com/btd6/races") as response:
                     if response.status == 200:
-                        data = await response.json()
-
-                        if data.get("success"):
-                            race_info = data["body"]
-
-                            embed = discord.Embed(
-                                title=f"<:btd6Race:1312989026147631154> BTD6 Race: {race_info['name']}",
-                                description=f"Map: {race_info['map']}\nMode: {race_info['mode']}\nDifficulty: {race_info['difficulty']}",
-                                color=discord.Color.red()
-                            )
-                            embed.set_thumbnail(url=race_info['mapURL'])
-                            embed.add_field(name="Starting Cash", value=f"${race_info['startingCash']}", inline=False)
-                            embed.add_field(name="Lives", value=f"{race_info['lives']} / {race_info['maxLives']}", inline=False)
-                            embed.add_field(name="Rounds", value=f"Start: {race_info['startRound']} - End: {race_info['endRound']}", inline=False)
-                            embed.add_field(name="Power Restrictions", value=f"Powers Disabled: {race_info['disablePowers']}", inline=False)
-
-                            await interaction.followup.send(embed=embed)
+                        races_data = await response.json()
+                        
+                        if races_data.get("success") and races_data.get("body"):
+                            # Try to find the race by ID or name
+                            found_race = None
+                            for race in races_data["body"]:
+                                if str(race["id"]) == race_id or race["name"].lower() == race_id.lower():
+                                    found_race = race
+                                    break
+                            
+                            if found_race:
+                                embed = discord.Embed(
+                                    title=f"<:btd6Race:1312989026147631154> BTD6 Race: {found_race['name']}",
+                                    description=f"Race ID: {found_race['id']}",
+                                    color=discord.Color.red()
+                                )
+                                
+                                # Convert timestamps to Discord timestamps
+                                start_time = int(found_race['start'] / 1000)
+                                end_time = int(found_race['end'] / 1000)
+                                
+                                embed.add_field(
+                                    name="Time Information",
+                                    value=f"Start: <t:{start_time}:F>\nEnd: <t:{end_time}:F>",
+                                    inline=False
+                                )
+                                
+                                embed.add_field(
+                                    name="Participation",
+                                    value=f"Total Scores: {found_race.get('totalScores', 'Unknown'):,}",
+                                    inline=False
+                                )
+                                
+                                await interaction.followup.send(embed=embed)
+                            else:
+                                await interaction.followup.send("Race not found. Please check the race ID or name and try again.", ephemeral=True)
                         else:
-                            await interaction.followup.send("Failed to retrieve race data. Please check the race ID and try again.", ephemeral=True)
+                            await interaction.followup.send("Failed to retrieve race data.", ephemeral=True)
                     else:
-                        await interaction.followup.send("Error occurred while fetching the race data. Please try again later.", ephemeral=True)
+                        await interaction.followup.send(f"Error occurred while fetching race data. Status code: {response.status}", ephemeral=True)
         except Exception as e:
+            print(f"Exception in racedata command: {str(e)}")
             await handle_logs(interaction, e)
+            await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
 
     @app_commands.command(name="racelb", description="Displays the leaderboard for a specific BTD6 race")
     @app_commands.describe(race_id="ID of the race you want to view the leaderboard for.")
@@ -130,11 +151,8 @@ class BloonsTD6CommandGroup(app_commands.Group):
         try:
             async with ClientSession() as session:
                 async with session.get("https://data.ninjakiwi.com/btd6/races") as response:
-                    response = await response.json()
                     if response.status == 200:
-                                
-                        data = response.json()
-
+                        data = await response.json()
                         if 'body' in data:
                             body = data['body']
                             embed = discord.Embed(
@@ -171,20 +189,19 @@ class BloonsTD6CommandGroup(app_commands.Group):
     async def btd6profile(self, interaction: discord.Interaction, oak_key: str = None):
         await interaction.response.defer()
         try:
-            member_info = open_file("storage/member_info.json")
-            discord_user_id = str(interaction.user.id)
-            if (discord_user_id not in member_info or "btd6oakkey" not in member_info[discord_user_id]):
-                await interaction.followup.send("You do not have a linked BTD6 account.")
-                return
-            else:
-                oak_key = member_info[discord_user_id]["btd6oakkey"]
+            if not oak_key:
+                member_info = open_file("storage/member_info.json")
+                discord_user_id = str(interaction.user.id)
+                if (discord_user_id not in member_info or "btd6oakkey" not in member_info[discord_user_id]):
+                    await interaction.followup.send("You do not have a linked BTD6 account.")
+                    return
+                else:
+                    oak_key = member_info[discord_user_id]["btd6oakkey"]
 
             async with ClientSession() as session:
                 async with session.get(f"https://data.ninjakiwi.com/btd6/users/{oak_key}") as response:
-                    response = await response.json()
-
-                    if response.status == 200:   
-                        data = response.json()
+                    if response.status == 200:
+                        data = await response.json()
 
                         if 'body' in data:
                             body = data['body']
