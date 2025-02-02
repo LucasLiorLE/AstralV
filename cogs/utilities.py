@@ -37,7 +37,7 @@ class ReminderGroup(app_commands.Group):
                 await interaction.followup.send("Reminder time cannot be longer than 30 days.")
                 return
 
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             user_id = str(interaction.user.id)
             
             if user_id not in member_info:
@@ -55,13 +55,13 @@ class ReminderGroup(app_commands.Group):
                 "end_time": end_time
             }
             
-            save_file("info/member_info.json", member_info)
+            save_file("storage/member_info.json", member_info)
             
             await interaction.followup.send(f"<:check:1292269189536682004> Reminder set! I'll remind you about: {reminder} <t:{end_time}:R>")
             
             await asyncio.sleep(duration_delta.total_seconds())
             
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             if user_id in member_info and "reminders" in member_info[user_id] and reminder_id in member_info[user_id]["reminders"]:
                 try:
                     await interaction.user.send(f"**Reminder:** {reminder}")
@@ -72,7 +72,7 @@ class ReminderGroup(app_commands.Group):
                     )
                 
                 del member_info[user_id]["reminders"][reminder_id]
-                save_file("info/member_info.json", member_info)
+                save_file("storage/member_info.json", member_info)
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -81,7 +81,7 @@ class ReminderGroup(app_commands.Group):
     async def list(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             user_id = str(interaction.user.id)
             
             if user_id not in member_info or "reminders" not in member_info[user_id] or not member_info[user_id]["reminders"]:
@@ -107,7 +107,7 @@ class ReminderGroup(app_commands.Group):
     async def remove(self, interaction: discord.Interaction, id: str):
         await interaction.response.defer()
         try:
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             user_id = str(interaction.user.id)
             
             if (user_id not in member_info or 
@@ -118,7 +118,7 @@ class ReminderGroup(app_commands.Group):
 
             reminder = member_info[user_id]["reminders"][id]
             del member_info[user_id]["reminders"][id]
-            save_file("info/member_info.json", member_info)
+            save_file("storage/member_info.json", member_info)
 
             await interaction.followup.send(
                 f"<:check:1292269189536682004> Removed reminder: {reminder['message']}", 
@@ -140,7 +140,7 @@ class UtilCog(commands.Cog):
             user_id = str(interaction.user.id)
             server_id = str(interaction.guild.id)
 
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
 
             if user_id in afk_data:
@@ -153,7 +153,7 @@ class UtilCog(commands.Cog):
                 "original_name": interaction.user.display_name
             }
             
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
 
             await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
             await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")

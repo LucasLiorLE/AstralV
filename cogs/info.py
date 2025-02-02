@@ -330,31 +330,48 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="ping", description="Shows your latency and the bot's latency.")
     async def ping(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
-            start_time = time.time()
-            processing_start_time = time.time()
-            await asyncio.sleep(0.1)
-            processing_time = (time.time() - processing_start_time) * 1000
-            end_time = time.time()
-            round_trip_latency = round((end_time - start_time) * 1000)
+            start_time = time.perf_counter()
+            command_start = time.time()
+            
             bot_latency = round(self.bot.latency * 1000)
-            color = (0x00FF00 if bot_latency < 81 else 0xFFFF00 if bot_latency < 201 else 0xFF0000)
-            embed = discord.Embed(
-                title="Pong! 🏓",
-                description=(
-                    f"Your approximate latency: {round_trip_latency}ms\n"
-                    f"Bot's latency: {bot_latency}ms\n"
-                    f"Processing Time: {processing_time:.2f}ms\n"
-                    f"Response Time: {round_trip_latency + processing_time:.2f}ms"
-                ),
-                color=color,
+            
+            ws_latency = round((time.perf_counter() - start_time) * 1000)
+            
+            api_start = time.perf_counter()
+            await interaction.followup.send("Measuring...", ephemeral=True)
+            api_end = time.perf_counter()
+            api_latency = round((api_end - api_start) * 1000)
+            
+            response_time = round((time.time() - command_start) * 1000)
+            
+            worst_latency = max(bot_latency, ws_latency, api_latency)
+            color = (0x00FF00 if worst_latency < 150 
+                    else 0xFFFF00 if worst_latency < 300 
+                    else 0xFF0000)
+            
+            def get_status(latency):
+                return "Low" if latency < 150 else "Medium" if latency < 300 else "High"
+            
+            latency_info = (
+                f"```\n"
+                f"Bot Latency:     {bot_latency}ms ({get_status(bot_latency)})\n"
+                f"WebSocket:       {ws_latency}ms ({get_status(ws_latency)})\n"
+                f"API Latency:     {api_latency}ms ({get_status(api_latency)})\n"
+                f"Response Time:   {response_time}ms\n"
+                f"```"
             )
-            await interaction.followup.send(embed=embed)
+            
+            embed = discord.Embed(
+                title="🏓 Pong!",
+                description=latency_info,
+                color=color
+            )
+            
+            await interaction.edit_original_response(content=None, embed=embed)
         except Exception as error:
             await handle_logs(interaction, error)
 

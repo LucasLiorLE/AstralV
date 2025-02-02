@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, server_id: str):
     try:
-        server_info = open_file("info/server_info.json")
+        server_info = open_file("storage/server_info.json")
         giveaway = server_info.get(server_id, {}).get("giveaways", {}).get(giveaway_id)
 
         if not giveaway:
@@ -27,7 +27,7 @@ async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, serve
         duration = giveaway['endTime'] - giveaway['startTime']
         await asyncio.sleep(duration)
 
-        server_info = open_file("info/server_info.json")
+        server_info = open_file("storage/server_info.json")
         giveaway = server_info.get(server_id, {}).get("giveaways", {}).get(giveaway_id)
 
         if not giveaway:
@@ -77,7 +77,7 @@ class GiveawayGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             server_id = str(interaction.guild_id)
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             
             if server_id not in server_info or "giveaways" not in server_info[server_id]:
                 return await interaction.followup.send("No giveaways found for this server.", ephemeral=True)
@@ -120,7 +120,7 @@ class GiveawayGroup(app_commands.Group):
     async def ggiveaway(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
         await interaction.response.defer()
         try:
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             duration_timedelta = parse_duration(duration)
             if duration_timedelta is None or duration_timedelta.total_seconds() <= 0:
                 raise ValueError("Duration must be greater than 0.")
@@ -147,7 +147,7 @@ class GiveawayGroup(app_commands.Group):
                 "winners": winners,
                 "participants": [],
             }
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
 
             embed = discord.Embed(
                 title=f"🎉 {prize} 🎉",
@@ -163,7 +163,7 @@ class GiveawayGroup(app_commands.Group):
             message = await interaction.followup.send(embed=embed, view=view)
             server_info[server_id]["giveaways"][giveaway_id]["channel_id"] = interaction.channel_id
             server_info[server_id]["giveaways"][giveaway_id]["message_id"] = message.id
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
 
             asyncio.create_task(end_giveaway(interaction, giveaway_id, server_id))
             
@@ -185,7 +185,7 @@ class GiveawayButtonView(discord.ui.View):
     @discord.ui.button(label="Enter/Leave Giveaway", style=discord.ButtonStyle.blurple)
     async def enter_leave_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             server_info.setdefault(self.server_id, {}).setdefault("giveaways", {})
 
             if self.giveaway_id not in server_info[self.server_id]["giveaways"]:
@@ -212,7 +212,7 @@ class GiveawayButtonView(discord.ui.View):
             
             embed.description = "\n".join(description_lines)
 
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
 
             await interaction.message.edit(embed=embed, view=self)
 
@@ -231,7 +231,7 @@ class AlertGroup(app_commands.Group):
     async def alert_follow(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             user = interaction.user.id
 
             if user not in member_info:
@@ -269,7 +269,7 @@ class AlertGroup(app_commands.Group):
 
             alertIDs = []
             successess = 0
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             for member in member_info:
                 if member_info[member]["subscribed"] == 1:
                     alertIDs.append(member)

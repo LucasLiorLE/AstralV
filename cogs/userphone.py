@@ -216,7 +216,7 @@ class UserphoneGroup(app_commands.Group):
                 await interaction.followup.send("You must be in a room to toggle anonymous mode!", ephemeral=True)
                 return
 
-            anon_data = open_file("info/anonymous_users.json")
+            anon_data = open_file("storage/anonymous_users.json")
             if "userphone" not in anon_data:
                 anon_data["userphone"] = {}
             
@@ -227,7 +227,7 @@ class UserphoneGroup(app_commands.Group):
                 anon_data["userphone"][user_id] = True
                 await interaction.followup.send("Anonymous mode enabled.", ephemeral=True)
             
-            save_file("info/anonymous_users.json", anon_data)
+            save_file("storage/anonymous_users.json", anon_data)
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -247,7 +247,7 @@ class UserphoneCog(commands.Cog):
         
         for room in self.userphone_group.rooms.values():
             if channel_id in room.members:
-                anon_data = open_file("info/anonymous_users.json")
+                anon_data = open_file("storage/anonymous_users.json")
                 is_anonymous = str(message.author.id) in anon_data.get("userphone", {})
 
                 for other_channel_id in room.members:

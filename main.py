@@ -5,31 +5,37 @@
 #    - /help for more info! (Ok tbh rn it doesn't crap :sob:)
 #
 # Release Notes:
-#    - Organized main.py
-#        - Also minor organization to other files.
-#    - Minor economy update
-#        - Deleted gambling commands for now.
-#    - Organized some other files.
 #    - Userphone command, which allows you to talk to others from across servers!
 #    - Reminder command group, basic reminder add, list and remove.
 #    - dmbed now has inline=False, looks better.
-#    - btd6.py uses aiohttp instead of requests (I don't know how I missed that)
 #    - mlevel update so it's generally better.
+#   
+# Bug Fixes:
+#    - You should no longer be able to warn the bot (Still able to give notes).
 #
-#    To fix:
-#        - Fix beg (just embed.set_footer instead of embed.footer I think)
-#        - Other eco commands have the same timer.
-#        - Level exp gain cd (1 min)
-#        - Except block for 400 bad request code 50007 for commands
-#        - Except block for 403 Forbidden code 50013 for commands
-#        - "Cannot access local variable 'server_info' where it is not associated with a value fix 
-#            - Pretty sure this was for deleting a warn? Guessing I forgot to reassign a variable?
-#        - Get rid of inline=True for most of the embds cause it looks bad
-#        - Specify the effected channel/role/user upon moderation command
-#        - Fix the bot being able to warn itself
-#        - Fix 400 bad request code 50006 for say & dm command
+# Other info:
+#    - Organized some other files.
+#    - Organized main.py
+#        - Also minor organization to other files.
+#    - btd6.py uses aiohttp instead of requests (I don't know how I missed that)
+#    - Removed info folder, moved everything to storage.
+#    - Changed back the prefix to "." :D, I use to use this for my first discord bot!
+#    - Embeds look better (inline=True sucks)
+# 
+# TODO/FIX:
+#    - Other eco commands have the same timer.
+#    - Level exp gain cd (1 min) cause for some reason it doesn't work when testing?
+#    - Except block for 400 bad request code 50007 for commands
+#    - Except block for 403 Forbidden code 50013 for commands
+#    - "Cannot access local variable 'server_info' where it is not associated with a value fix 
+#        - Pretty sure this was for deleting a warn? Guessing I forgot to reassign a variable?
+#    - Specify the effected channel/role/user upon moderation command
+#    - Fix 400 bad request code 50006 for say & dm command
+#    - Member warns & notes display past 25. 
+#    - Currently it returns an error (Since over 25 fields).
+#    - Make auto mute a server set function.
 #
-# This was last updated: 1/30/2025 2:31 PM
+# This was last updated: 2/1/2025 10:59 PM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -92,7 +98,7 @@ class StatusManager:
             await asyncio.sleep(600)
 
 # Bot def 
-class _botMain(commands.Bot):
+class botMain(commands.Bot):
     def __init__(self):
         intents = discord.Intents.all()
         intents.message_content = True
@@ -102,7 +108,7 @@ class _botMain(commands.Bot):
         intents.members = True
 
         super().__init__(
-            command_prefix=commands.when_mentioned_or(">"),
+            command_prefix=commands.when_mentioned_or("."),
             intents=intents,
             case_insensitive=True
         )
@@ -179,7 +185,7 @@ async def check_apis():
     return True
 
 # Bot setup and other stuff
-bot = _botMain()
+bot = botMain()
 user_last_message_time = {}
 
 # Event handling stuff
@@ -197,8 +203,8 @@ async def on_message(message):
     member_id = str(message.author.id)
     current_time = datetime.now(timezone.utc)
 
-    server_info = open_file("info/server_info.json")
-    member_data = open_file("info/member_info.json")
+    server_info = open_file("storage/server_info.json")
+    member_data = open_file("storage/member_info.json")
 
     afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
     exp_data = server_info.setdefault(server_id, {}).setdefault("exp", {})
@@ -206,7 +212,7 @@ async def on_message(message):
     if member_id in afk_data:
         original_name = afk_data[member_id].get("original_name")
         del afk_data[member_id]
-        save_file("info/server_info.json", server_info)
+        save_file("storage/server_info.json", server_info)
 
         await message.add_reaction("👋")
         await message.channel.send(f"Welcome back, {message.author.mention}! You are no longer AFK.", delete_after=3)
@@ -249,12 +255,18 @@ async def on_message(message):
             server_info["exp"][server_id] = {}
         server_info["exp"][server_id][member_id] = server_info["exp"][server_id].get(member_id, 0) + exp_gain
 
-        save_file("info/member_info.json", member_data)
-        save_file("info/server_info.json", server_info)
+        save_file("storage/member_info.json", member_data)
+        save_file("storage/server_info.json", server_info)
 
 # Main execution thing
 async def main():
     print(f"Script loaded. Version: v{__version__}")
+
+    # Checking for APIs not required but it will be required
+    # if you want to use some commands later.
+    # Recommended to uncomment this if you want to use it for that.
+    # I have it commented because I'm too lazy to refresh all 
+    # of my APIs, so you can do that too I guess.
 
     # if not await check_apis():
     #     return
@@ -267,12 +279,12 @@ async def main():
     except KeyboardInterrupt:
         print("Shutting down gracefully...")
     except Exception as e:
-        error(f"Unexpected error: {e}")
+        error(e)
     finally:
         print("Bot is shutting down.")
         await bot.close()
 
-if __name__ == "__main__":
+if __name__ == "__main__": # Was used to check if main was imported before bot_utils.
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

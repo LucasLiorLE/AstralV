@@ -37,7 +37,7 @@ class DelLog(discord.ui.Select):
         self.embed = embed
         self.interaction = interaction
 
-        server_info = open_file("info/server_info.json")
+        server_info = open_file("storage/server_info.json")
         
         if self.log_type == "warn":
             self.logs = server_info.get("warnings", {}).get(str(interaction.guild.id), {}).get(str(member.id), {})
@@ -62,13 +62,13 @@ class DelLog(discord.ui.Select):
 
                 if not self.logs:
                     if self.log_type == "warn":
-                        server_info = open_file("info/server_info.json")
+                        server_info = open_file("storage/server_info.json")
                         server_info["warnings"].get(str(interaction.guild.id), {}).pop(str(self.member.id), None)
                     elif self.log_type == "note":
-                        server_info = open_file("info/server_info.json")
+                        server_info = open_file("storage/server_info.json")
                         server_info["notes"].get(str(interaction.guild.id), {}).pop(str(self.member.id), None)
 
-                save_file("info/server_info.json", server_info)
+                save_file("storage/server_info.json", server_info)
 
                 self.embed.clear_fields()
                 updated_logs = self.logs.get(str(self.member.id), {})
@@ -309,7 +309,7 @@ class SetCommandGroup(app_commands.Group):
     async def setlogs(self, interaction: discord.Interaction, option: app_commands.Choice[str], channel: discord.TextChannel):
         await interaction.response.defer()
         try:
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
 
             if not await check_mod(interaction, "administrator"):
@@ -319,7 +319,7 @@ class SetCommandGroup(app_commands.Group):
                 server_info["preferences"][guild_id] = {}
 
             server_info["preferences"][guild_id][option.value] = channel.id
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
 
             await interaction.followup.send(f"{option.name} will be set to: {channel.mention}")
         except Exception as e:
@@ -337,7 +337,7 @@ class SetCommandGroup(app_commands.Group):
     async def setroles(self, interaction: discord.Interaction, option: str, role: discord.Role):
         await interaction.response.defer()
         try:
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
 
             if not await check_mod(interaction, "administrator"):
@@ -347,7 +347,7 @@ class SetCommandGroup(app_commands.Group):
                 server_info["preferences"][guild_id] = {}
 
             server_info["preferences"][guild_id][option] = role.id
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
 
             await interaction.followup.send(f"The role '{role.name}' has been set for members.")
         except Exception as e:
@@ -462,7 +462,7 @@ class ModerationCog(commands.Cog):
                 return
 
             channel = channel or interaction.channel
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
             
             if role is None:
@@ -518,7 +518,7 @@ class ModerationCog(commands.Cog):
                 return
             
             channel = channel or interaction.channel
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
             
             if role is None:
@@ -734,8 +734,11 @@ class ModerationCog(commands.Cog):
         try:
             if not await check_mod(interaction, "manage_messages"):
                 return
+            
+            if member == self.bot:
+                await interaction.followup.send("Why are you warning me 😭!")
 
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             server_id = str(interaction.guild.id)
 
             server_info.setdefault("warnings", {})
@@ -769,7 +772,7 @@ class ModerationCog(commands.Cog):
                 bot=self.bot
             )
 
-            if auto_mute == True: # TODO: Will become a server-set function later.
+            if auto_mute == True: 
                 mute_duration = 0
                 if len(member_warnings) > 2:
                     mute_duration = (len(member_warnings) - 2) * 60 * 30
@@ -792,9 +795,6 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    # TODO:
-    # Member warns & notes display past 25. 
-    # Currently it returns an error (Since over 25 fields)
 
     @app_commands.command(name="warns", description="Displays the warnings for a user.")
     @app_commands.describe(
@@ -807,7 +807,7 @@ class ModerationCog(commands.Cog):
                 return
             
             member = member or interaction.user
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             server_id = str(interaction.guild.id)
             
             member_warnings = server_info["warnings"].get(server_id, {}).get(str(member.id), {})
@@ -840,7 +840,7 @@ class ModerationCog(commands.Cog):
             if not await check_mod(interaction, "manage_messages"):
                 return
             
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             member_notes = server_info["notes"].setdefault(str(interaction.guild.id), {}).setdefault(str(member.id), {})
             case_number = str(max(map(int, member_notes.keys()), default=0) + 1)
             member_notes[case_number] = {
@@ -848,7 +848,7 @@ class ModerationCog(commands.Cog):
                 "moderator": str(interaction.user.id),
                 "time": int(time.time())
             }
-            save_file("info/server_info.json", server_info)
+            save_file("storage/server_info.json", server_info)
             await interaction.followup.send(embed=discord.Embed(
                 title="Note Added",
                 description=f"Added note to: {member.mention}\nCase #{case_number}\n{note}",
@@ -866,7 +866,7 @@ class ModerationCog(commands.Cog):
                 return
             
             member = member or interaction.user
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
             member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(member.id), {})
             embed = discord.Embed(
                 title=f"Notes for {member.display_name}", 
@@ -923,7 +923,7 @@ class ModerationCog(commands.Cog):
                 return
 
             member = member or interaction.user
-            server_info = open_file("info/server_info.json")
+            server_info = open_file("storage/server_info.json")
 
             stats = {
                 "warn": {"last 7 days": 0, "last 30 days": 0, "all time": 0},

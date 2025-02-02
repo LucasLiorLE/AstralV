@@ -44,7 +44,7 @@ class RobloxGroup(app_commands.Group):
             bio = await rbx_fetchUserBio(roblox_user_id)
 
             if color_sequence in bio:
-                member_info = open_file("info/member_info.json")
+                member_info = open_file("storage/member_info.json")
                 discord_user_id = str(interaction.user.id)
 
                 if discord_user_id not in member_info:
@@ -52,7 +52,7 @@ class RobloxGroup(app_commands.Group):
 
                 member_info[discord_user_id]["roblox_username"] = username
                 member_info[discord_user_id]["roblox_id"] = roblox_user_id
-                save_file("info/member_info.json", member_info)
+                save_file("storage/member_info.json", member_info)
 
                 await interaction.followup.send(f"Success! Your Roblox account is now linked.")
 
@@ -73,7 +73,7 @@ class RobloxGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("info/member_info.json")
+                member_info = open_file("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -99,7 +99,7 @@ class RobloxGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("info/member_info.json")
+                member_info = open_file("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -171,7 +171,7 @@ class RobloxGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("info/member_info.json")
+                member_info = open_file("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -333,7 +333,7 @@ class RobloxCog(commands.Cog):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("info/member_info.json")
+                member_info = open_file("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")

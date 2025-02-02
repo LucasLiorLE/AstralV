@@ -33,14 +33,14 @@ class BloonsTD6CommandGroup(app_commands.Group):
                 await interaction.followup.send(embed=embed)
 
             if oak_key:
-                member_info = open_file("info/member_info.json")
+                member_info = open_file("storage/member_info.json")
                 discord_user_id = str(interaction.user.id)
 
                 if discord_user_id not in member_info:
                     member_info[discord_user_id] = {}
 
                 member_info[discord_user_id]["btd6oakkey"] = oak_key
-                save_file("info/member_info.json", member_info)
+                save_file("storage/member_info.json", member_info)
                 
                 await interaction.followup.send("Success! Your BTD6 (Maybe someone else's) was successfully linked.")
         except Exception as e:
@@ -171,7 +171,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
     async def btd6profile(self, interaction: discord.Interaction, oak_key: str = None):
         await interaction.response.defer()
         try:
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
             discord_user_id = str(interaction.user.id)
             if (discord_user_id not in member_info or "btd6oakkey" not in member_info[discord_user_id]):
                 await interaction.followup.send("You do not have a linked BTD6 account.")

@@ -79,7 +79,7 @@ async def check_mod(
         - The configured moderator role
     3. Send an error message if user lacks permissions
     """
-    server_info = open_file("info/server_info.json")
+    server_info = open_file("storage/server_info.json")
     guild_id = str(interaction.guild_id)
 
     server_info.setdefault("preferences", {})
@@ -94,7 +94,7 @@ async def check_mod(
     server_info["warnings"].setdefault(guild_id, {})
     server_info["notes"].setdefault(guild_id, {})
 
-    save_file("info/server_info.json", server_info)
+    save_file("storage/server_info.json", server_info)
 
     mod_role_id: Optional[int] = server_info["preferences"][guild_id].get("moderator")
     has_permission: bool = getattr(interaction.user.guild_permissions, permission_name, False)
@@ -147,7 +147,7 @@ async def store_modlog(
         discord.HTTPException: If sending the modlog message fails
         ValueError: If channel ID format is invalid
     """
-    server_info = open_file("info/server_info.json")
+    server_info = open_file("storage/server_info.json")
     for key in ["preferences", "modlogs", "modstats", "warnings"]:
         server_info.setdefault(key, {})
         if key in ["modlogs", "modstats", "warnings"]:
@@ -234,7 +234,7 @@ async def store_modlog(
         except discord.HTTPException as e:
             raise discord.HTTPException(f"Failed to send modlog message: {e}")
 
-    save_file("info/server_info.json", server_info)
+    save_file("storage/server_info.json", server_info)
 
 async def send_modlog_embed(
         interaction: discord.Interaction, 
@@ -265,7 +265,7 @@ async def send_modlog_embed(
         - Timestamp
     3. Includes footer with pagination info
     """
-    server_info = open_file("info/server_info.json")
+    server_info = open_file("storage/server_info.json")
     print(server_info)
     server_id = str(interaction.guild.id)
     user_id = str(user.id)

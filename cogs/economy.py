@@ -136,15 +136,13 @@ def find_closest_item(search_term: str, shop_items: list) -> str:
     normalized_search = "".join(search_term.lower().split())
     normalized_items = [(item["item"], "".join(item["item"].lower().split())) for item in shop_items]
     
-    # Return exact match if found
     for orig, norm in normalized_items:
         if norm == normalized_search:
             return orig
             
-    # Find closest match alphabetically
     matches = [orig for orig, norm in normalized_items if norm.startswith(normalized_search)]
     if matches:
-        return min(matches)  # Return alphabetically first match
+        return min(matches)
     
     return None
 
@@ -306,7 +304,7 @@ class EconomyCog(commands.Cog):
 
     # Basic ways to get money
     @app_commands.command(name="beg", description="Beg for money on the streets.")
-    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def beg(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -363,7 +361,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="fish", description="Fish for some coins! Requires a fishing rod.")
-    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id)) 
     async def fish(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -406,7 +404,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="hunt", description="Hunt for some coins! Requires a rifle.")
-    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def hunt(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -445,7 +443,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="dig", description="Dig for some coins! Requires a shovel.")
-    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def dig(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -484,7 +482,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="search", description="Search for some coins! Requires a shovel.")
-    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def search(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -538,7 +536,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="crime", description="Commit a crime for coins! Requires a shovel.")
-    @app_commands.checks.cooldown(1, 30)
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def crime(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:

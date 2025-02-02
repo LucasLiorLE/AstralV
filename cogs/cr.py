@@ -207,14 +207,14 @@ class ClashRoyaleCommandGroup(app_commands.Group):
                 player_deck_names = [card.get("name", "Unknown") for card in current_deck]
 
                 if sorted(player_deck_names) == sorted(random_deck):
-                    member_info = open_file("info/member_info.json")
+                    member_info = open_file("storage/member_info.json")
                     discord_user_id = str(interaction.user.id)
 
                     if discord_user_id not in member_info:
                         member_info[discord_user_id] = {}
 
                     member_info[discord_user_id]["cr_id"] = tag
-                    save_file("info/member_info.json", member_info)
+                    save_file("storage/member_info.json", member_info)
 
                     await interaction.followup.send("Deck matched! Your Clash Royale ID has been successfully linked.")
                     return
@@ -230,7 +230,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
     async def crprofile(self, interaction: discord.Interaction, tag: str = None, user: discord.User = None):
         await interaction.response.defer()
         try:
-            member_info = open_file("info/member_info.json")
+            member_info = open_file("storage/member_info.json")
 
             if tag is None:
                 user_id = str(user.id) or str(interaction.user.id)
