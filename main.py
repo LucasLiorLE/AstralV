@@ -4,27 +4,8 @@
 #    - Has a lot of usefull utilities!
 #    - /help for more info! (Ok tbh rn it doesn't crap :sob:)
 #
-# Release Notes:
-#    - Userphone command, which allows you to talk to others from across servers!
-#    - Reminder command group, basic reminder add, list and remove.
-#    - dmbed now has inline=False, looks better.
-#    - mlevel update so it's generally better.
-#   
-# Bug Fixes:
-#    - You should no longer be able to warn the bot (Still able to give notes).
-#    - moderation.py fixed
-#    - Fix 400 bad request code 50006 for say & dm command
-#    - Member warns & notes display past 25. 
-#    - Currently it returns an error (Since over 25 fields).
-#
-# Other info:
-#    - Organized some other files.
-#    - Organized main.py
-#        - Also minor organization to other files.
-#    - btd6.py uses aiohttp instead of requests (I don't know how I missed that)
-#    - Removed info folder, moved everything to storage.
-#    - Changed back the prefix to "." :D, I use to use this for my first discord bot!
-#    - Embeds look better (inline=True sucks)
+# Release Notes
+#    - Make command descriptions better (Helps with help command)
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
@@ -32,7 +13,7 @@
 #    - Except block for 400 bad request code 50007 for commands
 #    - Make auto mute a server set function.
 #
-# This was last updated: 2/2/2025 10:35 AM
+# This was last updated: 2/2/2025 8:12 PM
 
 import os, random, math, asyncio
 # import asyncpraw

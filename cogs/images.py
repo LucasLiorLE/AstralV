@@ -1,5 +1,6 @@
 from bot_utils import (
-    handle_logs
+    handle_logs,
+    open_file
 )
 
 import discord
@@ -17,6 +18,17 @@ from urllib.parse import urlparse
 class ImageGroup(app_commands.Group): # This originally was named "Image" but it was conflicting with the PIL Image module and I got confused for a long time lol.
     def __init__(self):
         super().__init__(name="image", description="Image manipulation commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("image", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
     async def togif(self, image_buffer: io.BytesIO) -> io.BytesIO:
         image = Image.open(image_buffer)
@@ -156,13 +168,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
         return image_data, filename
 
     @app_commands.command(name="resize", description="Resize an uploaded image to a specified size")
-    @app_commands.describe(
-        image="The image file you want to resize.",
-        link="The link to the image you want to resize.",
-        width="The width you want to resize the image to.",
-        height="The height you want to resize the image to.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def resize_image(self, interaction: discord.Interaction, width: int, height: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -179,13 +184,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="crop", description="Crop an uploaded image to a specified size")
-    @app_commands.describe(
-        image="The image file you want to crop.",
-        link="The link to the image you want to crop.",
-        width="The width you want to crop the image to.",
-        height="The height you want to crop the image to.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def crop_image(self, interaction: discord.Interaction, width: int, height: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -208,12 +206,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
 
 
     @app_commands.command(name="rotate", description="Rotate an uploaded image by a specified angle")
-    @app_commands.describe(
-        image="The image file you want to flip.",
-        link="The link to the image you want to flip.",
-        angle="The angle you want to rotate the image by.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def rotate_image(self, interaction: discord.Interaction, angle: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -235,11 +227,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="flip", description="Flip an uploaded image vertically")
-    @app_commands.describe(
-        image="The image file you want to flip.",
-        link="The link to the image you want to flip.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def flip_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -257,11 +244,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="invert", description="Invert the colors of an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to invert.",
-        link="The link to the image you want to invert.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def invert_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -278,12 +260,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="blur", description="Blur an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to blur.",
-        link="The link to the image you want to blur.",
-        radius="The radius of the blur effect.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def blur_image(self, interaction: discord.Interaction, radius: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -300,12 +276,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="brightness", description="Adjust the brightness of an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to adjust the brightness of.",
-        link="The link to the image you want to adjust the brightness of.",
-        factor="The factor you want to adjust the brightness by.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def brightness_image(self, interaction: discord.Interaction, factor: float, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -322,12 +292,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="contrast", description="Adjust the contrast of an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to adjust the contrast of.",
-        link="The link to the image you want to adjust the contrast of.",
-        factor="The factor you want to adjust the contrast by.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def contrast_image(self, interaction: discord.Interaction, factor: float, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -344,11 +308,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="grayscale", description="Convert an uploaded image to grayscale")
-    @app_commands.describe(
-        image="The image file you want to convert to grayscale.",
-        link="The link to the image you want to convert to grayscale.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def grayscale_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -365,11 +324,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="sepia", description="Convert an uploaded image to sepia")
-    @app_commands.describe(
-        image="The image file you want to convert to sepia.",
-        link="The link to the image you want to convert to sepia.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def sepia_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -386,12 +340,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="sharpen", description="Sharpen an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to sharpen.",
-        link="The link to the image you want to sharpen.",
-        factor="The factor you want to sharpen the image by.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def sharpen_image(self, interaction: discord.Interaction, factor: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -408,12 +356,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="pixelate", description="Pixelate an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to pixelate.",
-        link="The link to the image you want to pixelate",
-        factor="The factor you want to pixelate the image by.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def pixelate_image(self, interaction: discord.Interaction, factor: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -430,12 +372,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
             await handle_logs(interaction, e)
 
     @app_commands.command(name="changeres", description="Change the resolution of an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to change the resolution of.",
-        link="The link to the image you want to change the resolution of.",
-        factor="The factor by which to reduce the resolution (e.g., 2 means 2x less resolution).",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def change_resolution_image(self, interaction: discord.Interaction, factor: int, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -471,12 +407,6 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
         await self.randomize_image(interaction, image=image, amount=3, ephemeral=False)
 
     @app_commands.command(name="random", description="Apply random effects to an uploaded image")
-    @app_commands.describe(
-        image="The image file you want to apply random effects to.",
-        link="The link to the image you want to apply random effects to.",
-        amount="The amount of random effects",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
     async def direct_randomize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, amount: int = 3, ephemeral: bool = True):
         await self.randomize_image(interaction, image, link, amount, ephemeral)
 
@@ -506,13 +436,21 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
 class ConvertGroup(app_commands.Group): # Keep this here for now.
     def __init__(self):
         super().__init__(name="convert", description="Image conversion commands")
+        
+        # Load command descriptions from JSON
+        self.command_help = open_file("storage/command_help.json").get("convert", {})
+        
+        # Set descriptions for commands
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
-    @app_commands.command(name="image", description="Convert an uploaded image to a specified format")
-    @app_commands.describe(
-        image="The image file you want to convert.", 
-        format="The format you want to convert the image to.",
-        ephemeral="If the message is hidden (Useful if no perms)"
-    )
+    @app_commands.command(name="image")
     @app_commands.choices(
         format=[
             app_commands.Choice(name="JPEG", value="jpeg"),
@@ -558,12 +496,7 @@ class ConvertGroup(app_commands.Group): # Keep this here for now.
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="video", description="Convert an uploaded video to a specified format")
-    @app_commands.describe(
-        video="The uploaded video file you want to convert.", 
-        format="The format you want to convert the video to.",
-        ephemeral="If you want the message ephemeral or not."
-    )
+    @app_commands.command(name="video")
     @app_commands.choices(
         format=[
             app_commands.Choice(name="MP4", value="mp4"),

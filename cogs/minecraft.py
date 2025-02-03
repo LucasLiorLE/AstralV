@@ -1,6 +1,7 @@
 from bot_utils import (
     handle_logs,
-    mc_fetchUUID
+    mc_fetchUUID,
+    open_file
 )
 
 import discord
@@ -10,6 +11,17 @@ from discord import app_commands
 class MinecraftCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="minecraft", description="Minecraft related commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("minecraft", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
     @app_commands.command(name="uuid", description="Get a Minecraft UUID based on a username")
     @app_commands.describe(username="A Minecraft username")

@@ -14,8 +14,18 @@ from aiohttp import ClientSession
 class BloonsTD6CommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("btd6", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command.description = self.command_help[command.name]["description"]
+                if "parameters" in self.command_help[command.name]:
+                    for param_name, param_desc in self.command_help[command.name]["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
-    @app_commands.command(name="connect", description="Connect your BTD6 account!")
+    @app_commands.command(name="connect")
     async def btd6connect(self, interaction: discord.Interaction, oak_key: str = None):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -36,7 +46,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
                 member_info = open_file("storage/member_info.json")
                 discord_user_id = str(interaction.user.id)
 
-                if discord_user_id not in member_info:
+                if (discord_user_id not in member_info):
                     member_info[discord_user_id] = {}
 
                 member_info[discord_user_id]["btd6oakkey"] = oak_key
@@ -47,22 +57,20 @@ class BloonsTD6CommandGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
         
-    @app_commands.command(name="racedata", description="Get race data for a specific BT6 race ID.")
+    @app_commands.command(name="racedata")
     @app_commands.describe(race_id="ID or name of the race you want to view the data for.")
     async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
-            # First, fetch the list of races to get the correct ID
             async with ClientSession() as session:
                 async with session.get("https://data.ninjakiwi.com/btd6/races") as response:
                     if response.status == 200:
                         races_data = await response.json()
                         
-                        if races_data.get("success") and races_data.get("body"):
-                            # Try to find the race by ID or name
+                        if (races_data.get("success") and races_data.get("body")):
                             found_race = None
                             for race in races_data["body"]:
-                                if str(race["id"]) == race_id or race["name"].lower() == race_id.lower():
+                                if (str(race["id"]) == race_id or race["name"].lower() == race_id.lower()):
                                     found_race = race
                                     break
                             
@@ -73,7 +81,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
                                     color=discord.Color.red()
                                 )
                                 
-                                # Convert timestamps to Discord timestamps
                                 start_time = int(found_race['start'] / 1000)
                                 end_time = int(found_race['end'] / 1000)
                                 
@@ -101,7 +108,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
             await handle_logs(interaction, e)
             await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
 
-    @app_commands.command(name="racelb", description="Displays the leaderboard for a specific BTD6 race")
+    @app_commands.command(name="racelb")
     @app_commands.describe(race_id="ID of the race you want to view the leaderboard for.")
     async def btd6racelb(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
@@ -144,7 +151,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="races", description="Displays the latest BTD6 race events.")
+    @app_commands.command(name="races")
     async def btd6races(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
@@ -184,7 +191,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="profile", description="Displays info about a BTD6 player!")
+    @app_commands.command(name="profile")
     @app_commands.describe(oak_key="https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API")
     async def btd6profile(self, interaction: discord.Interaction, oak_key: str = None):
         await interaction.response.defer()

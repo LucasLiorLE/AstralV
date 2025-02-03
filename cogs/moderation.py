@@ -188,8 +188,7 @@ class PurgeCommandGroup(app_commands.Group):
         
         self.bot = bot
 
-    @app_commands.command(name="any", description="Purges any type of message")
-    @app_commands.describe(amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
+    @app_commands.command(name="any")
     async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -209,8 +208,7 @@ class PurgeCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="user", description="Purges messages from a specific user.")
-    @app_commands.describe(member="The user to purge the messages for", amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
+    @app_commands.command(name="user")
     async def upurge(self, interaction: discord.Interaction, member: discord.Member, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -231,8 +229,7 @@ class PurgeCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="embeds", description="Purges messages containing embeds.")
-    @app_commands.describe(amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
+    @app_commands.command(name="embeds")
     async def epurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -252,8 +249,7 @@ class PurgeCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="attachments", description="Purges messages containing attachments.")
-    @app_commands.describe(amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
+    @app_commands.command(name="attachments")
     async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -273,8 +269,7 @@ class PurgeCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="text", description="Purges messages based on criteria (Default: 10)")
-    @app_commands.describe(amount="The amount of messages to be deleted (Default: 10)", reason="Reason for clearing the messages")
+    @app_commands.command(name="text")
     async def tpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -301,15 +296,7 @@ class SetCommandGroup(app_commands.Group):
 
         self.bot = bot
 
-    @app_commands.command(name="selogs", description="Changes the log channels of your server")
-    @app_commands.describe(option="Choose the type of log (Message Logs, DM Logs, Mod Logs)", channel="The channel to send logs to")
-    @app_commands.choices(
-        option=[
-            app_commands.Choice(name="Message Logs", value="messageLogs"),
-            app_commands.Choice(name="DM Logs", value="dmLogs"),
-            app_commands.Choice(name="Mod Logs", value="modLogs"),
-        ]
-    )
+    @app_commands.command(name="selogs")
     async def setlogs(self, interaction: discord.Interaction, option: app_commands.Choice[str], channel: discord.TextChannel):
         await interaction.response.defer()
         try:
@@ -329,15 +316,7 @@ class SetCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="seroles", description="Allows you to set the server roles")
-    @app_commands.describe(option="Choose the role to set", role="The role to set for members")
-    @app_commands.choices(
-        option=[
-            app_commands.Choice(name="Member", value="member"),
-            app_commands.Choice(name="Moderator", value="moderator"),
-            app_commands.Choice(name="Manager", value="manager")
-        ]
-    )
+    @app_commands.command(name="seroles")
     async def setroles(self, interaction: discord.Interaction, option: str, role: discord.Role):
         await interaction.response.defer()
         try:
@@ -419,8 +398,45 @@ class LogPageSelect(discord.ui.Select):
 class ModerationCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
+        self.command_help = open_file("storage/command_help.json")
         self.bot.tree.add_command(PurgeCommandGroup(self.bot))
+        
+        for command in self.__cog_app_commands__:
+            if isinstance(command, app_commands.Command):
+                command_data = self.command_help.get("moderation", {}).get(command.name)
+                if command_data:
+                    command.description = command_data["description"]
+                    if "parameters" in command_data:
+                        for param_name, param_desc in command_data["parameters"].items():
+                            if param_name in command._params:
+                                command._params[param_name].description = param_desc
+
+    async def get_command_help_embed(self, command_name: str) -> discord.Embed:
+        """Creates a help embed for a command using the loaded command help data"""
+        command_data = self.command_help.get("moderation", {}).get(command_name)
+        if not command_data:
+            return None
+
+        embed = discord.Embed(
+            title=f"Command: {command_name}",
+            description=command_data.get("description", "No description available."),
+            color=discord.Color.blue()
+        )
+
+        if "parameters" in command_data:
+            parameters = []
+            for param_name, param_desc in command_data["parameters"].items():
+                parameters.append(f"• **{param_name}**: {param_desc}")
+            
+            if parameters:
+                embed.add_field(
+                    name="Parameters",
+                    value="\n".join(parameters),
+                    inline=False
+                )
+
+        embed.set_footer(text="<> = required, [] = optional")
+        return embed
 
     @commands.command(name="purge")
     @commands.has_permissions(manage_messages=True)
@@ -454,8 +470,7 @@ class ModerationCog(commands.Cog):
             bot=self.bot
         )
 
-    @app_commands.command(name="clean", description="Clean the bot's messages")
-    @app_commands.describe(amount="Amount to delete (Default: 10)")
+    @app_commands.command(name="clean")
     async def clean(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -479,8 +494,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="role", description="Toggle a role for a member")
-    @app_commands.describe(member="Member to manage roles for", role="Role to manage", reason="Reason for management")
+    @app_commands.command(name="role")
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
         await interaction.response.defer()
         try:
@@ -513,12 +527,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="lock", description="Lock a channel.")
-    @app_commands.describe(
-        channel="The channel to lock (default is the current channel)",
-        role="The role to lock the channel for (default is 'Member')",
-        reason="The reason for locking the channel (default is 'No reason provided')",
-    )
+    @app_commands.command(name="lock")
     async def lock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
@@ -569,12 +578,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="unlock", description="Unlock a channel.")
-    @app_commands.describe(
-        channel="The channel to unlock (default is the current channel)",
-        role="The role to unlock the channel for (default is 'Member')",
-        reason="The reason for unlocking the channel (default is 'No reason provided')",
-    )
+    @app_commands.command(name="unlock")
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
@@ -622,8 +626,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="slowmode", description="Sets or removes the slowmode delay for the channel.")
-    @app_commands.describe(delay="Slowmode in seconds (max of 21600, omit for no slowmode)")
+    @app_commands.command(name="slowmode")
     @app_commands.checks.has_permissions(manage_messages=True)
     async def slowmode(self, interaction: discord.Interaction, channel: discord.TextChannel = None, delay: int = None):
         await interaction.response.defer()
@@ -669,8 +672,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="nick", description="Changes a member's nickname.")
-    @app_commands.describe(member="The member to manage nicknames for", new_nick="The new nickname of the member")
+    @app_commands.command(name="nick")
     @app_commands.checks.has_permissions(manage_nicknames=True)
     async def nick(self, interaction: discord.Interaction, member: discord.Member, new_nick: str):
         await interaction.response.defer()
@@ -701,12 +703,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="mute", description="Mutes a member for a specified duration")
-    @app_commands.describe(
-        member="Member to mute",
-        duration="Duration of the mute",
-        reason="Reason for the mute"
-    )
+    @app_commands.command(name="mute")
     async def mute(self, interaction: discord.Interaction, member: discord.Member, duration: str, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
@@ -741,7 +738,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="unmute", description="Unmutes a user.")
+    @app_commands.command(name="unmute")
     async def unmute(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
@@ -764,7 +761,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="kick", description="Kick a member out of the guild.")
+    @app_commands.command(name="kick")
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No Reason Provided."):
         await interaction.response.defer()
         try:
@@ -787,12 +784,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="warn", description="Warns a user.")
-    @app_commands.describe(
-        member="The member to warn.", 
-        reason="Reason for the warn.",
-        auto_mute="If the member will be automatically muted (3+ warnings)."
-    )
+    @app_commands.command(name="warn")
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str, auto_mute: bool = False):
         await interaction.response.defer()
         try:
@@ -867,8 +859,7 @@ class ModerationCog(commands.Cog):
             await handle_logs(interaction, e)
 
 
-    @app_commands.command(name="warns", description="Displays the warnings for a user.")
-    @app_commands.describe(member="The member whose warnings you want to check.", page="The page number to view")
+    @app_commands.command(name="warns")
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
@@ -899,8 +890,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="note", description="Gives a note to a user.")
-    @app_commands.describe(member="The member to add a note to", note="Whatever you want to say")
+    @app_commands.command(name="note")
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
         await interaction.response.defer()
         try:
@@ -924,8 +914,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="notes", description="Displays the notes for a member")
-    @app_commands.describe(member="The member whose notes you want to view.", page="The page number to view")
+    @app_commands.command(name="notes")
     async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
@@ -954,7 +943,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="modlogs", description="View moderation logs for a user.")
+    @app_commands.command(name="modlogs")
     async def modlogs(self, interaction: discord.Interaction, member: discord.Member, page: int = 1):
         await interaction.response.defer()
         try:
@@ -975,7 +964,7 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="modstats", description="Check the moderation statistics of a moderator")
+    @app_commands.command(name="modstats")
     async def modstats(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -1158,11 +1147,18 @@ class ModerationCog(commands.Cog):
             if isinstance(error, discord.ext.commands.errors.CommandNotFound):
                 return
             
+            if isinstance(error, commands.MissingRequiredArgument):
+                command_name = ctx.command.name
+                help_embed = await self.get_command_help_embed(command_name)
+                if help_embed:
+                    help_embed.title = f"Missing Required Argument: {error.param.name}"
+                    await ctx.send(embed=help_embed, delete_after=30)
+                    return
+            
             interaction = await create_interaction(ctx)
             await handle_logs(interaction, error)
         except Exception as e:
             await ctx.send(f"An error occurred: {str(e)}", delete_after=5)
-            await ctx.message.clear_reactions()
 
 async def setup(bot):
     await bot.add_cog(ModerationCog(bot))

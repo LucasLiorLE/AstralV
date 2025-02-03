@@ -1,6 +1,7 @@
 from bot_utils import (
     handle_logs,
-    osuAPI
+    osuAPI,
+    open_file
 )
 
 import discord
@@ -12,9 +13,19 @@ from ossapi import UserLookupKey
 class OsuCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="osu", description="Osu related commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("osu", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
-    @app_commands.command(name="profile", description="Get osu! profile information")
-    @app_commands.describe(username="Username to get data from")
+    @app_commands.command(name="profile")
     async def osuprofile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:

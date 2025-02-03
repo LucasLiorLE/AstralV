@@ -1,7 +1,8 @@
 from bot_utils import (
     handle_logs,
     mc_fetchUUID,
-    hypixelAPI
+    hypixelAPI,
+    open_file
 )
 
 import discord
@@ -78,14 +79,12 @@ class HypixelView(View):
             timestamp=datetime.now(timezone.utc)
         )
 
-        # inline=True (Automatically like it)
-
-        embed.add_field(name="SkyWars Level", value=f"{skywars_level.replace("§", "")}")
-        embed.add_field(name="Souls", value=f"{souls:,}") # I spent 10 mins debugging this just to find out I put add_filed
+        embed.add_field(name="SkyWars Level", value=f"{skywars_level.replace('§', '')}")
+        embed.add_field(name="Souls", value=f"{souls:,}")
         embed.add_field(name="Coins", value=f"{coins:,}")
         embed.add_field(name="Kills", value=f"{kills:,}")
         embed.add_field(name="Deaths", value=f"{deaths:,}")
-        embed.add_field(name="K/D Ratio", value=f"{kills / deaths if deaths > 0 else kills:.2f}") # Thinking about doing this instead of percentage for some of them.
+        embed.add_field(name="K/D Ratio", value=f"{kills / deaths if deaths > 0 else kills:.2f}")
         embed.add_field(name="Wins", value=f"{wins:,}")
         embed.add_field(name="Games Played", value=f"{games_played:,}")
         embed.add_field(name="Win Streak", value=f"{win_streak:,}")
@@ -316,6 +315,17 @@ class HypixelView(View):
 class HypixelCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="hypixel", description="Base Hypixel commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("hypixel", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
     @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
     @app_commands.describe(username="Their Minecraft username.")
@@ -710,6 +720,19 @@ class SkyblockView(View):
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="sb", description="Hypixel skyblock commands")
+        
+        # Load command descriptions from JSON
+        self.command_help = open_file("storage/command_help.json").get("sb", {})
+        
+        # Set descriptions for commands  
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
     @app_commands.command(name="profile", description="Get a Hypixel Skyblock account's data")
     @app_commands.describe(

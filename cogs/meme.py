@@ -1,5 +1,6 @@
 from bot_utils import (
-    handle_logs
+    handle_logs,
+    open_file
 )
 
 import discord
@@ -17,9 +18,19 @@ from urllib.parse import quote
 class MemeCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.command_help = open_file("storage/command_help.json").get("meme", {})
+        
+        for command in self.__cog_app_commands__:
+            if isinstance(command, app_commands.Command):
+                command_data = self.command_help.get(command.name)
+                if command_data:
+                    command.description = command_data["description"]
+                    if "parameters" in command_data:
+                        for param_name, param_desc in command_data["parameters"].items():
+                            if param_name in command._params:
+                                command._params[param_name].description = param_desc
 
-    @app_commands.command(name="spongebob", description="Generates a Spongebob meme")
-    @app_commands.describe(text="The text you want to show on the paper")
+    @app_commands.command(name="spongebob")
     async def spongebob(self, interaction: discord.Interaction, text: str):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -33,8 +44,7 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="drakelikehate", description="Generates a Drake Like Hate meme")
-    @app_commands.describe(text1="The text for the 'Like' part", text2="The text for the 'Hate' part")
+    @app_commands.command(name="drakelikehate")
     async def drakelikehate(self, interaction: discord.Interaction, text1: str, text2: str):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -49,12 +59,7 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
             
-    @app_commands.command(name="petpet", description="Creates a pet-pet gif from a user's avatar, emoji, custom image URL, or uploaded file")
-    @app_commands.describe(
-        member="Use a member's avatar",
-        url="URL to an image to create a pet-pet gif (optional)",
-        attachment="File attachment to use for the pet-pet gif (optional)"
-    )
+    @app_commands.command(name="petpet")
     async def petpet(self, interaction: discord.Interaction, member: discord.Member = None, url: str = None, attachment: discord.Attachment = None):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -83,8 +88,7 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="dailystruggle", description="Generates a Daily Struggle meme")
-    @app_commands.describe(text1="The text for the right", text2="The text for the left")
+    @app_commands.command(name="dailystruggle")
     async def dailystruggle(self, interaction: discord.Interaction, text1: str, text2: str):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -101,13 +105,7 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="isthis", description="Generates an 'Is this' meme")
-    @app_commands.describe(
-        question="The bottom text (Question)", 
-        person="The top text (Person)",
-        image="The image URL to use (optional)",
-        attachment="Upload an image to use (optional)"
-    )
+    @app_commands.command(name="isthis")
     async def isthis(self, interaction: discord.Interaction, question: str, person: str, image: str = None, attachment: discord.Attachment = None):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -142,13 +140,7 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="custom", description="Generates a caption via a custom image")
-    @app_commands.describe(
-        text="The caption",
-        link="The image URL to use",
-        attachment="Upload an image to use",
-        ephemeral="Whether to hide the response (default: true)"
-    )
+    @app_commands.command(name="custom")
     async def custom(self, interaction: discord.Interaction, text: str, link: str = None, attachment: discord.Attachment = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -175,14 +167,7 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
             
-    @app_commands.command(name="caption", description="Generates a caption on an image")
-    @app_commands.describe(
-        text="The caption",
-        link="The image URL to use",
-        attachment="Upload an image to use",
-        layout="The caption layout (top or default)",
-        ephemeral="Whether to hide the response (default: true)"
-    )
+    @app_commands.command(name="caption")
     @app_commands.choices(layout=[app_commands.Choice(name="Top", value="top"), app_commands.Choice(name="Default", value="default")])
     async def caption(self, interaction: discord.Interaction, text: str, link: str = None, attachment: discord.Attachment = None, layout: str = "top", ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)

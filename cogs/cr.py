@@ -179,9 +179,18 @@ class ProfileView(View):
 class ClashRoyaleCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="cr", description="Clash Royale related commands")
-            
-    @app_commands.command(name="connect", description="Connect your Clash Royale profile.")
-    @app_commands.describe(tag="Your player tag")
+        
+        self.command_help = open_file("storage/command_help.json").get("cr", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command.description = self.command_help[command.name]["description"]
+                if "parameters" in self.command_help[command.name]:
+                    for param_name, param_desc in self.command_help[command.name]["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
+
+    @app_commands.command(name="connect")
     async def crconnect(self, interaction: discord.Interaction, tag: str):
         await interaction.response.defer()
         try:
@@ -225,8 +234,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="profile", description="Get Clash Royale player profile data")
-    @app_commands.describe(tag="The user's tag (The one with the #, optional)", user="The user ID of the member (optional)")
+    @app_commands.command(name="profile")
     async def crprofile(self, interaction: discord.Interaction, tag: str = None, user: discord.User = None):
         await interaction.response.defer()
         try:
@@ -256,8 +264,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="clan", description="Get data about a Clash Royale clan")
-    @app_commands.describe(clantag="The clan's tag (the one with the #)")
+    @app_commands.command(name="clan")
     async def crclan(self, interaction: discord.Interaction, clantag: str):
         await interaction.response.defer()
         try:

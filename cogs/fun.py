@@ -1,6 +1,7 @@
 from bot_utils import (
     handle_logs,
-    check_mod
+    check_mod,
+    open_file
 )
 
 import discord
@@ -14,24 +15,21 @@ from aiohttp import ClientSession
 class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.command_help = open_file("storage/command_help.json").get("fun", {})
+        
+        for command in self.__cog_app_commands__:
+            if isinstance(command, app_commands.Command):
+                command_data = self.command_help.get(command.name)
+                if command_data:
+                    command.description = command_data["description"]
+                    if "parameters" in command_data:
+                        for param_name, param_desc in command_data["parameters"].items():
+                            if param_name in command._params:
+                                command._params[param_name].description = param_desc
 
-    @app_commands.command(name="say", description="Say a message in a channel.")
-    @app_commands.describe(
-        channel="The channel to send the message to.",
-        message="The message to send",
-        attachment="An optional attachment to include.",
-        message_id="An optional message to reply to.",
-        ephemeral="Whether the interaction will be ephemeral or not."
-    )
-    async def say(
-        self,
-        interaction: discord.Interaction,
-        channel: discord.TextChannel,
-        message: str = None,
-        attachment: discord.Attachment = None,
-        message_id: str = None,
-        ephemeral: bool = True 
-    ):
+    @app_commands.command(name="say")
+    async def say(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str = None, 
+                  attachment: discord.Attachment = None, message_id: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             if not await check_mod(interaction, "manage_messages"):
@@ -59,19 +57,9 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="dm", description="Directly message a person.")
-    @app_commands.describe(
-        member="The member to DM.",
-        message="The message to send to them.",
-        attachment="An optional attachment to include.",
-    )
-    async def dm(
-        self,
-        interaction: discord.Interaction,
-        member: discord.Member,
-        message: str = None,
-        attachment: discord.Attachment = None,
-    ):
+    @app_commands.command(name="dm")
+    async def dm(self, interaction: discord.Interaction, member: discord.Member, message: str = None,
+                attachment: discord.Attachment = None):
         await interaction.response.defer()
         try:
             try:
@@ -90,8 +78,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="fact", description="Fetches a random fact.")
+    @app_commands.command(name="fact")
     async def fact(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -109,8 +96,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="joke", description="Fetches a random joke.")
+    @app_commands.command(name="joke")
     async def joke(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -131,8 +117,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="cat", description="Fetches a cute cat picture.")
+    @app_commands.command(name="cat")
     async def cat(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -151,8 +136,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="dog", description="Fetches an adorable dog picture.")
+    @app_commands.command(name="dog")
     async def dog(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -171,8 +155,7 @@ class FunCog(commands.Cog):
             
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="duck", description="Fetches a random duck GIF.")
+    @app_commands.command(name="duck")
     async def duck(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -194,8 +177,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="quote", description="Fetches an inspirational quote.")
+    @app_commands.command(name="quote")
     async def quote(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -213,8 +195,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="meme", description="Fetches a funny meme!")
+    @app_commands.command(name="meme")
     async def meme(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -235,8 +216,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(question="Ask it a question!")
-    @app_commands.command(name='8ball', description='Ask the magic 8-ball a question')
+    @app_commands.command(name='8ball')
     async def eight_ball(self, interaction: discord.Interaction, question: str):
         await interaction.response.defer()
         try:
@@ -265,8 +245,7 @@ class FunCog(commands.Cog):
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
-    @app_commands.describe(ephemeral="If the message is hidden (Useful if no perms).")
-    @app_commands.command(name="xkcd", description="Fetches a random xkcd comic.")
+    @app_commands.command(name="xkcd")
     async def xkcd(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:

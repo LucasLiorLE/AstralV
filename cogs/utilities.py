@@ -15,12 +15,19 @@ from discord import app_commands
 class ReminderGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="reminder", description="Set and manage reminders")
+        
+        self.command_help = open_file("storage/command_help.json").get("reminder", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
-    @app_commands.command(name="add", description="Set a new reminder.")
-    @app_commands.describe(
-        duration="Time until reminder (format: 1d2h3m4s).",
-        reminder="What to remind you about."
-    )
+    @app_commands.command(name="add")
     async def add(self, interaction: discord.Interaction, duration: str, reminder: str):
         await interaction.response.defer()
         try:
@@ -77,7 +84,7 @@ class ReminderGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="list", description="List all your active reminders.")
+    @app_commands.command(name="list") 
     async def list(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -102,8 +109,7 @@ class ReminderGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="remove", description="Remove a reminder by its ID.")
-    @app_commands.describe(id="The ID of the reminder to remove.")
+    @app_commands.command(name="remove")
     async def remove(self, interaction: discord.Interaction, id: str):
         await interaction.response.defer()
         try:
@@ -130,10 +136,10 @@ class ReminderGroup(app_commands.Group):
 class UtilCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.command_help = open_file("storage/command_help.json")
         self.bot.tree.add_command(ReminderGroup())
 
-    @app_commands.command(name="afk", description="AFK and set a status of why.")
-    @app_commands.describe(reason="Your reason to AFK.")
+    @app_commands.command(name="afk")
     async def afk(self, interaction: discord.Interaction, reason: str = None):
         await interaction.response.defer(ephemeral=True)
         try:

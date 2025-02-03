@@ -1,5 +1,6 @@
 from bot_utils import (
-	handle_logs
+	handle_logs,
+	open_file
 )
 
 import discord
@@ -16,6 +17,17 @@ from urllib.parse import urlparse
 class VideoGroup(app_commands.Group):
 	def __init__(self):
 		super().__init__(name="video", description="Video manipulation commands")
+		
+		self.command_help = open_file("storage/command_help.json").get("video", {})
+		
+		for command in self.commands:
+			if command.name in self.command_help:
+				command_data = self.command_help[command.name]
+				command.description = command_data["description"]
+				if "parameters" in command_data:
+					for param_name, param_desc in command_data["parameters"].items():
+						if param_name in command._params:
+							command._params[param_name].description = param_desc
 
 	async def process_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None):
 		if video is None and link is None:
@@ -206,13 +218,7 @@ class VideoGroup(app_commands.Group):
 					except Exception:
 						pass
 				
-	@app_commands.command(name="speed", description="Change the speed of an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to change the speed of.",
-		link="The link to the video you want to change the speed of.",
-		factor="The factor you want to change the speed by.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="speed")
 	async def speed_video(self, interaction: discord.Interaction, factor: float, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 		
@@ -230,12 +236,7 @@ class VideoGroup(app_commands.Group):
 		except Exception as e:
 			await handle_logs(interaction, e)
 
-	@app_commands.command(name="reverse", description="Reverse an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to reverse.",
-		link="The link to the video you want to reverse.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="reverse")
 	async def reverse_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 
@@ -253,12 +254,7 @@ class VideoGroup(app_commands.Group):
 		except Exception as e:
 			await handle_logs(interaction, e)
 
-	@app_commands.command(name="mute", description="Mute an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to mute.",
-		link="The link to the video you want to mute.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="mute")
 	async def mute_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 
@@ -276,13 +272,7 @@ class VideoGroup(app_commands.Group):
 		except Exception as e:
 			await handle_logs(interaction, e)
 
-	@app_commands.command(name="sharpness", description="Sharpen an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to sharpen.",
-		link="The link to the video you want to sharpen.",
-		factor="The factor you want to sharpen the video by. (Max: 5)",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="sharpness")
 	async def sharpen_video(self, interaction: discord.Interaction, factor: float, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 
@@ -303,13 +293,7 @@ class VideoGroup(app_commands.Group):
 		except Exception as e:
 			await handle_logs(interaction, e)
 
-	@app_commands.command(name="random", description="Apply random effects to an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to apply random effects to.",
-		link="The link to the video you want to apply random effects to.",
-		amount="The amount of random effects to apply.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="random")
 	async def random_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None, amount: int = 3, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 		try:
@@ -337,16 +321,7 @@ class VideoGroup(app_commands.Group):
 
 	# Singular/Nonrandom commands:
 
-	@app_commands.command(name="crop", description="Crop an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to crop.",
-		link="The link to the video you want to crop.",
-		x="The x coordinate to start cropping from.",
-		y="The y coordinate to start cropping from.",
-		width="The width of the cropped video.",
-		height="The height of the cropped video.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="crop")
 	async def crop_video(self, interaction: discord.Interaction, x: int, y: int,  width: int, height: int, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 
@@ -385,14 +360,7 @@ class VideoGroup(app_commands.Group):
 		except Exception as e:
 			await handle_logs(interaction, e)
 
-	@app_commands.command(name="trim", description="Trim an uploaded video")
-	@app_commands.describe(
-		video="The video file you want to trim.",
-		link="The link to the video you want to trim.",
-		start="The start time to trim from.",
-		end="The end time to trim to.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="trim")
 	async def trim_video(self, interaction: discord.Interaction, start: int, end: int, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 
@@ -431,14 +399,7 @@ class VideoGroup(app_commands.Group):
 		except Exception as e:
 			await handle_logs(interaction, e)
 
-	@app_commands.command(name="concat", description="Concatenate two uploaded videos")
-	@app_commands.describe(
-		video1="The first video file you want to concatenate.",
-		video2="The second video file you want to concatenate.",
-		link1="The link to the first video you want to concatenate.",
-		link2="The link to the second video you want to concatenate.",
-		ephemeral="If the message is hidden (Useful if no perms)"
-	)
+	@app_commands.command(name="concat")
 	async def concat_video(self, interaction: discord.Interaction, video1: discord.Attachment = None, 
 						video2: discord.Attachment = None, link1: str = None, link2: str = None, 
 						ephemeral: bool = True):

@@ -70,9 +70,19 @@ async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, serve
 class GiveawayGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="giveaway", description="Giveaway related commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("giveaway", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
-    @app_commands.command(name="reroll", description="Rerolls a giveaway's winner/s")
-    @app_commands.describe(id="ID of the giveaway", winners="Number of winners to reroll")
+    @app_commands.command(name="reroll")
     async def greroll(self, interaction: discord.Interaction, id: str, winners: int):
         await interaction.response.defer()
         try:
@@ -109,14 +119,7 @@ class GiveawayGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="create", description="Creates a giveaway")
-    @app_commands.describe(
-        prize="The prize of the giveaway",
-        duration="Duration of the giveaway. Ex. 1d6h30m15s",
-        description="An optional description to add",
-        requirement="A role required to join the giveaway",
-        winners="The number of people who will win the giveaway"
-    )
+    @app_commands.command(name="create")
     async def ggiveaway(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
         await interaction.response.defer()
         try:
@@ -170,6 +173,81 @@ class GiveawayGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
+class AlertGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="alert", description="Used for updates, and allows you to follow along!")
+        
+        self.command_help = open_file("storage/command_help.json").get("alert", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
+
+    @app_commands.command(name="follow")
+    async def alert_follow(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        try:
+            member_info = open_file("storage/member_info.json")
+            user = interaction.user.id
+
+            if user not in member_info:
+                member_info[user] = {
+                    "subscribed": 0
+                }
+            
+            if member_info[user]["subscribed"] == 0:
+                member_info[user]["subscribed"] = 1
+                await interaction.followup.send("You are now subscribed to updates!")
+            else:
+                member_info[user]["subscribed"] = 0
+                await interaction.followup.send("You are now unsubscribed from updates!")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="send") 
+    @app_commands.choices(
+        type=[
+            app_commands.Choice(name="Alert", value="alert"),
+            app_commands.Choice(name="Update", value="update"),
+            app_commands.Choice(name="Warning", value="warning")
+        ]
+    )
+    async def alert_send(self, interaction: discord.Interaction, type: str, description: str):
+        await interaction.response.defer()
+        try:
+            if interaction.user.id not in botAdmins:
+                await interaction.followup.send("You do not have permission to use this command.")
+                return
+
+            alertIDs = []
+            successess = 0
+            member_info = open_file("storage/member_info.json")
+            for member in member_info:
+                if member_info[member]["subscribed"] == 1:
+                    alertIDs.append(member)
+
+            embed=discord.Embed(
+                title="New update!" if type.value == "update" else "ALERT" if type.value == "alert" else "WARNING",
+                description=description
+            )
+
+            for id in alertIDs:
+                try:
+                    user = await self.bot.fetch_user(id)
+                    await user.send(embed=embed)
+                    successess += 1
+                except Exception as e:
+                    pass
+
+            await interaction.response.send_message(f"Sent alert to {successess}/{len(alertIDs)} users.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
 class GiveawayButtonView(discord.ui.View):
     def __init__(self, giveaway_id: str, server_id: str):
         super().__init__(timeout=None)
@@ -220,74 +298,6 @@ class GiveawayButtonView(discord.ui.View):
 
         except KeyError as ke:
             await interaction.response.send_message("An error occurred: Giveaway not found.", ephemeral=True)
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-class AlertGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="alert", description="Used for updates, and allows you to follow along!")
-
-    @app_commands.command(name="follow", description="Subscribe or unsubscribe from updates")
-    async def alert_follow(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        try:
-            member_info = open_file("storage/member_info.json")
-            user = interaction.user.id
-
-            if user not in member_info:
-                member_info[user] = {
-                    "subscribed": 0
-                }
-            
-            if member_info[user]["subscribed"] == 0:
-                member_info[user]["subscribed"] = 1
-                await interaction.followup.send("You are now subscribed to updates!")
-            else:
-                member_info[user]["subscribed"] = 0
-                await interaction.followup.send("You are now unsubscribed from updates!")
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @app_commands.command(name="send", description="Sends an update to all subscribed users")
-    @app_commands.describe(
-        type="The type of alert",
-        description="Provide a brief description of what's going on",
-    )
-    @app_commands.choices(
-        type=[
-            app_commands.Choice(name="Alert", value="alert"),
-            app_commands.Choice(name="Update", value="update"),
-            app_commands.Choice(name="Warning", value="warning")
-        ]
-    )
-    async def alert_send(self, interaction: discord.Interaction, type: str, description: str):
-        await interaction.response.defer()
-        try:
-            if interaction.user.id not in botAdmins:
-                await interaction.followup.send("You do not have permission to use this command.")
-                return
-
-            alertIDs = []
-            successess = 0
-            member_info = open_file("storage/member_info.json")
-            for member in member_info:
-                if member_info[member]["subscribed"] == 1:
-                    alertIDs.append(member)
-
-            embed=discord.Embed(
-                title="New update!" if type.value == "update" else "ALERT" if type.value == "alert" else "WARNING",
-                description=description
-            )
-
-            for id in alertIDs:
-                try:
-                    user = await self.bot.fetch_user(id)
-                    await user.send(embed=embed)
-                    successess += 1
-                except Exception as e:
-                    pass
-
-            await interaction.response.send_message(f"Sent alert to {successess}/{len(alertIDs)} users.")
         except Exception as e:
             await handle_logs(interaction, e)
 

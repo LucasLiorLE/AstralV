@@ -45,79 +45,29 @@ async def handle_eco_shop():
 class MarketGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="market", description="Not coming soon.")
+        self.command_help = open_file("storage/command_help.json").get("economy", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command.description = self.command_help[command.name]["description"]
+                if "parameters" in self.command_help[command.name]:
+                    for param_name, param_desc in self.command_help[command.name]["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
 class ShopGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="shop", description="Shop commands.")
-
-    @app_commands.command(name="view", description="View the shop.")
-    async def view(self, interaction: discord.Interaction):
-        await interaction.response.defer()
-        try:
-            if not SHOP:
-                await handle_eco_shop()
-
-            embed = discord.Embed(title="Shop Items", color=discord.Color.blue())
-            for item in SHOP:
-                amount = "Infinity" if item["amount"] == -1 else item["amount"]
-                # Replace underscores with spaces in display name
-                display_name = item['item'].replace("_", " ").title()
-                embed.add_field(
-                    name=f"{display_name}",
-                    value=f"**Price**: {item['price']}\n**Amount Left**: {amount}\n**Description**: {item['description']}\n**Type**: {item['type']}",
-                    inline=False
-                )
-
-            await interaction.followup.send(embed=embed)
-        except Exception as e:
-            handle_logs(interaction, e)
-
-    @app_commands.command(name="buy", description="Buy an item from the shop.")
-    async def buy(self, interaction: discord.Interaction, item_name: str, quantity: int = 1):
-        await interaction.response.defer()
-        try:
-            if not SHOP:
-                await handle_eco_shop()
-
-            user_id = str(interaction.user.id)
-            eco = open_file(eco_path)
-            
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
-            
-            for item in SHOP:
-                if item["item"].lower() == item_name.lower():
-                    total_cost = item["price"] * quantity
-                    
-                    if eco[user_id]["balance"]["purse"] < total_cost:
-                        await interaction.followup.send("You don't have enough coins!", ephemeral=True)
-                        return
-                        
-                    if item["amount"] != -1 and item["amount"] < quantity:
-                        await interaction.followup.send(f"Not enough {item_name} in stock!", ephemeral=True)
-                        return
-
-                    if "inventory" not in eco[user_id]:
-                        eco[user_id]["inventory"] = {}
-
-                    if item["item"] in eco[user_id]["inventory"]:
-                        eco[user_id]["inventory"][item["item"]] += quantity
-                    else:
-                        eco[user_id]["inventory"][item["item"]] = quantity
-
-                    eco[user_id]["balance"]["purse"] -= total_cost
-                    
-                    if item["amount"] != -1:
-                        item["amount"] -= quantity
-
-                    save_file(eco_path, eco)
-                    await interaction.followup.send(f"You bought {quantity}x {item_name} for {total_cost:,} coins.")
-                    return
-
-            await interaction.followup.send(f"Item {item_name} not found in the shop.", ephemeral=True)
-        except Exception as e:
-            handle_logs(interaction, e)
+        self.command_help = open_file("storage/command_help.json").get("economy", {}).get("shop", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help.get("subcommands", {}):
+                cmd_data = self.command_help["subcommands"][command.name]
+                command.description = cmd_data["description"]
+                if "parameters" in cmd_data:
+                    for param_name, param_desc in cmd_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
 class AuctionGroup(app_commands.Group):
     def __init__(self):
@@ -149,10 +99,21 @@ def find_closest_item(search_term: str, shop_items: list) -> str:
 class EconomyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.command_help = open_file("storage/command_help.json").get("economy", {})
         handle_eco_shop.start()
         bot.tree.add_command(MarketGroup())
         bot.tree.add_command(ShopGroup())
         bot.tree.add_command(AuctionGroup())
+
+        for command in self.__cog_app_commands__:
+            if isinstance(command, app_commands.Command):
+                command_data = self.command_help.get(command.name)
+                if command_data:
+                    command.description = command_data["description"]
+                    if "parameters" in command_data:
+                        for param_name, param_desc in command_data["parameters"].items():
+                            if param_name in command._params:
+                                command._params[param_name].description = param_desc
 
     def cog_unload(self):
         handle_eco_shop.cancel()

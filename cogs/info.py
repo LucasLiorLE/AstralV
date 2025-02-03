@@ -55,6 +55,18 @@ class AvatarGroup(app_commands.Group):
 class InfoCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.start_time = datetime.now(timezone.utc)
+        self.command_help = open_file("storage/command_help.json")
+        
+        for command in self.__cog_app_commands__:
+            if isinstance(command, app_commands.Command):
+                command_data = self.command_help.get("info", {}).get(command.name)
+                if command_data:
+                    command.description = command_data["description"]
+                    if "parameters" in command_data:
+                        for param_name, param_desc in command_data["parameters"].items():
+                            if param_name in command._params:
+                                command._params[param_name].description = param_desc
 
         self.bot.tree.add_command(AvatarGroup())
 
@@ -78,41 +90,72 @@ class InfoCog(commands.Cog):
             total_exp += 5 * (l ** 2) + 50 * l + 100
         return total_exp
 
-    @app_commands.command(name="help", description="Get details about a specific command.")
-    @app_commands.describe(command="The command you'd like to learn about.")
-    async def help_command(self, interaction: discord.Interaction, command: str):
-        commands_data = open_file("info/commands.json")
-        for _, group_commands in commands_data.items():
-            for cmd_name, cmd_details in group_commands.items():
-                if cmd_name.lower() == command.lower():
-                    arguments = cmd_details.get("arguments", {})
-                    required_args = [f"[{arg}]" for arg, details in arguments.items() if details.get("required", False)]
-                    optional_args = [f"({arg})" for arg, details in arguments.items() if not details.get("required", False)]
-                    arg_list = " ".join(required_args + optional_args)
+    @app_commands.command(name="help")
+    async def help(self, interaction: discord.Interaction, command: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            if command:
+                for category, commands in self.command_help.items():
+                    if isinstance(commands, dict):
+                        if command in commands:
+                            cmd_data = commands[command]
+                            embed = discord.Embed(
+                                title=f"Help: {command}",
+                                description=cmd_data.get("description", "No description available."),
+                                color=discord.Color.blue()
+                            )
+                            
+                            if "parameters" in cmd_data:
+                                params = []
+                                for param_name, param_desc in cmd_data["parameters"].items():
+                                    params.append(f"• **{param_name}**: {param_desc}")
+                                if params:
+                                    embed.add_field(
+                                        name="Parameters",
+                                        value="\n".join(params),
+                                        inline=False
+                                    )
+                            
+                            if "subcommands" in cmd_data:
+                                subcmds = []
+                                for subcmd_name, subcmd_data in cmd_data["subcommands"].items():
+                                    subcmds.append(f"• **{subcmd_name}**: {subcmd_data['description']}")
+                                if subcmds:
+                                    embed.add_field(
+                                        name="Subcommands",
+                                        value="\n".join(subcmds),
+                                        inline=False
+                                    )
+                            
+                            await interaction.followup.send(embed=embed)
+                            return
+                
+                # If command not found in any category
+                await interaction.followup.send(f"No help found for command: {command}")
+                return
 
-                    embed = discord.Embed(
-                        title=f"/{cmd_name.lower()} {arg_list}",
-                        description=cmd_details.get("description", "No description provided."),
-                        color=discord.Color.blue()
-                    )
-                    
-                    if "example" in cmd_details:
-                        embed.add_field(name="Example", value=cmd_details["example"], inline=False)
+            # If no specific command requested, show categories
+            embed = discord.Embed(
+                title="Command Categories",
+                description="Here are all available command categories.\nUse `/help <command>` for detailed help on a command.",
+                color=discord.Color.blue()
+            )
 
-                    for arg_name, arg_details in arguments.items():
-                        arg_info = (
-                            f"**Required**: {arg_details.get('required', False)}\n"
-                            f"**Default**: {arg_details.get('default', 'None')}\n"
-                            f"**Type**: {arg_details.get('type', 'Unknown')}\n"
-                            f"**Description**: {arg_details.get('description', 'No description provided.')}")
-                        embed.add_field(name=arg_name.title(), value=arg_info, inline=False)
+            for category, commands in self.command_help.items():
+                if isinstance(commands, dict) and category not in ["modlogs", "warn", "mute"]:
+                    cmd_list = [f"`{cmd}`" for cmd in commands.keys() if not isinstance(commands[cmd], dict)]
+                    if cmd_list:
+                        embed.add_field(
+                            name=category.title(),
+                            value=", ".join(cmd_list),
+                            inline=False
+                        )
 
-                    embed.set_footer(text="[Required Arguments] (Optional Arguments)")
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
-                    return
+            await interaction.followup.send(embed=embed)
 
-        await interaction.response.send_message(f"Command `{command}` not found. This command is not done.", ephemeral=True)
-        
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     @app_commands.command(name="level", description="View your level globally or in your guild.")
     @app_commands.describe(where="Where you want to view your level.")
     @app_commands.choices(
@@ -232,6 +275,7 @@ class InfoCog(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
+            _t = target_exp
             if target_level is None and target_exp is None:
                 await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
                 return
@@ -260,24 +304,6 @@ class InfoCog(commands.Cog):
             if mee6_pro:
                 required_exp = int(required_exp / 1.5)
 
-            embed = discord.Embed(
-                title="Mee6 Level Calculator",
-                color=discord.Color.blue()
-            )
-            
-            if target_exp is not None:
-                embed.add_field(
-                    name="Info", 
-                    value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}\nTarget Total EXP: {target_exp:,}", 
-                    inline=False
-                )
-            else:
-                embed.add_field(
-                    name="Info", 
-                    value=f"Current Level: {current_level}\nCurrent EXP: {current_exp:,}\nTarget Level: {target_level}", 
-                    inline=False
-                )
-
             if target_date:
                 try:
                     target = datetime.strptime(target_date, "%m/%d/%Y")
@@ -289,16 +315,7 @@ class InfoCog(commands.Cog):
                         return
                     
                     required_daily_exp = required_exp / days_until
-                    chat_hours_needed = required_daily_exp / 1200
-                    
-                    target_timestamp = int(target.timestamp())
-                    embed.description = (
-                        f"Calculation based on reaching the target by {target_date}\n"
-                        f"Estimated completion: <t:{target_timestamp}:F> (<t:{target_timestamp}:R>)"
-                    )
-                    embed.add_field(name="Days Until Target", value=f"{days_until:,}", inline=False)
-                    embed.add_field(name="Required Daily EXP", value=f"{required_daily_exp:,.0f}", inline=False)
-                    embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=False)
+                    completion_date = target
                 except ValueError:
                     await interaction.followup.send("Invalid date format! Use MM/DD/YYYY")
                     return
@@ -309,18 +326,49 @@ class InfoCog(commands.Cog):
                 
                 days_needed = round(required_exp / exp_per_day)
                 completion_date = datetime.now() + timedelta(days=days_needed)
-                completion_timestamp = int(completion_date.timestamp())
-                
-                embed.description = (
-                    f"Based on gaining {exp_per_day:,} EXP per day{' with Mee6 Pro boost' if mee6_pro else ''}\n"
-                    f"Estimated completion: <t:{completion_timestamp}:F> (<t:{completion_timestamp}:R>)"
-                )
-                embed.add_field(name="Estimated Days", value=f"{days_needed:,}", inline=False)
-                chat_hours_needed = exp_per_day / 1200
-                embed.add_field(name="Est. Daily Chat Hours", value=f"{chat_hours_needed:.1f}", inline=False)
+                required_daily_exp = exp_per_day
 
-            embed.add_field(name="Required Total EXP", value=f"{required_exp:,}", inline=False)
-            embed.add_field(name="Minimum Messages", value=f"{int(required_exp / 20):,}", inline=False)
+            embed = discord.Embed(
+                title="Mee6 Level Calculator",
+                color=discord.Color.blue()
+            )
+
+            main_info = (
+                f"Total Required EXP: {required_exp:,}\n"
+                f"Minimum/Estimated Messages: {int(required_exp / 20 * 1.8):,}\n"
+            )
+
+            if target_date:
+                target_timestamp = int(target.timestamp())
+                main_info += f"Estimated Days: {days_until:,}\n"
+                main_info += f"Estimated completion: <t:{target_timestamp}:F>"
+            else:
+                completion_timestamp = int(completion_date.timestamp())
+                main_info += f"Estimated Days: {days_needed:,}\n"
+                main_info += f"Estimated completion: <t:{completion_timestamp}:F>"
+
+            embed.add_field(name="Main Info", value=main_info, inline=False)
+
+            daily_chat_info = ""
+            chat_hours_needed = (exp_per_day if exp_per_day else required_daily_exp) / 1200
+            hours = int(chat_hours_needed)
+            minutes = int((chat_hours_needed - hours) * 60)
+            
+            daily_chat_info += f"Time: {hours} hours {minutes} minutes\n"
+            daily_chat_info += f"Messages: {int((exp_per_day if exp_per_day else required_daily_exp) / 20):,} minimum messages per day\n"
+            daily_chat_info += f"EXP: {int(exp_per_day if exp_per_day else required_daily_exp):,} exp per day"
+            
+            embed.add_field(name="Est. Daily Chat Info", value=daily_chat_info, inline=False)
+
+            other_info = (
+                f"Current Level/EXP: {current_level}/{current_exp:,}\n"
+                f"Target Level/EXP: {target_level}/{_t if _t else 0:,}\n"
+                f"Total current level EXP: {total_current_exp:,}\n"
+                f"Total target level EXP: {target_exp if target_exp else self.exp_required(target_level):,}"
+            )
+            
+            embed.add_field(name="Other Info", value=other_info, inline=False)
+
             embed.set_footer(text=f"Estimates based on 1.2k EXP per hour of chatting", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)

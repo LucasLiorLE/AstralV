@@ -1,5 +1,6 @@
 from bot_utils import (
-    handle_logs
+    handle_logs,
+    open_file
 )
 
 import discord
@@ -11,6 +12,17 @@ from aiohttp import ClientSession
 class GeometryDashCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="gd", description="Geometry Dash related commands")
+        
+        self.command_help = open_file("storage/command_help.json").get("gd", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
     @app_commands.command(name="profile", description="Fetch a Geometry Dash profile's data.")
     @app_commands.describe(username="The Geometry Dash username to fetch.")

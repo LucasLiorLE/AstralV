@@ -31,14 +31,19 @@ class UserphoneGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="userphone", description="Userphone commands allows you to talk to people in different servers!")
         self.rooms: Dict[str, Room] = {}
+        
+        self.command_help = open_file("storage/command_help.json").get("userphone", {})
+        
+        for command in self.commands:
+            if command.name in self.command_help:
+                command_data = self.command_help[command.name]
+                command.description = command_data["description"]
+                if "parameters" in command_data:
+                    for param_name, param_desc in command_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc
 
-    @app_commands.command(
-        name="create",
-        description="Create a userphone room"
-    )
-    @app_commands.describe(
-        password="Optional password to make the room private"
-    )
+    @app_commands.command(name="create")
     async def create(self, interaction: discord.Interaction, password: str = None):
         try:
             await interaction.response.defer()
@@ -66,15 +71,7 @@ class UserphoneGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(
-        name="join",
-        description="Join a userphone room"
-    )
-    @app_commands.describe(
-        room_id="The room ID to join (leave empty for random public room)",
-        password="Password for private rooms",
-        anonymous="Join as anonymous (all users will be anonymous in this room)"
-    )
+    @app_commands.command(name="join")
     async def join(self, interaction: discord.Interaction, room_id: str = None, password: str = None, anonymous: bool = False):
         try:
             await interaction.response.defer(ephemeral=False)
@@ -134,10 +131,7 @@ class UserphoneGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(
-        name="list",
-        description="List active userphone rooms"
-    )
+    @app_commands.command(name="list")
     async def list_rooms(self, interaction: discord.Interaction):
         try:
             if not self.rooms:
@@ -164,10 +158,7 @@ class UserphoneGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(
-        name="leave",
-        description="Leave the current userphone room"
-    )
+    @app_commands.command(name="leave") 
     async def leave(self, interaction: discord.Interaction):
         try:
             channel_id = str(interaction.channel_id)
@@ -196,10 +187,7 @@ class UserphoneGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(
-        name="anonymous",
-        description="Toggle anonymous mode for yourself in the current room"
-    )
+    @app_commands.command(name="anonymous")
     async def toggle_anonymous(self, interaction: discord.Interaction):
         try:
             await interaction.response.defer(ephemeral=True)
