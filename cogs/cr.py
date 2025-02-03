@@ -3,6 +3,7 @@ from bot_utils import (
     save_file,
     cr_fetchClanData,
     cr_fetchPlayerData,
+    load_commands,
     handle_logs
 )
 
@@ -179,17 +180,9 @@ class ProfileView(View):
 class ClashRoyaleCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="cr", description="Clash Royale related commands")
-        
-        self.command_help = open_file("storage/command_help.json").get("cr", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command.description = self.command_help[command.name]["description"]
-                if "parameters" in self.command_help[command.name]:
-                    for param_name, param_desc in self.command_help[command.name]["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
 
+        load_commands(self.commands, "cr")
+        
     @app_commands.command(name="connect")
     async def crconnect(self, interaction: discord.Interaction, tag: str):
         await interaction.response.defer()

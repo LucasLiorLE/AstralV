@@ -1,4 +1,5 @@
 from bot_utils import (
+    load_commands,
     handle_logs,
     open_file
 )
@@ -18,17 +19,7 @@ from urllib.parse import quote
 class MemeCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.command_help = open_file("storage/command_help.json").get("meme", {})
-        
-        for command in self.__cog_app_commands__:
-            if isinstance(command, app_commands.Command):
-                command_data = self.command_help.get(command.name)
-                if command_data:
-                    command.description = command_data["description"]
-                    if "parameters" in command_data:
-                        for param_name, param_desc in command_data["parameters"].items():
-                            if param_name in command._params:
-                                command._params[param_name].description = param_desc
+        load_commands(self.__cog_app_commands__, "meme")
 
     @app_commands.command(name="spongebob")
     async def spongebob(self, interaction: discord.Interaction, text: str):

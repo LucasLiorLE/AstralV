@@ -1,4 +1,5 @@
 from bot_utils import (
+    load_commands,
     handle_logs, 
     store_log,
     open_file,
@@ -71,16 +72,7 @@ class GiveawayGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="giveaway", description="Giveaway related commands")
         
-        self.command_help = open_file("storage/command_help.json").get("giveaway", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "giveaway")
 
     @app_commands.command(name="reroll")
     async def greroll(self, interaction: discord.Interaction, id: str, winners: int):
@@ -177,16 +169,7 @@ class AlertGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="alert", description="Used for updates, and allows you to follow along!")
         
-        self.command_help = open_file("storage/command_help.json").get("alert", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "alert")
 
     @app_commands.command(name="follow")
     async def alert_follow(self, interaction: discord.Interaction):

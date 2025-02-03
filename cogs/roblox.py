@@ -4,7 +4,8 @@ from bot_utils import (
     rbx_fetchUserID,
     rbx_fetchUserBio,
     check_user,
-    handle_logs
+    handle_logs,
+    load_commands
 )
 
 import discord
@@ -18,17 +19,7 @@ from datetime import datetime
 class RobloxGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="roblox", description="Roblox account-related commands")
-        
-        self.command_help = open_file("storage/command_help.json").get("roblox", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "roblox")
 
     @app_commands.command(name="connect")
     async def rbxconnect(self, interaction: discord.Interaction, username: str):
@@ -322,200 +313,194 @@ class GloveView(View):
 class RobloxCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.command_help = open_file("storage/command_help.json")
         self.bot.tree.add_command(RobloxGroup())
 
-        # Add command description for standalone cgloves command
-        @app_commands.command(name="cgloves")
-        async def cgloves(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
-            cmd_data = self.command_help.get("cgloves", {})
-            cgloves.description = cmd_data.get("description")
-            if "parameters" in cmd_data:
-                for param_name, param_desc in cmd_data["parameters"].items():
-                    if param_name in cgloves._params:
-                        cgloves._params[param_name].description = param_desc
-            await interaction.response.defer(ephemeral=ephemeral)
-            try:
-                if username:
-                    roblox_id = await rbx_fetchUserID(username)
-                    if roblox_id is None:
-                        await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
-                        return
-                else:
-                    discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                    member_info = open_file("storage/member_info.json")
+        load_commands(self.__cog_app_commands__, "cgloves")
 
-                    if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
-                        await interaction.followup.send("The specified account (or yours) is not linked.")
-                        return
+    @app_commands.command(name="cgloves")
+    async def cgloves(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            if username:
+                roblox_id = await rbx_fetchUserID(username)
+                if roblox_id is None:
+                    await interaction.followup.send(f"Failed to retrieve Roblox ID for {username}.")
+                    return
+            else:
+                discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
+                member_info = open_file("storage/member_info.json")
 
-                    roblox_id = member_info[discord_user_id]["roblox_id"]
+                if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
+                    await interaction.followup.send("The specified account (or yours) is not linked.")
+                    return
 
-                gloves = open_file("storage/gloves.json")
-                all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
+                roblox_id = member_info[discord_user_id]["roblox_id"]
 
-                def split_into_chunks(lst, chunk_size):
-                    for i in range(0, len(lst), chunk_size):
-                        yield lst[i:i + chunk_size] # First time using yield in 6k lines of code
+            gloves = open_file("storage/gloves.json")
+            all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
 
-                badge_chunks = list(split_into_chunks(all_badge_ids, 99))
-                all_badge_data = []
+            def split_into_chunks(lst, chunk_size):
+                for i in range(0, len(lst), chunk_size):
+                    yield lst[i:i + chunk_size]
 
-                async with aiohttp.ClientSession() as session:
-                    for chunk in badge_chunks:
-                        url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={','.join(map(str, chunk))}"
-                        async with session.get(url) as response:
-                            if response.status == 200:
-                                data = await response.json()
-                                all_badge_data.extend(data["data"]) # I don't think I've ued extend in 6k lines of code either lol
-                            else:
-                                await interaction.followup.send("An error occurred while fetching the user's gloves.")
-                                return
+            badge_chunks = list(split_into_chunks(all_badge_ids, 99))
+            all_badge_data = []
 
-                    if not all_badge_data:
-                        await interaction.followup.send(f"No badges found for the user: {username if username else interaction.user.name}")
-                        return
-
-                    owned = [
-                        glove
-                        for glove, badge_ids in gloves.items()
-                        if all(
-                            any(badge.get("badgeId") == badge_id for badge in all_badge_data)
-                            for badge_id in badge_ids
-                        )
-                    ]
-                    not_owned = [glove for glove in gloves.keys() if glove not in owned]
-
-                    total_gloves = len(gloves)
-                    owned_gloves = len(owned)
-                    glove_percentage = (owned_gloves / total_gloves) * 100
-                    glove_percentage_str = f"{glove_percentage:.1f}"
-
-                    glove_embed = discord.Embed(
-                        title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
-                        description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
-                        color=interaction.user.top_role.color or 0xFF0000,
-                    )
-                    glove_embed.add_field(
-                        name="OWNED", 
-                        value=", ".join(owned) if owned else "None", 
-                        inline=False
-                    )
-                    glove_embed.add_field(
-                        name="NOT OWNED",
-                        value=", ".join(not_owned) if not_owned else "None",
-                        inline=False,
-                    )
-
-                    obtained_gloves = {
-                        glove: badge["awardedDate"]
-                        for glove, badge_ids in gloves.items()
-                        for badge_id in badge_ids
-                        for badge in all_badge_data
-                        if badge.get("badgeId") == badge_id
-                    }
-
-                    additional_badges = {
-                        "Welcome": 2124743766,
-                        "You met the owner": 2124760252,
-                        "you met snow": 2124760875,
-                        "[REDACTED]": 2124760911,
-                        "Divine Punishment": 2124760917,
-                        "really?": 2124760923,
-                        "barzil": 2124775097,
-                        "The one": 2124807750,
-                        "Ascend": 2124807752,
-                        "1 0 0": 2124836270,
-                        'The "Reverse" Incident': 2124912059,
-                        "Clipped Wings": 2147535393,
-                        "Apostle of Judgement": 4414399146292319,
-                        "court evidence": 2124760907,
-                        "duck": 2124760916,
-                        "The Lone Orange": 2128220957,
-                        "The Hunt Event": 1195935784919838,
-                        "The Backrooms": 2124929812,
-                        "pog": 2124760877,
-                    }
-
-                    badge_ids = ",".join(map(str, additional_badges.values()))
-                    url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={badge_ids}"
-
+            async with aiohttp.ClientSession() as session:
+                for chunk in badge_chunks:
+                    url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={','.join(map(str, chunk))}"
                     async with session.get(url) as response:
                         if response.status == 200:
                             data = await response.json()
-
-                            badge_embed = discord.Embed(
-                                title=f"Additional Badges for {username if username else interaction.user.name} ({roblox_id}):",
-                                color=0xFF0000,
-                            )
-
-                            obtained_badges = {badge["badgeId"]: badge["awardedDate"] for badge in data["data"]}
-
-                            for badge_name, badge_id in additional_badges.items():
-                                if badge_id in obtained_badges:
-                                    awarded_date = obtained_badges[badge_id]
-                                    date, time, fraction = awarded_date.replace("Z", "+0000").partition(".")
-                                    fraction = fraction[: fraction.index("+")][:6] + "+0000"
-                                    awarded_date = f"{date}.{fraction}"
-                                    awarded_date = datetime.strptime(awarded_date, "%Y-%m-%dT%H:%M:%S.%f%z")
-                                    epoch_time = int(awarded_date.timestamp())
-                                    badge_embed.add_field(
-                                        name=f"<:check:1292269189536682004> | {badge_name}",
-                                        value=f"Obtained on <t:{epoch_time}:F>",
-                                        inline=False,
-                                    )
-                                else:
-                                    badge_embed.add_field(
-                                        name=f"❌ | {badge_name}",
-                                        value="Not obtained",
-                                        inline=False,
-                                    )
-
-                            gamepass_items = {
-                                "2x Slaps": 15037108,
-                                "5x Slaps": 15037147,
-                                "Radio": 16067226,
-                                "nothing": 16127797,
-                                "OVERKILL": 16361133,
-                                "Spectator": 19150776,
-                                "Custom death audio": 21651535,
-                                "CUSTOM GLOVE": 33742082,
-                                "Animation Pack": 37665008,
-                                "Vampire": 45176930,
-                                "Ultra Instinct": 85895851,
-                                "Cannoneer": 174818129,
-                            }
-
-                            owned_gamepasses = []
-                            not_owned_gamepasses = []
-
-                            for item_name, item_id in gamepass_items.items():
-                                url = f"https://inventory.roblox.com/v1/users/{roblox_id}/items/1/{item_id}/is-owned"
-                                async with session.get(url) as item_response:
-                                    if item_response.status == 200:
-                                        item_data = await item_response.json()
-                                        if item_data:
-                                            owned_gamepasses.append(item_name)
-                                        else:
-                                            not_owned_gamepasses.append(item_name)
-
-                            view = GloveView(
-                                badge_embed,
-                                glove_embed,
-                                full_glove_data=obtained_gloves,
-                                obtained_gloves=obtained_gloves,
-                                roblox_id=roblox_id,
-                                owned_gamepasses=owned_gamepasses,
-                                not_owned_gamepasses=not_owned_gamepasses,
-                            )
-
-                            await interaction.followup.send(embeds=[glove_embed], view=view)
-
+                            all_badge_data.extend(data["data"])
                         else:
-                            await interaction.followup.send("An error occurred while fetching the user's badges.")
+                            await interaction.followup.send("An error occurred while fetching the user's gloves.")
+                            return
 
-            except Exception as error:
-                await handle_logs(interaction, error)
+                if not all_badge_data:
+                    await interaction.followup.send(f"No badges found for the user: {username if username else interaction.user.name}")
+                    return
+
+                owned = [
+                    glove
+                    for glove, badge_ids in gloves.items()
+                    if all(
+                        any(badge.get("badgeId") == badge_id for badge in all_badge_data)
+                        for badge_id in badge_ids
+                    )
+                ]
+                not_owned = [glove for glove in gloves.keys() if glove not in owned]
+
+                total_gloves = len(gloves)
+                owned_gloves = len(owned)
+                glove_percentage = (owned_gloves / total_gloves) * 100
+                glove_percentage_str = f"{glove_percentage:.1f}"
+
+                glove_embed = discord.Embed(
+                    title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
+                    description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
+                    color=interaction.user.top_role.color or 0xFF0000,
+                )
+                glove_embed.add_field(
+                    name="OWNED", 
+                    value=", ".join(owned) if owned else "None", 
+                    inline=False
+                )
+                glove_embed.add_field(
+                    name="NOT OWNED",
+                    value=", ".join(not_owned) if not_owned else "None",
+                    inline=False,
+                )
+
+                obtained_gloves = {
+                    glove: badge["awardedDate"]
+                    for glove, badge_ids in gloves.items()
+                    for badge_id in badge_ids
+                    for badge in all_badge_data
+                    if badge.get("badgeId") == badge_id
+                }
+
+                additional_badges = {
+                    "Welcome": 2124743766,
+                    "You met the owner": 2124760252,
+                    "you met snow": 2124760875,
+                    "[REDACTED]": 2124760911,
+                    "Divine Punishment": 2124760917,
+                    "really?": 2124760923,
+                    "barzil": 2124775097,
+                    "The one": 2124807750,
+                    "Ascend": 2124807752,
+                    "1 0 0": 2124836270,
+                    'The "Reverse" Incident': 2124912059,
+                    "Clipped Wings": 2147535393,
+                    "Apostle of Judgement": 4414399146292319,
+                    "court evidence": 2124760907,
+                    "duck": 2124760916,
+                    "The Lone Orange": 2128220957,
+                    "The Hunt Event": 1195935784919838,
+                    "The Backrooms": 2124929812,
+                    "pog": 2124760877,
+                }
+
+                badge_ids = ",".join(map(str, additional_badges.values()))
+                url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={badge_ids}"
+
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+
+                        badge_embed = discord.Embed(
+                            title=f"Additional Badges for {username if username else interaction.user.name} ({roblox_id}):",
+                            color=0xFF0000,
+                        )
+
+                        obtained_badges = {badge["badgeId"]: badge["awardedDate"] for badge in data["data"]}
+
+                        for badge_name, badge_id in additional_badges.items():
+                            if badge_id in obtained_badges:
+                                awarded_date = obtained_badges[badge_id]
+                                date, time, fraction = awarded_date.replace("Z", "+0000").partition(".")
+                                fraction = fraction[: fraction.index("+")][:6] + "+0000"
+                                awarded_date = f"{date}.{fraction}"
+                                awarded_date = datetime.strptime(awarded_date, "%Y-%m-%dT%H:%M:%S.%f%z")
+                                epoch_time = int(awarded_date.timestamp())
+                                badge_embed.add_field(
+                                    name=f"<:check:1292269189536682004> | {badge_name}",
+                                    value=f"Obtained on <t:{epoch_time}:F>",
+                                    inline=False,
+                                )
+                            else:
+                                badge_embed.add_field(
+                                    name=f"❌ | {badge_name}",
+                                    value="Not obtained",
+                                    inline=False,
+                                )
+
+                        gamepass_items = {
+                            "2x Slaps": 15037108,
+                            "5x Slaps": 15037147,
+                            "Radio": 16067226,
+                            "nothing": 16127797,
+                            "OVERKILL": 16361133,
+                            "Spectator": 19150776,
+                            "Custom death audio": 21651535,
+                            "CUSTOM GLOVE": 33742082,
+                            "Animation Pack": 37665008,
+                            "Vampire": 45176930,
+                            "Ultra Instinct": 85895851,
+                            "Cannoneer": 174818129,
+                        }
+
+                        owned_gamepasses = []
+                        not_owned_gamepasses = []
+
+                        for item_name, item_id in gamepass_items.items():
+                            url = f"https://inventory.roblox.com/v1/users/{roblox_id}/items/1/{item_id}/is-owned"
+                            async with session.get(url) as item_response:
+                                if item_response.status == 200:
+                                    item_data = await item_response.json()
+                                    if item_data:
+                                        owned_gamepasses.append(item_name)
+                                    else:
+                                        not_owned_gamepasses.append(item_name)
+
+                        view = GloveView(
+                            badge_embed,
+                            glove_embed,
+                            full_glove_data=obtained_gloves,
+                            obtained_gloves=obtained_gloves,
+                            roblox_id=roblox_id,
+                            owned_gamepasses=owned_gamepasses,
+                            not_owned_gamepasses=not_owned_gamepasses,
+                        )
+
+                        await interaction.followup.send(embeds=[glove_embed], view=view)
+
+                    else:
+                        await interaction.followup.send("An error occurred while fetching the user's badges.")
+
+        except Exception as error:
+            await handle_logs(interaction, error)
 
 async def setup(bot):
     await bot.add_cog(RobloxCog(bot))

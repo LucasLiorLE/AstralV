@@ -1,7 +1,8 @@
 from bot_utils import (
     handle_logs,
     check_mod,
-    open_file
+    open_file,
+    load_commands
 )
 
 import discord
@@ -15,17 +16,7 @@ from aiohttp import ClientSession
 class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.command_help = open_file("storage/command_help.json").get("fun", {})
-        
-        for command in self.__cog_app_commands__:
-            if isinstance(command, app_commands.Command):
-                command_data = self.command_help.get(command.name)
-                if command_data:
-                    command.description = command_data["description"]
-                    if "parameters" in command_data:
-                        for param_name, param_desc in command_data["parameters"].items():
-                            if param_name in command._params:
-                                command._params[param_name].description = param_desc
+        load_commands(self.__cog_app_commands__, "fun")
 
     @app_commands.command(name="say")
     async def say(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str = None, 

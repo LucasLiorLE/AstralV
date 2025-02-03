@@ -1,6 +1,7 @@
 from bot_utils import (
     open_file,
     save_file,
+    load_commands,
     handle_logs
 )
 
@@ -14,16 +15,7 @@ from aiohttp import ClientSession
 class BloonsTD6CommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands")
-        
-        self.command_help = open_file("storage/command_help.json").get("btd6", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command.description = self.command_help[command.name]["description"]
-                if "parameters" in self.command_help[command.name]:
-                    for param_name, param_desc in self.command_help[command.name]["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "btd6")
 
     @app_commands.command(name="connect")
     async def btd6connect(self, interaction: discord.Interaction, oak_key: str = None):

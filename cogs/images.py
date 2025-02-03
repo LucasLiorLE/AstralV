@@ -1,6 +1,7 @@
 from bot_utils import (
     handle_logs,
-    open_file
+    open_file,
+    load_commands
 )
 
 import discord
@@ -15,20 +16,10 @@ from moviepy.editor import VideoFileClip, AudioFileClip
 from aiohttp import ClientSession
 from urllib.parse import urlparse
 
-class ImageGroup(app_commands.Group): # This originally was named "Image" but it was conflicting with the PIL Image module and I got confused for a long time lol.
+class ImageGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="image", description="Image manipulation commands")
-        
-        self.command_help = open_file("storage/command_help.json").get("image", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "image")
 
     async def togif(self, image_buffer: io.BytesIO) -> io.BytesIO:
         image = Image.open(image_buffer)
@@ -433,22 +424,10 @@ class ImageGroup(app_commands.Group): # This originally was named "Image" but it
         except Exception as e:
             await handle_logs(interaction, e)    
 
-class ConvertGroup(app_commands.Group): # Keep this here for now.
+class ConvertGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="convert", description="Image conversion commands")
-        
-        # Load command descriptions from JSON
-        self.command_help = open_file("storage/command_help.json").get("convert", {})
-        
-        # Set descriptions for commands
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "convert")
 
     @app_commands.command(name="image")
     @app_commands.choices(
@@ -545,7 +524,7 @@ class FileCog(commands.Cog):
         self.bot.tree.add_command(ConvertGroup())
         self.bot.tree.add_command(ImageGroup())
 
-        self.context_randomize = app_commands.ContextMenu(
+        self.context_randomize = app_commands.ContextMenu( # Will be removed in later versions.
             name="Randomize Image",
             callback=ImageGroup().context_randomize_callback
         )

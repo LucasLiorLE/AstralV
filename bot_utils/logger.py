@@ -40,7 +40,7 @@ def store_log(log_type: str, message: str) -> int:
     }
 
     logs[log_type].append(log_entry)
-    print(f"[{log_type}] {message}")
+    print(f"[{log_type}]: {message}")
 
     current_id = log_id_counter
     log_id_counter += 1
