@@ -6,6 +6,9 @@
 #
 # Release Notes
 #    - Make command descriptions better (Helps with help command)
+
+# Other stuff:
+#    - load_command() as a new helper thing.
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
