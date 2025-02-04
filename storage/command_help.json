@@ -604,6 +604,15 @@
                 "link": "The link to the image to apply the effect to",
                 "ephemeral": "If the message is hidden (Useful if no perms)"
             }
+        },
+        "fisheye": {
+            "description": "Apply a fisheye lens effect to an image",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "intensity": "The intensity of the fisheye effect (default: 2.0)",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
         }
     },
     "convert": {
