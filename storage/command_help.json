@@ -813,14 +813,6 @@
             }
         }
     },
-    "cgloves": {
-        "description": "Check all the user's gloves in slap battles",
-        "parameters": {
-            "username": "The user to check gloves for (leave empty to check your own)",
-            "member": "Discord member to check (optional)",
-            "ephemeral": "If the message is hidden (Useful if no perms)"
-        }
-    },
     "userphone": {
         "create": {
             "description": "Create a userphone room",
@@ -864,10 +856,20 @@
             }
         }
     },
-    "afk": {
-        "description": "AFK and set a status of why",
-        "parameters": {
-            "reason": "Your reason to AFK"
+    "utility": {
+        "cgloves": {
+            "description": "Check all the user's gloves in slap battles",
+            "parameters": {
+                "username": "The user to check gloves for (leave empty to check your own)",
+                "member": "Discord member to check (optional)",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "afk": {
+            "description": "AFK and set a status of why",
+            "parameters": {
+                "reason": "Your reason to AFK"
+            }
         }
     }
 }

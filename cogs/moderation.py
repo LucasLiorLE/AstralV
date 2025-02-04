@@ -402,11 +402,11 @@ class ModerationCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.tree.add_command(PurgeCommandGroup(self.bot))
+        self.command_help = open_file("storage/command_help.json")
         
         load_commands(self.__cog_app_commands__, "moderation")
 
     async def get_command_help_embed(self, command_name: str) -> discord.Embed:
-        """Creates a help embed for a command using the loaded command help data"""
         command_data = self.command_help.get("moderation", {}).get(command_name)
         if not command_data:
             return None
@@ -429,7 +429,6 @@ class ModerationCog(commands.Cog):
                     inline=False
                 )
 
-        embed.set_footer(text="<> = required, [] = optional")
         return embed
 
     @commands.command(name="purge")
@@ -728,6 +727,18 @@ class ModerationCog(commands.Cog):
                 server_id=interaction.guild_id,
                 bot=self.bot
             )
+
+        except OverflowError:
+            await interaction.followup.send("The duration is too long. Please provide a shorter duration.")
+
+        except discord.Forbidden:
+            await interaction.followup.send("I do not have the required permissions to mute this user.")
+
+        except discord.HTTPException as e:
+            if e.code == 50013:
+                await interaction.followup.send("I do not have the required permissions to mute this user.")
+            else:
+                await interaction.followup.send("An error occurred while trying to mute this user.")
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -1136,7 +1147,6 @@ class ModerationCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        """Handle errors from prefix commands"""
         try:
             if isinstance(error, discord.ext.commands.errors.CommandNotFound):
                 return

@@ -82,11 +82,13 @@ class InfoCog(commands.Cog):
         return total_exp
 
     @app_commands.command(name="help")
-    async def help(self, interaction: discord.Interaction, command: str = None, ephemeral: bool = True):
+    async def help(self, interaction: discord.Interaction, command: str, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
+            command_help = open_file("storage/command_help.json")
+
             if command:
-                for category, commands in self.command_help.items():
+                for category, commands in command_help.items():
                     if isinstance(commands, dict):
                         if command in commands:
                             cmd_data = commands[command]
@@ -130,7 +132,7 @@ class InfoCog(commands.Cog):
                 color=discord.Color.blue()
             )
 
-            for category, commands in self.command_help.items():
+            for category, commands in command_help.items():
                 if isinstance(commands, dict) and category not in ["modlogs", "warn", "mute"]:
                     cmd_list = [f"`{cmd}`" for cmd in commands.keys() if not isinstance(commands[cmd], dict)]
                     if cmd_list:
