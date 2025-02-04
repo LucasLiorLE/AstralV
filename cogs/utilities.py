@@ -130,14 +130,18 @@ class UtilCog(commands.Cog):
         self.bot = bot
         self.bot.tree.add_command(ReminderGroup())
 
-        load_commands(self.__cog_app_commands__, "util")
+        load_commands(self.__cog_app_commands__, "info")
 
     @app_commands.command(name="afk")
     async def afk(self, interaction: discord.Interaction, reason: str = None):
         await interaction.response.defer(ephemeral=True)
         try:
             user_id = str(interaction.user.id)
-            server_id = str(interaction.guild.id)
+            try:
+                server_id = str(interaction.guild.id)
+            except AttributeError:
+                await interaction.followup.send("This command can only be used in a server.")
+                return
 
             server_info = open_file("storage/server_info.json")
             afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})

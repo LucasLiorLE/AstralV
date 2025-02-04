@@ -718,6 +718,23 @@
                 "ephemeral": "If the message is hidden (Useful if no perms)"
             }
         },
+        "avatar": {
+            "description": "Avatar related commands",
+            "subcommands": {
+                "get": {
+                    "description": "Get a user's global Discord avatar",
+                    "parameters": {
+                        "user": "The user whose avatar you want to see (optional)"
+                    }
+                },
+                "server": {
+                    "description": "Get a user's server-specific avatar",
+                    "parameters": {
+                        "user": "The user whose server avatar you want to see (optional)" 
+                    }
+                }
+            }
+        },
         "ping": {
             "description": "Shows your latency and the bot's latency"
         },

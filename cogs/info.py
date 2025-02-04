@@ -20,15 +20,15 @@ from PIL import Image
 class AvatarGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="avatar")
-        load_commands(self.commands, "avatar")
+        # Move load_commands call to after command definitions
 
     @app_commands.command(name="get")
-    async def get(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def get(self, interaction: discord.Interaction, user: discord.User = None):
         await interaction.response.defer()
         try:
-            member = member or interaction.user
-            embed = discord.Embed(title=f"{member.display_name}'s Avatar", color=0x808080)
-            embed.set_image(url=member.avatar.url if member.avatar else None)
+            user = user or interaction.user
+            embed = discord.Embed(title=f"{user.display_name}'s Avatar", color=0x808080)
+            embed.set_image(url=user.avatar.url if user.avatar else None)
             embed.set_footer(
                 text=f"Requested by {interaction.user}",
                 icon_url=(interaction.user.avatar.url if interaction.user.avatar else None)
@@ -38,12 +38,12 @@ class AvatarGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="server")
-    async def server(self, interaction: discord.Interaction, member: discord.Member = None):
+    async def server(self, interaction: discord.Interaction, user: discord.User = None):
         await interaction.response.defer()
         try:
-            member = member or interaction.user
-            embed = discord.Embed(title=f"{member.display_name}'s Server Avatar", color=0x808080)
-            embed.set_image(url=member.display_avatar.url if member.display_avatar else None)
+            user = user or interaction.user
+            embed = discord.Embed(title=f"{user.display_name}'s Server Avatar", color=0x808080)
+            embed.set_image(url=user.display_avatar.url if user.display_avatar else None)
             embed.set_footer(
                 text=f"Requested by {interaction.user}",
                 icon_url=(interaction.user.avatar.url if interaction.user.avatar else None)
@@ -52,6 +52,10 @@ class AvatarGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
+    # Add this after all command definitions
+    def setup_commands(self):
+        load_commands(self, "info")
+
 class InfoCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -59,7 +63,9 @@ class InfoCog(commands.Cog):
         
         load_commands(self.__cog_app_commands__, "info")
         
-        self.bot.tree.add_command(AvatarGroup())
+        avatar_group = AvatarGroup()
+        avatar_group.setup_commands()  # Call setup after creation
+        self.bot.tree.add_command(avatar_group)
 
         self.context_userinfo = app_commands.ContextMenu(
             name='User Information',
@@ -306,7 +312,7 @@ class InfoCog(commands.Cog):
 
             main_info = (
                 f"Total Required EXP: {required_exp:,}\n"
-                f"Minimum/Estimated Messages: {int(required_exp / 20 * 1.8):,}\n"
+                f"Minimum Messages: {int(required_exp / 20 * 1.8):,}\n"
             )
 
             if target_date:
