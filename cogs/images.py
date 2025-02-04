@@ -130,6 +130,32 @@ class ImageGroup(app_commands.Group):
         pixelated_image.save(output_buffer, format="PNG")
         output_buffer.seek(0)
         return output_buffer
+
+    async def image_watercolor(self, image_buffer: io.BytesIO) -> io.BytesIO:
+        image = Image.open(image_buffer)
+        watercolor = image.filter(ImageFilter.ModeFilter(size=5))
+        watercolor = watercolor.filter(ImageFilter.SMOOTH_MORE)
+        watercolor = watercolor.filter(ImageFilter.EdgeEnhance)
+        output_buffer = io.BytesIO()
+        watercolor.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
+
+    async def image_posterize(self, image_buffer: io.BytesIO) -> io.BytesIO:
+        image = Image.open(image_buffer)
+        posterized = ImageOps.posterize(image.convert('RGB'), bits=2)
+        output_buffer = io.BytesIO()
+        posterized.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
+
+    async def image_solarize(self, image_buffer: io.BytesIO) -> io.BytesIO:
+        image = Image.open(image_buffer)
+        solarized = ImageOps.solarize(image.convert('RGB'), threshold=128)
+        output_buffer = io.BytesIO()
+        solarized.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
     
     async def process_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None):
         if image is None and link is None:
@@ -383,6 +409,51 @@ class ImageGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.command(name="watercolor")
+    async def watercolor_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            watercolor_buffer = await self.image_watercolor(image_buffer)
+            
+            await interaction.followup.send(
+                content="Here is your image with watercolor effect:",
+                file=discord.File(fp=watercolor_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="posterize")
+    async def posterize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            poster_buffer = await self.image_posterize(image_buffer)
+            
+            await interaction.followup.send(
+                content="Here is your posterized image:",
+                file=discord.File(fp=poster_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="solarize")
+    async def solarize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            solar_buffer = await self.image_solarize(image_buffer)
+            
+            await interaction.followup.send(
+                content="Here is your solarized image:",
+                file=discord.File(fp=solar_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     async def context_randomize_callback(self, interaction: discord.Interaction, message: discord.Message):
         if not message.attachments:
             await interaction.response.send_message("This message doesn't contain any images!", ephemeral=True)
@@ -405,8 +476,12 @@ class ImageGroup(app_commands.Group):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             random_effects = [
-                self.image_flip, self.image_invert, self.image_blur, self.image_brightness, self.image_contrast,
-                self.image_grayscale, self.image_sepia, self.image_sharpen, self.image_pixelate
+                self.image_flip, self.image_invert, self.image_blur, 
+                self.image_brightness, self.image_contrast,
+                self.image_grayscale, self.image_sepia, 
+                self.image_sharpen, self.image_pixelate,
+                self.image_watercolor, self.image_posterize, 
+                self.image_solarize
             ]
 
             image_data, filename = await self.process_image(interaction, image, link)

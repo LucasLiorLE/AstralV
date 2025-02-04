@@ -580,6 +580,30 @@
                 "factor": "The factor by which to reduce the resolution",
                 "ephemeral": "If the message is hidden (Useful if no perms)"
             }
+        },
+        "watercolor": {
+            "description": "Apply a watercolor effect to an image",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "posterize": {
+            "description": "Apply a poster effect by reducing colors",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "solarize": {
+            "description": "Apply a solarization effect to invert colors above threshold",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
         }
     },
     "convert": {
