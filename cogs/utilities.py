@@ -5,6 +5,7 @@ from bot_utils import (
     handle_logs,
     save_file,
     open_file,
+    load_commands,
     parse_duration
 )
 
@@ -15,17 +16,8 @@ from discord import app_commands
 class ReminderGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="reminder", description="Set and manage reminders")
-        
-        self.command_help = open_file("storage/command_help.json").get("reminder", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+
+        load_commands(self.commands, "reminder")
 
     @app_commands.command(name="add")
     async def add(self, interaction: discord.Interaction, duration: str, reminder: str):
@@ -136,8 +128,9 @@ class ReminderGroup(app_commands.Group):
 class UtilCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.command_help = open_file("storage/command_help.json")
         self.bot.tree.add_command(ReminderGroup())
+
+        load_commands(self.__cog_app_commands__, "util")
 
     @app_commands.command(name="afk")
     async def afk(self, interaction: discord.Interaction, reason: str = None):

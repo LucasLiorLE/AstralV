@@ -9,6 +9,7 @@ from bot_utils import (
     parse_duration,
     create_interaction,
     error,
+    load_commands,
     handle_logs
 )
 
@@ -185,7 +186,8 @@ class MessageCheck:
 class PurgeCommandGroup(app_commands.Group):
     def __init__(self, bot):
         super().__init__(name="purge", description="Purge commands for messages")
-        
+
+        load_commands(self.commands, "purge")
         self.bot = bot
 
     @app_commands.command(name="any")
@@ -294,6 +296,7 @@ class SetCommandGroup(app_commands.Group):
     def __init__(self, bot):
         super().__init__(name="set", description="Set the server's preferences.")
 
+        load_commands(self.commands, "set")
         self.bot = bot
 
     @app_commands.command(name="selogs")
@@ -398,18 +401,9 @@ class LogPageSelect(discord.ui.Select):
 class ModerationCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.command_help = open_file("storage/command_help.json")
         self.bot.tree.add_command(PurgeCommandGroup(self.bot))
         
-        for command in self.__cog_app_commands__:
-            if isinstance(command, app_commands.Command):
-                command_data = self.command_help.get("moderation", {}).get(command.name)
-                if command_data:
-                    command.description = command_data["description"]
-                    if "parameters" in command_data:
-                        for param_name, param_desc in command_data["parameters"].items():
-                            if param_name in command._params:
-                                command._params[param_name].description = param_desc
+        load_commands(self.__cog_app_commands__, "moderation")
 
     async def get_command_help_embed(self, command_name: str) -> discord.Embed:
         """Creates a help embed for a command using the loaded command help data"""

@@ -1,4 +1,5 @@
 from bot_utils import (
+    load_commands,
     handle_logs,
     mc_fetchUUID,
     hypixelAPI,
@@ -315,17 +316,7 @@ class HypixelView(View):
 class HypixelCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="hypixel", description="Base Hypixel commands")
-        
-        self.command_help = open_file("storage/command_help.json").get("hypixel", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "hypixel")
 
     @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
     @app_commands.describe(username="Their Minecraft username.")
@@ -407,8 +398,8 @@ class SkyblockView(View):
                 23950, 30200, 38050, 47850, 60100, 75400, 94450
             ],
             "social": [
-                0, 50, 150, 300, 550, 1050, 1800, 2800, 4050, 5550, 7550, 10050, 13050, 16800, 21300, 27300, 35300, 45300, 
-                57800, 72800, 92800, 117800, 147800, 182800, 222800, 272800
+                0, 50, 150, 300, 550, 1050, 1800, 2800, 4050, 5550, 7550, 10050, 13050, 16800, 21300, 27300, 35300, 45300, 57800, 
+                72800, 92800, 117800, 147800, 182800, 222800, 272800
             ],
             "dungeoneering": [
                 0, 50, 125, 235, 395, 625, 955, 1425, 2095, 3045, 4385, 6275, 8940, 12700, 17960, 25340, 35640, 50040, 
@@ -721,18 +712,8 @@ class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="sb", description="Hypixel skyblock commands")
         
-        # Load command descriptions from JSON
-        self.command_help = open_file("storage/command_help.json").get("sb", {})
-        
-        # Set descriptions for commands  
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "sb")
+
 
     @app_commands.command(name="profile", description="Get a Hypixel Skyblock account's data")
     @app_commands.describe(

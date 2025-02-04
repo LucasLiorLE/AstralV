@@ -1,6 +1,7 @@
 from bot_utils import (
     open_file,
     save_file,
+    load_commands,
     handle_logs
 )
 
@@ -32,16 +33,7 @@ class UserphoneGroup(app_commands.Group):
         super().__init__(name="userphone", description="Userphone commands allows you to talk to people in different servers!")
         self.rooms: Dict[str, Room] = {}
         
-        self.command_help = open_file("storage/command_help.json").get("userphone", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help:
-                command_data = self.command_help[command.name]
-                command.description = command_data["description"]
-                if "parameters" in command_data:
-                    for param_name, param_desc in command_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self.commands, "userphone")
 
     @app_commands.command(name="create")
     async def create(self, interaction: discord.Interaction, password: str = None):

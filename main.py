@@ -6,6 +6,9 @@
 #
 # Release Notes
 #    - Make command descriptions better (Helps with help command)
+
+# Other stuff:
+#    - load_command() as a new helper thing.
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
@@ -118,6 +121,9 @@ async def load_cogs():
                 await bot.load_extension(f"cogs.{filename[:-3]}")
                 print(f"Loaded {filename}")
             except Exception as e:
+                # import traceback
+                # traceback.print_exc()
+
                 error(f"Failed to load {filename}: {e}")
 
 async def test_hy_key() -> bool:

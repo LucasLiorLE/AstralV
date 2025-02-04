@@ -2,7 +2,8 @@ from bot_utils import (
     handle_logs,
     open_file,
     parse_duration,
-    __version__
+    __version__,
+    load_commands
 )
 
 import discord
@@ -18,10 +19,10 @@ from PIL import Image
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="avatar", description="Avatar related commands.")
+        super().__init__(name="avatar")
+        load_commands(self.commands, "avatar")
 
-    @app_commands.command(name="get", description="Displays a user's global avatar.")
-    @app_commands.describe(member="The member to get the avatar for")
+    @app_commands.command(name="get")
     async def get(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -36,8 +37,7 @@ class AvatarGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="server", description="Displays a user's server-specific avatar.")
-    @app_commands.describe(member="The member to get the server-specific avatar for")
+    @app_commands.command(name="server")
     async def server(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -56,18 +56,9 @@ class InfoCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.start_time = datetime.now(timezone.utc)
-        self.command_help = open_file("storage/command_help.json")
         
-        for command in self.__cog_app_commands__:
-            if isinstance(command, app_commands.Command):
-                command_data = self.command_help.get("info", {}).get(command.name)
-                if command_data:
-                    command.description = command_data["description"]
-                    if "parameters" in command_data:
-                        for param_name, param_desc in command_data["parameters"].items():
-                            if param_name in command._params:
-                                command._params[param_name].description = param_desc
-
+        load_commands(self.__cog_app_commands__, "info")
+        
         self.bot.tree.add_command(AvatarGroup())
 
         self.context_userinfo = app_commands.ContextMenu(
@@ -130,11 +121,9 @@ class InfoCog(commands.Cog):
                             await interaction.followup.send(embed=embed)
                             return
                 
-                # If command not found in any category
                 await interaction.followup.send(f"No help found for command: {command}")
                 return
 
-            # If no specific command requested, show categories
             embed = discord.Embed(
                 title="Command Categories",
                 description="Here are all available command categories.\nUse `/help <command>` for detailed help on a command.",
@@ -156,8 +145,7 @@ class InfoCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="level", description="View your level globally or in your guild.")
-    @app_commands.describe(where="Where you want to view your level.")
+    @app_commands.command(name="level")
     @app_commands.choices(
         where=[app_commands.Choice(name="Local (Server)", value="guild"), app_commands.Choice(name="Global", value="global")]
     )
@@ -250,29 +238,10 @@ class InfoCog(commands.Cog):
         except Exception as e:
             await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
 
-    @app_commands.command(name="mlevel", description="Calculate Mee6 levels and time to achieve them.")
-    @app_commands.describe( 
-        current_level="Your current level",
-        current_exp="Your current EXP in that level",
-        target_level="The level you want to achieve (optional if target_exp provided)",
-        target_exp="The total EXP you want to achieve (optional if target_level provided)",
-        target_date="The date you want to achieve it by (MM/DD/YYYY)",
-        exp_per_day="Optional: Daily EXP goal (if not using target date)",
-        mee6_pro="Do you have Mee6 Pro? (50% EXP boost)",
-        ephemeral="Should the response be ephemeral (Hidden)?"
-    )
-    async def mlevel(
-        self, 
-        interaction: discord.Interaction, 
-        current_level: int, 
-        current_exp: int, 
-        target_level: int = None,
-        target_exp: int = None, 
-        target_date: str = None,
-        exp_per_day: int = None, 
-        mee6_pro: bool = False,
-        ephemeral: bool = True,
-    ):
+    @app_commands.command(name="mlevel")
+    async def mlevel(self, interaction: discord.Interaction, current_level: int, current_exp: int, 
+                    target_level: int = None, target_exp: int = None, target_date: str = None,
+                    exp_per_day: int = None, mee6_pro: bool = False, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             _t = target_exp
@@ -375,7 +344,7 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="ping", description="Shows your latency and the bot's latency.")
+    @app_commands.command(name="ping")
     async def ping(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -420,7 +389,7 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="info", description="Displays information about the bot.")
+    @app_commands.command(name="info")
     async def info(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -442,7 +411,7 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="serverinfo", description="Shows information about the server.")
+    @app_commands.command(name="serverinfo")
     async def serverinfo(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -464,8 +433,7 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="roleinfo", description="Provides information for a role.")
-    @app_commands.describe(role="The role to get the info for")
+    @app_commands.command(name="roleinfo")
     async def roleinfo(self, interaction: discord.Interaction, role: discord.Role):
         await interaction.response.defer()
         try:
@@ -493,8 +461,7 @@ class InfoCog(commands.Cog):
     async def context_userinfo_callback(self, interaction: discord.Interaction, user: discord.Member):
         await self.userinfo(interaction, user)
 
-    @app_commands.command(name="userinfo", description="Provides information about a user.")
-    @app_commands.describe(member="The member to get the info for",)
+    @app_commands.command(name="userinfo")
     async def direct_userinfo(self, interaction: discord.Interaction, member: discord.Member = None):
         await self.userinfo(interaction, member)
     
@@ -514,8 +481,7 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="status", description="Check the status of a website.")
-    @app_commands.describe(website="Link to the website.")
+    @app_commands.command(name="status")
     async def status(self, interaction: discord.Interaction, website: str):
         await interaction.response.defer()
 
@@ -537,8 +503,7 @@ class InfoCog(commands.Cog):
 
         await interaction.followup.send(message)
 
-    @app_commands.command(name="define", description="Define a word")
-    @app_commands.describe(word="The word you want to define")
+    @app_commands.command(name="define")
     async def define(self, interaction: discord.Interaction, word: str):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -609,8 +574,7 @@ class InfoCog(commands.Cog):
         
         await self.filedata(interaction, file)
         
-    @app_commands.command(name="filedata", description="Display metadata for an uploaded file")
-    @app_commands.describe(file="The uploaded file to analyze.")
+    @app_commands.command(name="filedata")
     async def direct_filedata(self, interaction: discord.Interaction, file: discord.Attachment):
         await self.filedata(interaction, file)
 

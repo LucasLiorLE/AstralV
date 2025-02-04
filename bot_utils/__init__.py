@@ -7,5 +7,12 @@ from .utils import *
 
 # Version info
 
-__version__ = "2.1.1"
+VERSION = {
+    'major': 2,
+    'minor': 1,
+    'patch': 2
+}
+
+__version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}"
+__status__ = "Development"
 __author__ = "LucasLiorLE"

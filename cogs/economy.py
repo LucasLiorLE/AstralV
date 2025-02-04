@@ -9,6 +9,7 @@ from bot_utils import (
     eco_path,
     create_interaction,
     error,
+    load_commands,
     handle_logs
 )
 
@@ -45,29 +46,12 @@ async def handle_eco_shop():
 class MarketGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="market", description="Not coming soon.")
-        self.command_help = open_file("storage/command_help.json").get("economy", {})
+        load_commands(self.commands, "economy")
         
-        for command in self.commands:
-            if command.name in self.command_help:
-                command.description = self.command_help[command.name]["description"]
-                if "parameters" in self.command_help[command.name]:
-                    for param_name, param_desc in self.command_help[command.name]["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
-
 class ShopGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="shop", description="Shop commands.")
-        self.command_help = open_file("storage/command_help.json").get("economy", {}).get("shop", {})
-        
-        for command in self.commands:
-            if command.name in self.command_help.get("subcommands", {}):
-                cmd_data = self.command_help["subcommands"][command.name]
-                command.description = cmd_data["description"]
-                if "parameters" in cmd_data:
-                    for param_name, param_desc in cmd_data["parameters"].items():
-                        if param_name in command._params:
-                            command._params[param_name].description = param_desc
+        load_commands(self, "economy")
 
 class AuctionGroup(app_commands.Group):
     def __init__(self):
@@ -99,21 +83,13 @@ def find_closest_item(search_term: str, shop_items: list) -> str:
 class EconomyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.command_help = open_file("storage/command_help.json").get("economy", {})
         handle_eco_shop.start()
         bot.tree.add_command(MarketGroup())
         bot.tree.add_command(ShopGroup())
         bot.tree.add_command(AuctionGroup())
-
-        for command in self.__cog_app_commands__:
-            if isinstance(command, app_commands.Command):
-                command_data = self.command_help.get(command.name)
-                if command_data:
-                    command.description = command_data["description"]
-                    if "parameters" in command_data:
-                        for param_name, param_desc in command_data["parameters"].items():
-                            if param_name in command._params:
-                                command._params[param_name].description = param_desc
+        
+        # Change this line to use __cog_app_commands__
+        load_commands(self.__cog_app_commands__, "economy")
 
     def cog_unload(self):
         handle_eco_shop.cancel()
@@ -126,8 +102,7 @@ class EconomyCog(commands.Cog):
         else:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="balance", description="Check a user's purse and bank balance!")
-    @app_commands.describe(member="The user whose balance you want to check.")
+    @app_commands.command(name="balance")
     async def balance(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -231,7 +206,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="withdraw", description="Withdraw money from the bank.")
+    @app_commands.command(name="withdraw")
     async def withdraw(self, interaction: discord.Interaction, amount: int):
         await interaction.response.defer()
         try:
@@ -245,7 +220,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="deposit", description="Deposit money to the bank.")
+    @app_commands.command(name="deposit") 
     async def deposit(self, interaction: discord.Interaction, amount: int):
         await interaction.response.defer()
         try:
@@ -259,12 +234,12 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="pay", description="Pay other user coins.")
+    @app_commands.command(name="pay")
     async def pay(self, interaction: discord.Interaction):
         pass
 
     # Basic ways to get money
-    @app_commands.command(name="beg", description="Beg for money on the streets.")
+    @app_commands.command(name="beg")
     @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def beg(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -321,7 +296,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="fish", description="Fish for some coins! Requires a fishing rod.")
+    @app_commands.command(name="fish")
     @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id)) 
     async def fish(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -364,7 +339,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="hunt", description="Hunt for some coins! Requires a rifle.")
+    @app_commands.command(name="hunt")
     @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def hunt(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -403,7 +378,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="dig", description="Dig for some coins! Requires a shovel.")
+    @app_commands.command(name="dig")
     @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def dig(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -442,7 +417,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="search", description="Search for some coins! Requires a shovel.")
+    @app_commands.command(name="search")
     @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def search(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -496,7 +471,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="crime", description="Commit a crime for coins! Requires a shovel.")
+    @app_commands.command(name="crime")
     @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
     async def crime(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -550,7 +525,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="daily", description="Claim your daily reward!")
+    @app_commands.command(name="daily")
     async def daily(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -605,7 +580,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="weekly", description="Claim your weekly reward!")
+    @app_commands.command(name="weekly")
     async def weekly(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -649,7 +624,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="monthly", description="Claim your monthly reward!")
+    @app_commands.command(name="monthly")
     async def monthly(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -697,7 +672,7 @@ class EconomyCog(commands.Cog):
     GAME COMMANDS (PART OF ECO)
     """
 
-    @app_commands.command(name="coinflip", description="50% chance to double or lose everything.")
+    @app_commands.command(name="coinflip")
     @app_commands.describe(guess="Heads or tails?", amount="Optional amount if you want to bet!")
     @app_commands.choices(
         guess=[
@@ -762,7 +737,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="inventory", description="Check your inventory!")
+    @app_commands.command(name="inventory")
     @app_commands.describe(member="The user whose inventory you want to check.")
     async def inventory(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()

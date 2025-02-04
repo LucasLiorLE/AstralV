@@ -56,13 +56,37 @@ async def dmbed(
         MemberEmbed.set_footer(text="If you think this is a mistake, please contact a staff user.")
         await user.send(embed=MemberEmbed)
     except (discord.Forbidden, discord.HTTPException):
-        embed.add_field(
-            name="Note",
-            value="❌ I was unable to DM this user.",
-            inline=False
-        )
+        embed.set_footer(text="I was unable to DM this user.")
 
     await interaction.followup.send(embed=embed)
+
+def check_mod_server_info(id: int) -> Dict[str, Any]:
+    """
+    Checks whether basic moderation data is in server_info.json
+    
+    Parameteres:
+        id: The guild ID of the server
+        
+    Returns:
+        JsonData: The server info updated.
+    """
+    server_info = open_file("storage/server_info.json")
+
+    server_info.setdefault("preferences", {})
+    server_info.setdefault("modlogs", {})
+    server_info.setdefault("modstats", {})
+    server_info.setdefault("warnings", {})
+    server_info.setdefault("notes", {})
+
+    server_info["preferences"].setdefault(id, {})
+    server_info["modlogs"].setdefault(id, {})
+    server_info["modstats"].setdefault(id, {})
+    server_info["warnings"].setdefault(id, {})
+    server_info["notes"].setdefault(id, {})
+
+    save_file("storage/server_info.json", server_info)
+
+    return server_info
 
 async def check_mod(
         interaction: discord.Interaction, 
@@ -85,22 +109,8 @@ async def check_mod(
         - The configured moderator role
     3. Send an error message if user lacks permissions
     """
-    server_info = open_file("storage/server_info.json")
     guild_id = str(interaction.guild_id)
-
-    server_info.setdefault("preferences", {})
-    server_info.setdefault("modlogs", {})
-    server_info.setdefault("modstats", {})
-    server_info.setdefault("warnings", {})
-    server_info.setdefault("notes", {})
-
-    server_info["preferences"].setdefault(guild_id, {})
-    server_info["modlogs"].setdefault(guild_id, {})
-    server_info["modstats"].setdefault(guild_id, {})
-    server_info["warnings"].setdefault(guild_id, {})
-    server_info["notes"].setdefault(guild_id, {})
-
-    save_file("storage/server_info.json", server_info)
+    server_info = check_mod_server_info(guild_id)
 
     mod_role_id: Optional[int] = server_info["preferences"][guild_id].get("moderator")
     has_permission: bool = getattr(interaction.user.guild_permissions, permission_name, False)
@@ -283,7 +293,7 @@ async def send_modlog_embed(
         await interaction.followup.send(f"No logs found for {user}.", ephemeral=True)
         return None, total_logs, 0
 
-    logs_per_page = 10 # Could be a max of 25 because discord.py can handle up to 25 at once.
+    logs_per_page = 10
     total_pages = (total_logs // logs_per_page) + (1 if total_logs % logs_per_page > 0 else 0)
 
     if page < 1 or page > total_pages:

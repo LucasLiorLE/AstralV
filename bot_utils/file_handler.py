@@ -1,4 +1,5 @@
 import json
+from discord import app_commands
 from typing import Dict, Any, TypeVar, Union, List
 
 T = TypeVar('T')
@@ -45,3 +46,25 @@ def save_file(filename: str, data: JsonData) -> None:
             json.dump(data, f, indent=4, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o)
     except Exception as e:
         raise Exception(f"Error: Could not save data to '{filename}'. {e}")
+
+def load_commands(commands: Union[List[app_commands.Command], app_commands.Group], group: str) -> None:
+    """
+    Loads command descriptions and parameter help from command_help.json
+    
+    Parameters:
+        commands: List of commands or a command Group
+        group: Group name in command_help.json
+    """
+    command_help = open_file("storage/command_help.json").get(group, {})
+    
+    command_list = commands.commands if hasattr(commands, 'commands') else commands
+    
+    for command in command_list:
+        if command.name in command_help:
+            cmd_data = command_help[command.name]
+            command.description = cmd_data.get("description", command.description)
+            
+            if "parameters" in cmd_data:
+                for param_name, param_desc in cmd_data["parameters"].items():
+                    if param_name in command._params:
+                        command._params[param_name].description = param_desc

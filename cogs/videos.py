@@ -1,6 +1,7 @@
 from bot_utils import (
-	handle_logs,
-	open_file
+	open_file,
+	load_commands,
+	handle_logs
 )
 
 import discord
@@ -18,16 +19,7 @@ class VideoGroup(app_commands.Group):
 	def __init__(self):
 		super().__init__(name="video", description="Video manipulation commands")
 		
-		self.command_help = open_file("storage/command_help.json").get("video", {})
-		
-		for command in self.commands:
-			if command.name in self.command_help:
-				command_data = self.command_help[command.name]
-				command.description = command_data["description"]
-				if "parameters" in command_data:
-					for param_name, param_desc in command_data["parameters"].items():
-						if param_name in command._params:
-							command._params[param_name].description = param_desc
+		load_commands(self.commands, "video")
 
 	async def process_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None):
 		if video is None and link is None:
@@ -400,9 +392,7 @@ class VideoGroup(app_commands.Group):
 			await handle_logs(interaction, e)
 
 	@app_commands.command(name="concat")
-	async def concat_video(self, interaction: discord.Interaction, video1: discord.Attachment = None, 
-						video2: discord.Attachment = None, link1: str = None, link2: str = None, 
-						ephemeral: bool = True):
+	async def concat_video(self, interaction: discord.Interaction, video1: discord.Attachment = None, video2: discord.Attachment = None, link1: str = None, link2: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 		
 		try:

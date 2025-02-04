@@ -686,38 +686,61 @@
             }
         },
         "ping": {
-            "description": "Check the bot's latency"
+            "description": "Shows your latency and the bot's latency"
         },
-        "uptime": {
-            "description": "Check how long the bot has been running"
+        "info": {
+            "description": "Displays information about the bot"
         },
-        "about": {
-            "description": "Information about the bot"
+        "serverinfo": {
+            "description": "Shows information about the server"
         },
-        "invite": {
-            "description": "Get the bot's invite link"
-        },
-        "server": {
-            "description": "Get information about the server"
-        },
-        "user": {
-            "description": "Get information about a user",
+        "roleinfo": {
+            "description": "Provides information for a role",
             "parameters": {
-                "member": "The member to get info about (defaults to you)"
-            }
-        }
-    },
-    "minecraft": {
-        "uuid": {
-            "description": "Get a Minecraft UUID based on a username",
-            "parameters": {
-                "username": "A Minecraft username"
+                "role": "The role to get the info for"
             }
         },
-        "avatar": {
-            "description": "Provides a Minecraft account's avatar",
+        "userinfo": {
+            "description": "Provides information about a user",
             "parameters": {
-                "username": "A Minecraft username" 
+                "member": "The member to get the info for (defaults to you)"
+            }
+        },
+        "status": {
+            "description": "Check the status of a website",
+            "parameters": {
+                "website": "Link to the website"
+            }
+        },
+        "define": {
+            "description": "Define a word",
+            "parameters": {
+                "word": "The word you want to define"
+            }
+        },
+        "filedata": {
+            "description": "Display metadata for an uploaded file",
+            "parameters": {
+                "file": "The uploaded file to analyze"
+            }
+        },
+        "mlevel": {
+            "description": "Calculate Mee6 levels and time to achieve them",
+            "parameters": {
+                "current_level": "Your current level",
+                "current_exp": "Your current EXP in that level",
+                "target_level": "The level you want to achieve (optional if target_exp provided)",
+                "target_exp": "The total EXP you want to achieve (optional if target_level provided)",
+                "target_date": "The date you want to achieve it by (MM/DD/YYYY)",
+                "exp_per_day": "Optional: Daily EXP goal (if not using target date)",
+                "mee6_pro": "Do you have Mee6 Pro? (50% EXP boost)",
+                "ephemeral": "Should the response be ephemeral (Hidden)?"
+            }
+        },
+        "level": {
+            "description": "View your level globally or in your guild",
+            "parameters": {
+                "where": "Where you want to view your level (guild or global)"
             }
         }
     },
