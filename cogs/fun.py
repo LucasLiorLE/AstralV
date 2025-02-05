@@ -157,7 +157,7 @@ class FunCog(commands.Cog):
                         if "url" in data:
                             embed = discord.Embed(title="Random Duck GIF", timestamp=datetime.now(timezone.utc))
                             embed.set_image(url=data["url"])
-                            embed.set_footer(f"Powered by random-d.uk\nRequested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                            embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                             await interaction.followup.send(embed=embed)
                         else:
                             await interaction.followup.send("Sorry, I couldn't fetch a duck GIF right now. Try again later!")
@@ -183,25 +183,50 @@ class FunCog(commands.Cog):
                         await interaction.followup.send("An error occurred while fetching the quote.")
         except Exception as e:
             await handle_logs(interaction, e)
-
+            
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="meme")
-    async def meme(self, interaction: discord.Interaction, ephemeral: bool = False):
+    async def meme(self, interaction: discord.Interaction, allow_nsfw: bool = False, 
+                  allow_spoilers: bool = False, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             async with ClientSession() as session:
-                async with session.get("https://meme-api.com/gimme") as response:
-                    if response.status == 200:  
-                        data = await response.json()
-                        meme_data = data[0]
+                max_retries = 5
+                for _ in range(max_retries):
+                    async with session.get("https://meme-api.com/gimme") as response:
+                        if response.status == 200:  
+                            meme_data = await response.json()
+                            
+                            if not allow_nsfw and meme_data.get('nsfw', False):
+                                continue
+                                
+                            if not allow_spoilers and meme_data.get('spoiler', False):
+                                continue
 
-                        embed = discord.Embed(title=f"({meme_data['title']})[{meme_data['postLink']}]", color=0x66CDAA)
-                        embed.set_image(url=meme_data["url"])
-                        embed.set_footer(text=f"{meme_data['ups']} Upvotes | By: {meme_data['author']} | Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
-                        await interaction.followup.send(embed=embed)
-                    else:
-                        await interaction.followup.send("An error occurred when trying to fetch the meme")
+                            embed = discord.Embed(
+                                title=meme_data['title'],
+                                url=meme_data['postLink'],
+                                color=0x66CDAA,
+                                timestamp=datetime.now(timezone.utc)
+                            )
+                            embed.set_image(url=meme_data["url"])
+                            
+                            footer_text = f"👍 {meme_data['ups']} | Posted by u/{meme_data['author']}"
+                            if meme_data.get('nsfw'):
+                                footer_text += " | 🔞 NSFW"
+                            if meme_data.get('spoiler'):
+                                footer_text += " | ⚠️ Spoiler"
+                            footer_text += f" | Requested by {interaction.user.display_name}"
+                            
+                            embed.set_footer(
+                                text=footer_text,
+                                icon_url=interaction.user.avatar.url
+                            )
+                            
+                            return await interaction.followup.send(embed=embed)
+                            
+                await interaction.followup.send("Couldn't find a suitable meme matching your criteria. Please try again!")
         except Exception as e:
             await handle_logs(interaction, e)
 

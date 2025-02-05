@@ -10,9 +10,9 @@ from .utils import *
 VERSION = {
     'major': 2,
     'minor': 1,
-    'patch': 3
+    'patch': 4
 }
 
 __version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}"
-__status__ = "Alpha"
+__status__ = "Development"
 __author__ = "LucasLiorLE"
