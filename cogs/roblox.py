@@ -282,7 +282,7 @@ class GloveView(View):
             description=full_glove_description
             if full_glove_description
             else "No gloves obtained.",
-            color=0xFF0000,
+            color=0xDA8EE7,
         )
 
         await interaction.response.edit_message(embeds=[full_glove_embed], view=self)
@@ -304,7 +304,7 @@ class GloveView(View):
         self.current_page = "gamepass_data"
         self.update_buttons()
 
-        gamepass_embed = discord.Embed(title=f"Gamepass Data for {interaction.user.name}", color=0xFF0000)
+        gamepass_embed = discord.Embed(title=f"Gamepass Data for {interaction.user.name}", color=0xDA8EE7)
         gamepass_embed.add_field(name="Owned", value=", ".join(self.owned_gamepasses) if self.owned_gamepasses else "None", inline=False)
         gamepass_embed.add_field(name="Not Owned", value=", ".join(self.not_owned_gamepasses) if self.not_owned_gamepasses else "None", inline=False)
 
@@ -314,8 +314,14 @@ class RobloxCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.tree.add_command(RobloxGroup())
-
         load_commands(self.__cog_app_commands__, "cgloves")
+
+    def get_member_color(self, interaction: discord.Interaction):
+        if interaction.guild:
+            member = interaction.guild.get_member(interaction.user.id)
+            if member:
+                return member.top_role.color
+        return 0xDA8EE7
 
     @app_commands.command(name="cgloves")
     async def cgloves(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
@@ -376,10 +382,11 @@ class RobloxCog(commands.Cog):
                 glove_percentage = (owned_gloves / total_gloves) * 100
                 glove_percentage_str = f"{glove_percentage:.1f}"
 
+                color = self.get_member_color(interaction)
                 glove_embed = discord.Embed(
                     title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
                     description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
-                    color=interaction.user.top_role.color or 0xFF0000,
+                    color=color,
                 )
                 glove_embed.add_field(
                     name="OWNED", 
@@ -431,7 +438,7 @@ class RobloxCog(commands.Cog):
 
                         badge_embed = discord.Embed(
                             title=f"Additional Badges for {username if username else interaction.user.name} ({roblox_id}):",
-                            color=0xFF0000,
+                            color=color,
                         )
 
                         obtained_badges = {badge["badgeId"]: badge["awardedDate"] for badge in data["data"]}
