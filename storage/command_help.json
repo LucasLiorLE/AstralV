@@ -580,6 +580,39 @@
                 "factor": "The factor by which to reduce the resolution",
                 "ephemeral": "If the message is hidden (Useful if no perms)"
             }
+        },
+        "watercolor": {
+            "description": "Apply a watercolor effect to an image",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "posterize": {
+            "description": "Apply a poster effect by reducing colors",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "solarize": {
+            "description": "Apply a solarization effect to invert colors above threshold",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "fisheye": {
+            "description": "Apply a fisheye lens effect to an image",
+            "parameters": {
+                "image": "The image file to apply the effect to",
+                "link": "The link to the image to apply the effect to",
+                "intensity": "The intensity of the fisheye effect (default: 2.0)",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
         }
     },
     "convert": {
@@ -683,6 +716,23 @@
             "parameters": {
                 "command": "The command to get help for",
                 "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
+        "avatar": {
+            "description": "Avatar related commands",
+            "subcommands": {
+                "get": {
+                    "description": "Get a user's global Discord avatar",
+                    "parameters": {
+                        "user": "The user whose avatar you want to see (optional)"
+                    }
+                },
+                "server": {
+                    "description": "Get a user's server-specific avatar",
+                    "parameters": {
+                        "user": "The user whose server avatar you want to see (optional)" 
+                    }
+                }
             }
         },
         "ping": {

@@ -104,6 +104,9 @@ class botMain(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
+                # Delete all commands
+                for guild in bot.guilds:
+                    await bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
                 await bot.tree.sync()
                 print("Commands successfully synced.")

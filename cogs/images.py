@@ -16,6 +16,9 @@ from moviepy.editor import VideoFileClip, AudioFileClip
 from aiohttp import ClientSession
 from urllib.parse import urlparse
 
+import numpy as np
+import cv2
+
 class ImageGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="image", description="Image manipulation commands")
@@ -130,7 +133,83 @@ class ImageGroup(app_commands.Group):
         pixelated_image.save(output_buffer, format="PNG")
         output_buffer.seek(0)
         return output_buffer
-    
+
+    async def image_watercolor(self, image_buffer: io.BytesIO) -> io.BytesIO:
+        image = Image.open(image_buffer)
+        watercolor = image.filter(ImageFilter.ModeFilter(size=5))
+        watercolor = watercolor.filter(ImageFilter.SMOOTH_MORE)
+        watercolor = watercolor.filter(ImageFilter.EDGE_ENHANCE)
+        output_buffer = io.BytesIO()
+        watercolor.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
+
+    async def image_posterize(self, image_buffer: io.BytesIO) -> io.BytesIO:
+        image = Image.open(image_buffer)
+        posterized = ImageOps.posterize(image.convert('RGB'), bits=2)
+        output_buffer = io.BytesIO()
+        posterized.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
+
+    async def image_solarize(self, image_buffer: io.BytesIO) -> io.BytesIO:
+        image = Image.open(image_buffer)
+        solarized = ImageOps.solarize(image.convert('RGB'), threshold=128)
+        output_buffer = io.BytesIO()
+        solarized.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
+
+    async def image_fisheye(self, image_buffer: io.BytesIO, intensity: float = None) -> io.BytesIO:
+        if intensity is None:
+            intensity = random.uniform(2.0, 4.0)
+            
+        image = Image.open(image_buffer)
+        width, height = image.size
+        
+        x = np.linspace(-1, 1, width)
+        y = np.linspace(-1, 1, height)
+        x_grid, y_grid = np.meshgrid(x, y)
+        
+        r = np.sqrt(x_grid**2 + y_grid**2)
+        theta = np.arctan2(y_grid, x_grid)
+        
+        r_fisheye = np.power(r, intensity)
+        
+        x_fisheye = r_fisheye * np.cos(theta)
+        y_fisheye = r_fisheye * np.sin(theta)
+        
+        x_fisheye = ((x_fisheye + 1) / 2 * (width - 1)).astype(np.float32)
+        y_fisheye = ((y_fisheye + 1) / 2 * (height - 1)).astype(np.float32)
+        
+        coords = np.stack((x_fisheye, y_fisheye))
+        
+        cv_image = np.array(image)
+        if len(cv_image.shape) == 3:
+            cv_image = cv_image[:, :, ::-1]
+        
+        distorted = cv2.remap(cv_image, coords[0], coords[1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        
+        y, x = np.ogrid[:height, :width]
+        center_y, center_x = height/2, width/2
+        mask = ((x - center_x)/(center_x))**2 + ((y - center_y)/(center_y))**2
+        mask = 1 - mask * 0.8 
+        mask = np.clip(mask, 0.1, 1) 
+        
+        if len(distorted.shape) == 3:
+            mask = np.dstack([mask] * 3)
+        distorted = (distorted * mask).astype(np.uint8)
+        
+        if len(cv_image.shape) == 3:
+            distorted = distorted[:, :, ::-1]
+            
+        result = Image.fromarray(distorted)
+        
+        output_buffer = io.BytesIO()
+        result.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+        return output_buffer
+
     async def process_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None):
         if image is None and link is None:
                     await interaction.followup.send("Please provide an image attachment or a link to an image.", ephemeral=True)
@@ -383,6 +462,66 @@ class ImageGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.command(name="watercolor")
+    async def watercolor_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            watercolor_buffer = await self.image_watercolor(image_buffer)
+            
+            await interaction.followup.send(
+                content="Here is your image with watercolor effect:",
+                file=discord.File(fp=watercolor_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="posterize")
+    async def posterize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            poster_buffer = await self.image_posterize(image_buffer)
+            
+            await interaction.followup.send(
+                content="Here is your posterized image:",
+                file=discord.File(fp=poster_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="solarize")
+    async def solarize_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            solar_buffer = await self.image_solarize(image_buffer)
+            
+            await interaction.followup.send(
+                content="Here is your solarized image:",
+                file=discord.File(fp=solar_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="fisheye", description="Apply a fisheye lens effect to an image")
+    async def fisheye_image(self, interaction: discord.Interaction, intensity: float = 2.0, image: discord.Attachment = None, link: str = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            image_data, filename = await self.process_image(interaction, image, link)
+            image_buffer = io.BytesIO(image_data)
+            fisheye_buffer = await self.image_fisheye(image_buffer, intensity)
+            
+            await interaction.followup.send(
+                content=f"Here is your image with fisheye effect (intensity: {intensity}):",
+                file=discord.File(fp=fisheye_buffer, filename=f"{filename.rsplit('.', 1)[0]}.png")
+            )
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     async def context_randomize_callback(self, interaction: discord.Interaction, message: discord.Message):
         if not message.attachments:
             await interaction.response.send_message("This message doesn't contain any images!", ephemeral=True)
@@ -405,8 +544,12 @@ class ImageGroup(app_commands.Group):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             random_effects = [
-                self.image_flip, self.image_invert, self.image_blur, self.image_brightness, self.image_contrast,
-                self.image_grayscale, self.image_sepia, self.image_sharpen, self.image_pixelate
+                self.image_flip, self.image_invert, self.image_blur, 
+                self.image_brightness, self.image_contrast,
+                self.image_grayscale, self.image_sepia, 
+                self.image_sharpen, self.image_pixelate,
+                self.image_watercolor, self.image_posterize, 
+                self.image_solarize, self.image_fisheye
             ]
 
             image_data, filename = await self.process_image(interaction, image, link)
