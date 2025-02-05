@@ -3,6 +3,7 @@ from bot_utils import (
     open_file,
     parse_duration,
     __version__,
+    __status__,
     load_commands
 )
 
@@ -20,7 +21,6 @@ from PIL import Image
 class AvatarGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="avatar")
-        # Move load_commands call to after command definitions
 
     @app_commands.command(name="get")
     async def get(self, interaction: discord.Interaction, user: discord.User = None):
@@ -52,7 +52,6 @@ class AvatarGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    # Add this after all command definitions
     def setup_commands(self):
         load_commands(self, "info")
 
@@ -64,7 +63,7 @@ class InfoCog(commands.Cog):
         load_commands(self.__cog_app_commands__, "info")
         
         avatar_group = AvatarGroup()
-        avatar_group.setup_commands()  # Call setup after creation
+        avatar_group.setup_commands()
         self.bot.tree.add_command(avatar_group)
 
         self.context_userinfo = app_commands.ContextMenu(
@@ -402,7 +401,7 @@ class InfoCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         try:
             embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
-            embed.add_field(name="Version", value=f"v{__version__}")
+            embed.add_field(name="Version", value=f"v{__version__} ({__status__})")
             embed.add_field(name="Server Count", value=len(self.bot.guilds))
             embed.add_field(name="Library", value="Discord.py")
             embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 310+ hours")

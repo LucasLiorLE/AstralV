@@ -32,7 +32,7 @@ class ReminderGroup(app_commands.Group):
                 await interaction.followup.send("Reminder time must be greater than 0 seconds.")
                 return
 
-            if duration_delta.total_seconds() > 2592000:  # 30 days
+            if duration_delta.total_seconds() > 2592000:
                 await interaction.followup.send("Reminder time cannot be longer than 30 days.")
                 return
 
@@ -158,8 +158,12 @@ class UtilCog(commands.Cog):
             
             save_file("storage/server_info.json", server_info)
 
-            await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
-            await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
+            try:
+                await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
+                await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
+            except discord.errors.Forbidden:
+                await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}\nI was unable to change your name.")
+
         except Exception as e:
             await handle_logs(interaction, e)
 

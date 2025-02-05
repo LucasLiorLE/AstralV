@@ -88,7 +88,6 @@ class EconomyCog(commands.Cog):
         bot.tree.add_command(ShopGroup())
         bot.tree.add_command(AuctionGroup())
         
-        # Change this line to use __cog_app_commands__
         load_commands(self.__cog_app_commands__, "economy")
 
     def cog_unload(self):
