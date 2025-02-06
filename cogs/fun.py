@@ -2,6 +2,7 @@ from bot_utils import (
     handle_logs,
     check_mod,
     open_file,
+    get_member_color,
     load_commands
 )
 
@@ -77,7 +78,12 @@ class FunCog(commands.Cog):
                 async with session.get("https://uselessfacts.jsph.pl/random.json?language=en") as response:
                     if response.status == 200:
                         data = await response.json()
-                        embed = discord.Embed(title="Random Fact 🤓", description=data["text"], color=0x9370DB, timestamp=datetime.now(timezone.utc))
+                        embed = discord.Embed(
+                            title="Random Fact 🤓", 
+                            description=data["text"], 
+                            color=get_member_color(interaction, 0xe04ac7), 
+                            timestamp=datetime.now(timezone.utc)
+                        )
                         embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         await interaction.followup.send(embed=embed)
                     else:
@@ -96,7 +102,12 @@ class FunCog(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         if "setup" in data and "punchline" in data:
-                            embed = discord.Embed(title=data['setup'], description=f"||{data['punchline']}||", timestamp=datetime.now(timezone.utc))
+                            embed = discord.Embed(
+                                title=data['setup'], 
+                                description=f"||{data['punchline']}||", 
+                                color=get_member_color(interaction, 0xad3d4c),
+                                timestamp=datetime.now(timezone.utc)
+                            )
                             embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                             await interaction.followup.send(embed=embed)
                         else:
@@ -116,7 +127,11 @@ class FunCog(commands.Cog):
                 async with session.get("https://api.thecatapi.com/v1/images/search") as response:
                     if response.status == 200:
                         data = await response.json()
-                        embed = discord.Embed(title="Here's a cute cat for you!", color=0xFFA07A, timestamp=datetime.now(timezone.utc))
+                        embed = discord.Embed(
+                            title="Here's a cute cat for you!", 
+                            color=get_member_color(interaction, 0x553a69), 
+                            timestamp=datetime.now(timezone.utc)
+                        )
                         embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         embed.set_image(url=data[0]["url"])
                         await interaction.followup.send(embed=embed)
@@ -135,7 +150,11 @@ class FunCog(commands.Cog):
                 async with session.get("https://dog.ceo/api/breeds/image/random") as response:
                     if response.status == 200:
                         data = await response.json()
-                        embed = discord.Embed(title="Here's a cute dog for you!", color=0xADD8E6, timestamp=datetime.now(timezone.utc))
+                        embed = discord.Embed(
+                            title="Here's a cute dog for you!", 
+                            color=get_member_color(interaction, 0x52452a), 
+                            timestamp=datetime.now(timezone.utc)
+                        )
                         embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                         embed.set_image(url=data["message"])
                         await interaction.followup.send(embed=embed)
@@ -155,9 +174,12 @@ class FunCog(commands.Cog):
                     if response.status == 200:
                         data = await response.json()
                         if "url" in data:
-                            embed = discord.Embed(title="Random Duck GIF", timestamp=datetime.now(timezone.utc))
+                            embed = discord.Embed(
+                                title="Random Duck GIF", 
+                                color=get_member_color(interaction, 0xfbff8a),
+                                timestamp=datetime.now(timezone.utc))
                             embed.set_image(url=data["url"])
-                            embed.set_footer(f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                            embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
                             await interaction.followup.send(embed=embed)
                         else:
                             await interaction.followup.send("Sorry, I couldn't fetch a duck GIF right now. Try again later!")
@@ -176,8 +198,14 @@ class FunCog(commands.Cog):
                 async with session.get("https://zenquotes.io/api/random") as response:
                     if response.status == 200:
                         data = await response.json()
-                        embed = discord.Embed(title=data[0]["q"], description=f"- {data[0]['a']}", color=0x66CDAA, timestamp=datetime.now(timezone.utc))
-                        embed.set_footer(text=f"Requested by {interaction.user.display_name}", icon_url=interaction.user.avatar.url)
+                        embed = discord.Embed(
+                            title="Super inspiring title",
+                            description=f"```{data[0]['q']}```\n*― {data[0]['a']}*", 
+                            color=get_member_color(interaction, 0x9932CC),
+                            timestamp=datetime.now(timezone.utc)
+                        )
+                        embed.set_footer(text=f"Requested by {interaction.user.display_name}", 
+                                    icon_url=interaction.user.avatar.url)
                         await interaction.followup.send(embed=embed)
                     else:
                         await interaction.followup.send("An error occurred while fetching the quote.")
@@ -207,7 +235,7 @@ class FunCog(commands.Cog):
                             embed = discord.Embed(
                                 title=meme_data['title'],
                                 url=meme_data['postLink'],
-                                color=0x66CDAA,
+                                color=get_member_color(interaction, 0xffef40),
                                 timestamp=datetime.now(timezone.utc)
                             )
                             embed.set_image(url=meme_data["url"])
@@ -252,7 +280,7 @@ class FunCog(commands.Cog):
             embed = discord.Embed(
                 title="Magic 8-ball",
                 description=f'**Question:** {question}\n**Answer:** {response}',
-                color=discord.Color.blurple()
+                color=get_member_color(interaction, 0x4169E1)
             )
             
             await interaction.followup.send(embed=embed)
@@ -277,7 +305,12 @@ class FunCog(commands.Cog):
                                 year = int(comic_data['year'])
                                 posted_date = datetime(year, 1, 1).date()
 
-                                embed = discord.Embed(title=comic_data["title"], description=comic_data["alt"], color=0x6A5ACD, timestamp=datetime.now(timezone.utc))
+                                embed = discord.Embed(
+                                    title=comic_data["title"], 
+                                    description=comic_data["alt"], 
+                                    color=get_member_color(interaction, 0xFFFFFF),
+                                    timestamp=datetime.now(timezone.utc)
+                                )
                                 embed.url = comic_url
                                 embed.set_footer(text=f"Posted on {posted_date}", icon_url="https://xkcd.com/favicon.ico")
                                 embed.set_image(url=comic_data["img"])

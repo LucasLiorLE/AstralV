@@ -4,6 +4,7 @@ from bot_utils import (
     rbx_fetchUserID,
     rbx_fetchUserBio,
     check_user,
+    get_member_color,
     handle_logs,
     load_commands
 )
@@ -316,13 +317,6 @@ class RobloxCog(commands.Cog):
         self.bot.tree.add_command(RobloxGroup())
         load_commands(self.__cog_app_commands__, "cgloves")
 
-    def get_member_color(self, interaction: discord.Interaction):
-        if interaction.guild:
-            member = interaction.guild.get_member(interaction.user.id)
-            if member:
-                return member.top_role.color
-        return 0xDA8EE7
-
     @app_commands.command(name="cgloves")
     async def cgloves(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -382,7 +376,7 @@ class RobloxCog(commands.Cog):
                 glove_percentage = (owned_gloves / total_gloves) * 100
                 glove_percentage_str = f"{glove_percentage:.1f}"
 
-                color = self.get_member_color(interaction)
+                color = get_member_color(interaction)
                 glove_embed = discord.Embed(
                     title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
                     description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",

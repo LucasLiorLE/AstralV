@@ -151,3 +151,21 @@ async def create_interaction(ctx):
                 self.message = ctx.message
 
         return PseudoInteraction(ctx)
+
+
+def get_member_color(interaction: discord.Interaction, color: str) -> discord.Color:
+    """Retrieves the color of the member's highest role in the guild.
+
+    Args:
+        interaction (discord.Interaction): The interaction object containing user and guild information.
+        color (str): The default color to return if the member is not found or the color is None.
+
+    Returns:
+        discord.Color: The color of the member's highest role.
+                      Returns 0xDA8EE7 if the member is not found or the color is None.
+    """
+    if interaction.guild:
+        member = interaction.guild.get_member(interaction.user.id)
+        if member:
+            return member.top_role.color
+    return 0xDA8EE7 if color is None else color
