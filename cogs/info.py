@@ -17,18 +17,52 @@ from aiohttp import ClientSession, ClientError
 from datetime import datetime, timezone, timedelta
 from moviepy.editor import VideoFileClip, AudioFileClip
 from PIL import Image
+import io
+from collections import Counter
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="avatar")
+
+    async def get_dominant_color(self, url):
+        try:
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        return 0x808080
+                    
+                    image_data = await response.read()
+                    image = Image.open(io.BytesIO(image_data))
+                    image = image.resize((50, 50))
+                    if image.mode != 'RGB':
+                        image = image.convert('RGB')
+                    pixels = image.getcolors(2500)
+                    
+                    if not pixels:
+                        return 0x808080
+                    sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
+                    dominant_color = sorted_pixels[0][1]
+                    return int('%02x%02x%02x' % dominant_color, 16)
+        except:
+            return 0x808080
 
     @app_commands.command(name="get")
     async def get(self, interaction: discord.Interaction, user: discord.User = None):
         await interaction.response.defer()
         try:
             user = user or interaction.user
-            embed = discord.Embed(title=f"{user.display_name}'s Avatar", color=0x808080)
-            embed.set_image(url=user.avatar.url if user.avatar else None)
+            avatar_url = user.avatar.url if user.avatar else None
+            
+            if avatar_url:
+                embed_color = await self.get_dominant_color(avatar_url)
+            else:
+                embed_color = 0x808080
+                
+            embed = discord.Embed(
+                title=f"{user.display_name}'s Avatar",
+                color=embed_color
+            )
+            embed.set_image(url=avatar_url)
             embed.set_footer(
                 text=f"Requested by {interaction.user}",
                 icon_url=(interaction.user.avatar.url if interaction.user.avatar else None)
@@ -42,8 +76,18 @@ class AvatarGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             user = user or interaction.user
-            embed = discord.Embed(title=f"{user.display_name}'s Server Avatar", color=0x808080)
-            embed.set_image(url=user.display_avatar.url if user.display_avatar else None)
+            avatar_url = user.display_avatar.url if user.display_avatar else None
+            
+            if avatar_url:
+                embed_color = await self.get_dominant_color(avatar_url)
+            else:
+                embed_color = 0x808080
+                
+            embed = discord.Embed(
+                title=f"{user.display_name}'s Server Avatar",
+                color=embed_color
+            )
+            embed.set_image(url=avatar_url)
             embed.set_footer(
                 text=f"Requested by {interaction.user}",
                 icon_url=(interaction.user.avatar.url if interaction.user.avatar else None)
@@ -420,12 +464,15 @@ class InfoCog(commands.Cog):
 
     @app_commands.command(name="serverinfo")
     async def serverinfo(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=True)
         try:
             guild = interaction.guild
+            if not guild:
+                await interaction.followup.send("This command can only be used in a server.", ephemeral=True)
+                return
 
             embed = discord.Embed(title="Server Info", color=0x808080)
-            embed.add_field(name="Owner", value=guild.owner.mention)
+            embed.add_field(name="Owner", value=guild.owner.mention if guild.owner else "N/A")
             embed.add_field(name="Members", value=guild.member_count)
             embed.add_field(name="Roles", value=len([role.name for role in guild.roles]))
             embed.add_field(name="Category Channels", value=len(guild.categories))
@@ -433,7 +480,7 @@ class InfoCog(commands.Cog):
             embed.add_field(name="Voice Channels", value=len([channel for channel in guild.voice_channels]))
             embed.add_field(name="Role List", value=", ".join([role.name for role in guild.roles]), inline=False)
             embed.add_field(name="Server ID", value=guild.id)
-            embed.add_field(name="Server Created", value=f"{guild.created_at.strftime("%m/%d/%Y %I:%M %p")}")
+            embed.add_field(name="Server Created", value=f"{guild.created_at.strftime('%m/%d/%Y %I:%M %p')}")
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
             await interaction.followup.send(embed=embed)
@@ -452,10 +499,10 @@ class InfoCog(commands.Cog):
             embed.add_field(name="Color", value=str(role.color))
             embed.add_field(name="Mentionable", value=str(role.mentionable))
             embed.add_field(name="Hoist", value=str(role.hoist))
-            embed.add_field(name="Position",value=f"{role.position}/{len(self, interaction.guild.roles)}",)
-            embed.add_field(name="Permissions",value=", ".join(permissions_list) if permissions_list else "No permissions")
+            embed.add_field(name="Position",value=f"{role.position}/{len(interaction.guild.roles)}",)
             embed.add_field(name="Member Count", value=len(role.members))
             embed.add_field(name="Role Created On",value=f"{role.created_at.strftime("%m/%d/%Y %H:%M")} ({(datetime.now(timezone.utc) - role.created_at).days} days ago)")
+            embed.add_field(name="Permissions",value=", ".join(permissions_list) if permissions_list else "No permissions", inline=False)
 
             if role.icon:
                 embed.set_thumbnail(url=role.icon.url)
@@ -476,14 +523,20 @@ class InfoCog(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         try:
             member = member or interaction.user
+            if not member:
+                await interaction.followup.send("This command can only be used in a server.", ephemeral=True)
+                return
+
             embed = discord.Embed(title="User Info", color=0x808080)
-            embed.set_thumbnail(url=member.avatar.url)
+            embed.set_thumbnail(url=member.avatar.url if member.avatar else None)
             embed.add_field(name="Username", value=member.display_name)
             embed.add_field(name="User ID", value=member.id)
             embed.add_field(name="Joined Discord", value=member.created_at.strftime("%b %d, %Y"))
-            embed.add_field(name="Joined Server", value=member.joined_at.strftime("%b %d, %Y"))
-            embed.add_field(name="Roles", value=", ".join([role.name for role in member.roles]))
+            embed.add_field(name="Joined Server", value=member.joined_at.strftime("%b %d, %Y") if member.joined_at else "N/A")
+            if member.roles:
+                embed.add_field(name="Roles", value=", ".join([role.name for role in member.roles]))
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+
             await interaction.followup.send(embed=embed)
         except Exception as error:
             await handle_logs(interaction, error)
