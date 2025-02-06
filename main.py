@@ -6,7 +6,8 @@
 #
 # Release Notes
 #    - Make command descriptions better (Helps with help command)
-
+#    - Bug fixing for all cogs
+#
 # Other stuff:
 #    - load_command() as a new helper thing.
 # 
@@ -96,6 +97,8 @@ class botMain(commands.Bot):
         self.status_manager = StatusManager(self)
 
     async def setup_hook(self):
+        self.loop.create_task(self.status_manager.change_status())
+        
         # import logging
         # logging.basicConfig(level=logging.INFO)
         # logger = logging.getLogger("discord")
