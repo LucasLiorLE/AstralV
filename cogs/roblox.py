@@ -1,12 +1,14 @@
 from bot_utils import (
-    open_file,
-    save_file,
     rbx_fetchUserID,
     rbx_fetchUserBio,
+
     check_user,
     get_member_color,
+
+    open_file,
+    save_file,
+    load_commands,
     handle_logs,
-    load_commands
 )
 
 import discord

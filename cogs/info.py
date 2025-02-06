@@ -18,7 +18,6 @@ from datetime import datetime, timezone, timedelta
 from moviepy.editor import VideoFileClip, AudioFileClip
 from PIL import Image
 import io
-from collections import Counter
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):

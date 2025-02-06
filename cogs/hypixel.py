@@ -1,9 +1,9 @@
 from bot_utils import (
-    load_commands,
-    handle_logs,
     mc_fetchUUID,
     hypixelAPI,
-    open_file
+
+    load_commands,
+    handle_logs,
 )
 
 import discord

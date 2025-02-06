@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
-# Find and load secrets.env from the storage folder
-root_dir = Path(__file__).parent.parent  # Go up one level from bot_utils
+from ossapi import UserLookupKey, Ossapi
+
+root_dir = Path(__file__).parent.parent
 secrets_path = root_dir / "storage" / "secrets.env"
 
 if not secrets_path.exists():
@@ -23,7 +24,6 @@ osuAPI = os.getenv("osu_api")
 osuSecret = os.getenv("osu_secret")
 hypixelAPI = os.getenv("hypixel_api")
 
-# Add error checking for required token
 if not token:
     print(f"ERROR: Token not found in {secrets_path}")
     print("Please ensure your secrets.env file contains a line with: token=your_bot_token_here")
@@ -40,6 +40,23 @@ class ClanData(TypedDict):
     members: int
     description: str
     type: str
+
+class OsuAPI:
+    """
+    A class to interact with the osu! API.
+
+    Attributes:
+        api (Ossapi): An instance of the Ossapi class for making API requests.
+
+    Methods:
+        user(username: str, key: UserLookupKey):
+            Fetches user data from the osu! API based on the provided username and lookup key.
+    """
+    def __init__(self, client_id: str, client_secret: str):
+        self.api = Ossapi(client_id, client_secret)
+
+    async def user(self, username: str, key: UserLookupKey):
+        return self.api.user(username, key=key)
 
 """
 CLASH ROYALE COMMANDS

@@ -6,10 +6,15 @@
 #
 # Release Notes
 #    - Make command descriptions better (Helps with help command)
-#    - Bug fixing for all cogs
+#    - Avatar commands now display the main color of their pfp!
+#
+# Bug Fixes:
+#    - Fixed bug for every single command.
+#        - Might still have some minor bugs I did not find.
 #
 # Other stuff:
-#    - load_command() as a new helper thing.
+#    - load_command() is now used to load command descriptions.
+#    - get_member_color() is used to get the top role of the user.
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
@@ -17,12 +22,11 @@
 #    - Except block for 400 bad request code 50007 for commands
 #    - Make auto mute a server set function.
 #
-# This was last updated: 2/2/2025 8:12 PM
+# This was last updated: 2/5/2025 10:35 PM
 
 import os, random, math, asyncio
 # import asyncpraw
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import discord
 from discord.ext import commands

@@ -1,8 +1,10 @@
 import discord
-import re
+import re, io
 
 from datetime import timedelta
 from typing import Optional, TypeVar, Generic
+from aiohttp import ClientSession
+from PIL import Image
 
 def parse_duration(duration_str: str) -> Optional[timedelta]:
     """
@@ -169,3 +171,39 @@ def get_member_color(interaction: discord.Interaction, color: str) -> discord.Co
         if member:
             return member.top_role.color
     return 0xDA8EE7 if color is None else color
+
+async def get_dominant_color(url: str = None, buffer: io.BytesIO = None) -> discord.Color:
+    """
+    Retrieves the dominant color from an image.
+
+    Parameters:
+    - url (str): The URL of the image to analyze.
+    - buffer (io.BytesIO): A buffer containing the image data.
+
+    Returns:
+    - discord.Color: The dominant color in the image as a Discord color object.
+    """
+    try:
+        if buffer:
+            image = Image.open(buffer)
+        else:
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status != 200:
+                        return 0x808080
+                    
+                    image_data = await response.read()
+                    image = Image.open(io.BytesIO(image_data))
+        
+        image = image.resize((50, 50))
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        pixels = image.getcolors(2500)
+        
+        if not pixels:
+            return 0x808080
+        sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
+        dominant_color = sorted_pixels[0][1]
+        return int('%02x%02x%02x' % dominant_color, 16)
+    except:
+        return 0x808080

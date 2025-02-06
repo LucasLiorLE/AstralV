@@ -1,9 +1,9 @@
 from bot_utils import (
-    handle_logs,
     check_mod,
-    open_file,
     get_member_color,
-    load_commands
+    
+    load_commands,
+    handle_logs,
 )
 
 import discord

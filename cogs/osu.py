@@ -1,8 +1,11 @@
 from bot_utils import (
+    get_dominant_color,
     load_commands,
     handle_logs,
+
+    OsuAPI,
     osuAPI,
-    open_file
+    osuSecret
 )
 
 import discord
@@ -21,13 +24,15 @@ class OsuCommandGroup(app_commands.Group):
     async def osuprofile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
-            user = osuAPI.user(username, key=UserLookupKey.USERNAME)
+            osu_api = OsuAPI(osuAPI, osuSecret)
+            user = await osu_api.user(username, key=UserLookupKey.USERNAME)
             
             embed = discord.Embed(
                 title=f"osu! Profile: {user.username}",
                 url=f"https://osu.ppy.sh/users/{user.id}",
-                color=discord.Color.blue(),
+                color=0xFF00D9,
             )
+
             embed.set_thumbnail(url=user.avatar_url)
             embed.add_field(name="Username", value=user.username or "N/A")
             embed.add_field(name="ID", value=str(user.id) if user.id is not None else "N/A")
@@ -53,7 +58,10 @@ class OsuCommandGroup(app_commands.Group):
             
             await interaction.followup.send(embed=embed)
         except Exception as e:
-            await handle_logs(interaction, e)
+            if "not found" in str(e):
+                await interaction.followup.send(f"User '{username}' not found.")
+            else:
+                await handle_logs(interaction, e)
 
 class OsuCog(commands.Cog):
     def __init__(self, bot):

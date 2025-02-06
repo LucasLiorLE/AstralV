@@ -1,8 +1,8 @@
 from bot_utils import (
-    handle_logs,
     mc_fetchUUID,
+
     load_commands,
-    open_file
+    handle_logs,
 )
 
 import discord
