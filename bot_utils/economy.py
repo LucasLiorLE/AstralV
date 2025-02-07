@@ -139,7 +139,7 @@ async def process_transaction(user_id, transaction_type, amount):
     max_bank = int(player_data["balance"]["maxBank"])
 
     if int(amount) <= 0:
-        return "The amount must be a positive number."
+        return False, "The amount must be a positive number."
 
     if transaction_type == "deposit":
         if purse_balance < int(amount):
@@ -196,4 +196,3 @@ def update_stats(user_id, game, result, amount=0):
 
     eco[user_id][game] = stats
     save_file(eco_path, eco)
-

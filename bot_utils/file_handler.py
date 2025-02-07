@@ -14,21 +14,11 @@ def open_file(filename: str) -> Dict[str, Any]:
         
     Returns:
         Dict[str, Any]: Parsed JSON data as dictionary
-        
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        json.JSONDecodeError: If file contains invalid JSON
     """
-    try:
-        with open(filename, "r") as f:
-            file_data = json.load(f)
-        return file_data
-    except FileNotFoundError:
-        print(f"[ERROR]: The file '{filename}' was not found.")
-        return {}
-    except json.JSONDecodeError:
-        print(f"[ERROR]: The file '{filename}' contains invalid JSON.")
-        return {}
+    with open(filename, "r") as f:
+        file_data = json.load(f)
+    return file_data
+
 
 def save_file(filename: str, data: JsonData) -> None:
     """

@@ -14,7 +14,6 @@ from discord.ext import commands
 from discord import app_commands
 
 import asyncio, random, time
-from datetime import datetime, timezone
 
 async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, server_id: str):
     try:

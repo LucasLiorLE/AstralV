@@ -791,6 +791,54 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+
+    @app_commands.command(name="ban")
+    async def ban(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
+        await interaction.response.defer()
+        try:
+            if not await check_mod(interaction, "ban_members"):
+                return
+            
+            await member.ban(reason=reason)
+
+            await dmbed(interaction, member, "banned", reason)
+
+            await store_modlog(
+                modlog_type="Ban",
+                moderator=interaction.user,
+                user=member,
+                reason=reason,
+                server_id=interaction.guild_id,
+                bot=self.bot
+            )
+            
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="unban")
+    async def unban(self, interaction: discord.Interaction, id: int, reason: str = "No reason provided"):
+        await interaction.response.defer()
+        try:
+            if not await check_mod(interaction, "ban_members"):
+                return
+            
+            member = await self.bot.fetch_user(id)
+            member.unban(reason=reason)
+
+            await dmbed(interaction, member, "unbanned", reason)
+
+            await store_modlog(
+                modlog_type="Unban",
+                moderator=interaction.user,
+                user=member,
+                reason=reason,
+                server_id=interaction.guild_id,
+                bot=self.bot
+            )
+
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     @app_commands.command(name="warn")
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str, auto_mute: bool = False):
         await interaction.response.defer()
@@ -1089,6 +1137,24 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             await self.kick.callback(self, interaction, member, reason)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="ban")
+    @commands.has_permissions(manage_messages=True)
+    async def manual_ban(self, ctx, member: discord.Member, reason: str = "No reason provided"):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.ban.callback(self, interaction, member, reason)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="unban")
+    @commands.has_permissions(manage_messages=True)
+    async def manual_unban(self, ctx, id: int, reason: str = "No reason provided"):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.unban.callback(self, interaction, id, reason)
         except Exception as e:
             error(e)
 

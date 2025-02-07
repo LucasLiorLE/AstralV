@@ -282,7 +282,6 @@ async def send_modlog_embed(
     3. Includes footer with pagination info
     """
     server_info = open_file("storage/server_info.json")
-    print(server_info)
     server_id = str(interaction.guild.id)
     user_id = str(user.id)
 

@@ -699,9 +699,8 @@ class SkyblockView(View):
 
     def create_collections_embed(self):
 
-        # TODO: Coming v1.1.25
         embed = discord.Embed(
-            title="Coming next version!", 
+            title="Not coming soon.", 
             color=discord.Color.yellow(),
             timestamp=datetime.now(timezone.utc)
         )

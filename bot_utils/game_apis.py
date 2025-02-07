@@ -25,7 +25,7 @@ osuSecret = os.getenv("osu_secret")
 hypixelAPI = os.getenv("hypixel_api")
 
 if not token:
-    print(f"ERROR: Token not found in {secrets_path}")
+    print(f"[ERROR]: Token not found in {secrets_path}")
     print("Please ensure your secrets.env file contains a line with: token=your_bot_token_here")
     raise ValueError("Discord bot token not found in environment variables")
 
@@ -174,7 +174,8 @@ async def mc_fetchUUID(interaction: discord.Interaction, username: str) -> Union
         username (str): The username to the account.
         
     Returns:
-        Union[str, False]: The UUID of the account."""
+        Union[str, False]: The UUID of the account.
+    """
     async with ClientSession() as session:
         async with session.get(f"https://api.mojang.com/users/profiles/minecraft/{username}") as response:
             if response.status == 200:

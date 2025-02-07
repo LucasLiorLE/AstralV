@@ -11,18 +11,18 @@ def parse_duration(duration_str: str) -> Optional[timedelta]:
     Parses a duration string in the format 'XdYhZmWs' into a timedelta object.
 
     Parameters:
-    - duration_str (str): The duration string to parse, where:
-      - 'd' represents days,
-      - 'h' represents hours,
-      - 'm' represents minutes,
-      - 's' represents seconds.
+        duration_str (str): The duration string to parse, where:
+            'd' represents days,
+            'h' represents hours,
+            'm' represents minutes,
+            's' represents seconds.
 
     Returns:
-    - Optional[timedelta]: A `timedelta` object representing the total duration if the format is valid, otherwise `None`.
+        Optional[timedelta]: A `timedelta` object representing the total duration if the format is valid, otherwise `None`.
 
     Example:
-    - Input: "1d2h30m15s"
-    - Output: timedelta(days=1, hours=2, minutes=30, seconds=15)
+        - Input: "1d2h30m15s"
+        - Output: timedelta(days=1, hours=2, minutes=30, seconds=15)
     """
     duration_regex = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
     match = duration_regex.match(duration_str)
@@ -49,11 +49,11 @@ def check_user(interaction: discord.Interaction, original_user: discord.User) ->
     Checks if the interaction is performed by the original user.
 
     Parameters:
-    - interaction (discord.Interaction): The interaction object triggered by the user.
-    - original_user (discord.User): The user who is allowed to interact.
+        interaction (discord.Interaction): The interaction object triggered by the user.
+        original_user (discord.User): The user who is allowed to interact.
 
     Returns:
-    - bool: True if the interaction user matches the original user, otherwise False.
+        bool: True if the interaction user matches the original user, otherwise False.
     """
     return interaction.user.id == original_user.id
 
@@ -61,16 +61,17 @@ def check_user(interaction: discord.Interaction, original_user: discord.User) ->
 def convert_number(number: str) -> int:
     """
     Converts shorthand notations like 50m, 1b, 10k to full numbers.
-    Ex. 
-    50m -> 50000000
-    1b -> 1000000000
-    10k -> 10000
 
     Args:
         number (str): The shorthand number as a string.
 
     Returns:
         int: The full numeric value.
+
+    Example:
+        - 50m -> 50000000
+        - 1b -> 1000000000
+        - 10k -> 10000
     """
     suffixes = {'k': 1_000, 'm': 1_000_000, 'b': 1_000_000_000, 't': 1_000_000_000_000}
     if not number:
@@ -82,7 +83,7 @@ def convert_number(number: str) -> int:
         return int(float(number[:-1]) * multiplier)
     return int(number)
 
-T = TypeVar('T')  # Generic type for RestrictedView
+T = TypeVar('T')
 
 class RestrictedView(discord.ui.View, Generic[T]):
     """
@@ -114,13 +115,16 @@ async def create_interaction(ctx):
                 self._responded = False
 
             async def defer(self, ephemeral=False):
+                """Marks the interaction as deferred."""
                 self._deferred = True
 
             async def send_message(self, *args, **kwargs):
+                """Sends a message in response to the interaction."""
                 self._responded = True
                 return await self.ctx.send(*args, **kwargs)
 
             def is_done(self):
+                """Checks if the interaction has been deferred."""
                 return self._deferred
 
         class Followup:
@@ -129,6 +133,7 @@ async def create_interaction(ctx):
                 self._last_message = None
 
             async def send(self, content=None, **kwargs):
+                """Sends a follow-up message, deleting the previous one if it exists."""
                 if self._last_message:
                     try:
                         await self._last_message.delete()
@@ -154,7 +159,6 @@ async def create_interaction(ctx):
 
         return PseudoInteraction(ctx)
 
-
 def get_member_color(interaction: discord.Interaction, color: str) -> discord.Color:
     """Retrieves the color of the member's highest role in the guild.
 
@@ -177,11 +181,11 @@ async def get_dominant_color(url: str = None, buffer: io.BytesIO = None) -> disc
     Retrieves the dominant color from an image.
 
     Parameters:
-    - url (str): The URL of the image to analyze.
-    - buffer (io.BytesIO): A buffer containing the image data.
+        url (str): The URL of the image to analyze.
+        buffer (io.BytesIO): A buffer containing the image data.
 
     Returns:
-    - discord.Color: The dominant color in the image as a Discord color object.
+        discord.Color: The dominant color in the image as a Discord color object.
     """
     try:
         if buffer:
@@ -199,7 +203,7 @@ async def get_dominant_color(url: str = None, buffer: io.BytesIO = None) -> disc
         if image.mode != 'RGB':
             image = image.convert('RGB')
         pixels = image.getcolors(2500)
-        
+
         if not pixels:
             return 0x808080
         sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
