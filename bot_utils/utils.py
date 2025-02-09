@@ -106,7 +106,18 @@ class RestrictedView(discord.ui.View, Generic[T]):
         return check_user(interaction, self.original_user)
 
 async def create_interaction(ctx):
-    """Creates a pseudo-interaction from a command context"""
+    """Creates a pseudo-interaction from a command context.
+
+    This function simulates a Discord interaction using the provided command context.
+    It creates a pseudo-interaction object that mimics the behavior of a real interaction,
+    allowing for deferred responses and follow-up messages.
+
+    Args:
+        ctx: The command context from which to create the pseudo-interaction.
+
+    Returns:
+        PseudoInteraction: An object that simulates a Discord interaction.
+    """
     async with ctx.typing():
         class Response:
             def __init__(self, ctx):
@@ -115,16 +126,32 @@ async def create_interaction(ctx):
                 self._responded = False
 
             async def defer(self, ephemeral=False):
-                """Marks the interaction as deferred."""
+                """Marks the interaction as deferred.
+
+                Args:
+                    ephemeral (bool): Whether the deferred response should be ephemeral (default is False).
+                """
                 self._deferred = True
 
             async def send_message(self, *args, **kwargs):
-                """Sends a message in response to the interaction."""
+                """Sends a message in response to the interaction.
+
+                Args:
+                    *args: Positional arguments to pass to the send method.
+                    **kwargs: Keyword arguments to pass to the send method.
+
+                Returns:
+                    The message that was sent.
+                """
                 self._responded = True
                 return await self.ctx.send(*args, **kwargs)
 
             def is_done(self):
-                """Checks if the interaction has been deferred."""
+                """Checks if the interaction has been deferred.
+
+                Returns:
+                    bool: True if the interaction has been deferred, otherwise False.
+                """
                 return self._deferred
 
         class Followup:
@@ -133,7 +160,15 @@ async def create_interaction(ctx):
                 self._last_message = None
 
             async def send(self, content=None, **kwargs):
-                """Sends a follow-up message, deleting the previous one if it exists."""
+                """Sends a follow-up message, deleting the previous one if it exists.
+
+                Args:
+                    content: The content of the follow-up message.
+                    **kwargs: Additional keyword arguments to pass to the send method.
+
+                Returns:
+                    The follow-up message that was sent.
+                """
                 if self._last_message:
                     try:
                         await self._last_message.delete()
