@@ -200,7 +200,7 @@ class UserphoneGroup(app_commands.Group):
             member_data = open_file("storage/member_info.json")
             
             if (user_id not in member_data):
-                member_data[user_id] = {"EXP": 0, "userphone_anom": False}
+                member_data[user_id] = {"userphone_anom": False}
             
             member_data[user_id]["userphone_anom"] = not member_data[user_id].get("userphone_anom", False)
             

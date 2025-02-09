@@ -12,7 +12,7 @@ from discord.ext import commands
 from discord.ui import View, Button
 from discord import app_commands
 
-import time, asyncio, os, tempfile
+import time, asyncio, os, tempfile, math
 from aiohttp import ClientSession, ClientError
 from datetime import datetime, timezone, timedelta
 from moviepy.editor import VideoFileClip, AudioFileClip
@@ -129,6 +129,14 @@ class InfoCog(commands.Cog):
             total_exp += 5 * (l ** 2) + 50 * l + 100
         return total_exp
 
+    def exp_required_tower(self, level):
+        if level <= 10:
+            return 45 + (level * 3.5)
+        elif level <= 40:
+            return level * 8
+        else:
+            return 260 + (level * 1.5)
+
     @app_commands.command(name="help")
     async def help(self, interaction: discord.Interaction, command: str, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -170,7 +178,7 @@ class InfoCog(commands.Cog):
                             
                             await interaction.followup.send(embed=embed)
                             return
-                
+                        
                 await interaction.followup.send(f"No help found for command: {command}")
                 return
 
@@ -394,6 +402,161 @@ class InfoCog(commands.Cog):
         except Exception as error:
             await handle_logs(interaction, error)
 
+    @app_commands.command(name="tlevel")
+    @app_commands.choices(
+            mode=[
+                app_commands.Choice(name="Easy", value="easy"),
+                app_commands.Choice(name="Casual", value="casual"),
+                app_commands.Choice(name="Intermediate", value="intermediate"),
+                app_commands.Choice(name="Molten", value="molten"),
+                app_commands.Choice(name="Fallen", value="fallen"),
+                app_commands.Choice(name="Hardcore", value="hardcore")
+            ]
+        )
+    async def tlevel(self, interaction: discord.Interaction, current_level: int, current_exp: float, 
+                    target_level: int = None, target_exp: float = None, target_date: str = None,
+                    games_per_day: int = None, mode: str = "fallen", vip: bool = False, 
+                    vip_plus: bool = False, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
+        try:
+            if target_level is None and target_exp is None:
+                await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
+                return
+
+            mode_config = {
+                "easy": {"exp": 50, "time": 20, "reward": "250 coins", "reward_amount": 250, "type": "coins"},
+                "casual": {"exp": 90, "time": 20, "reward": "400 coins", "reward_amount": 400, "type": "coins"},
+                "intermediate": {"exp": 120, "time": 25, "reward": "500 coins", "reward_amount": 500, "type": "coins"},
+                "molten": {"exp": 185, "time": 30, "reward": "750 coins", "reward_amount": 750, "type": "coins"},
+                "fallen": {"exp": 250, "time": 35, "reward": "1000 coins", "reward_amount": 1000, "type": "coins"},
+                "hardcore": {"exp": 400, "time": 35, "reward": "300 gems", "reward_amount": 300, "type": "gems"}
+            }
+
+            selected_mode = mode_config[mode]
+            base_exp_per_game = selected_mode["exp"]
+
+            exp_multiplier = 1.0
+            coin_multiplier = 1.0
+            
+            if vip_plus:
+                exp_multiplier += 0.50
+                coin_multiplier += 0.20
+            elif vip:
+                exp_multiplier += 0.25
+
+            if selected_mode["type"] == "coins":
+                reward_amount = math.floor(selected_mode["reward_amount"] * coin_multiplier)
+            else:
+                reward_amount = selected_mode["reward_amount"]
+
+            total_current_exp = sum(self.exp_required_tower(i) for i in range(current_level)) + current_exp
+            
+            if target_exp is not None:
+                target_level = target_level or current_level
+                total_target_exp = sum(self.exp_required_tower(i) for i in range(target_level)) + target_exp
+            else:
+                total_target_exp = sum(self.exp_required_tower(i) for i in range(target_level + 1))
+
+            if total_target_exp <= total_current_exp:
+                await interaction.followup.send("Target must be higher than current progress!", ephemeral=True)
+                return
+
+            required_exp = total_target_exp - total_current_exp
+            days_needed = 0
+
+            total_exp_needed = required_exp / exp_multiplier
+
+            if target_date:
+                try:
+                    target = datetime.strptime(target_date, "%m/%d/%Y")
+                    now = datetime.now()
+                    days_until = (target - now).days + 1
+                    
+                    if days_until <= 0:
+                        await interaction.followup.send("Target date must be in the future!")
+                        return
+
+                    weekend_days = sum(1 for i in range(days_until) if (now + timedelta(days=i)).weekday() >= 5)
+                    regular_days = days_until - weekend_days
+                    
+                    if games_per_day is None:
+                        daily_games = math.ceil(total_exp_needed / (base_exp_per_game * (regular_days + weekend_days * 2)))
+                    else:
+                        daily_games = games_per_day
+                    
+                    completion_date = target
+                    days_needed = days_until
+                except ValueError:
+                    await interaction.followup.send("Invalid date format! Use MM/DD/YYYY")
+                    return
+            else:
+                if not games_per_day:
+                    await interaction.followup.send("Either target_date or games_per_day must be provided!")
+                    return
+                
+                daily_games = games_per_day
+                avg_daily_exp = daily_games * base_exp_per_game * (5 + 4) / 7
+                days_needed = math.ceil(total_exp_needed / avg_daily_exp)
+                completion_date = datetime.now() + timedelta(days=days_needed)
+
+            if target_date:
+                total_games = daily_games * days_until
+            else:
+                total_games = daily_games * days_needed
+
+            total_rewards = total_games * reward_amount
+            total_time = (total_games * selected_mode["time"]) / 60
+
+            embed = discord.Embed(
+                title="Tower Defense Level Calculator",
+                color=discord.Color.blue()
+            )
+
+            main_info = (
+                f"Total Required EXP: {required_exp:,.2f}\n"
+                f"Estimated Games: {total_games:,}\n"
+                f"Total {selected_mode['type']}: {total_rewards:,}\n"
+                f"Total Time: {total_time:,.1f} hours\n"
+            )
+
+            if target_date:
+                target_timestamp = int(target.timestamp())
+                main_info += f"Days until target: {days_until:,}\n"
+                main_info += f"Target completion: <t:{target_timestamp}:F>"
+            else:
+                completion_timestamp = int(completion_date.timestamp())
+                main_info += f"Estimated days: {days_needed:,}\n"
+                main_info += f"Estimated completion: <t:{completion_timestamp}:F>"
+
+            embed.add_field(name="Main Info", value=main_info, inline=False)
+
+            daily_info = (
+                f"Games per day: {daily_games:,}\n"
+                f"Time per day: {(daily_games * selected_mode["time"] / 60):,.1f} hours\n"
+                f"{selected_mode['type'].title()} per day: {(daily_games * reward_amount):,}"
+            )
+            embed.add_field(name="Daily Requirements", value=daily_info, inline=False)
+
+            status_info = (
+                f"Current Level/EXP: {current_level}/{current_exp:,.2f}\n"
+                f"Target Level/EXP: {target_level}/{target_exp if target_exp else 0:,.2f}\n"
+                f"Mode: {mode.title()} ({selected_mode['exp']} EXP)\n"
+                f"EXP Multiplier: {exp_multiplier}x"
+            )
+            if selected_mode["type"] == "coins" and coin_multiplier > 1:
+                status_info += f"\nCoin Multiplier: {coin_multiplier}x"
+            
+            embed.add_field(name="Status Info", value=status_info, inline=False)
+
+            footer_text = "Weekend days (2x EXP) are included in calculations"
+
+            embed.set_footer(text=footer_text, icon_url=interaction.user.avatar.url)
+
+            await interaction.followup.send(embed=embed)
+
+        except Exception as error:
+            await handle_logs(interaction, error)
+
     @app_commands.command(name="ping")
     async def ping(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
@@ -443,10 +606,18 @@ class InfoCog(commands.Cog):
     async def info(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
+            current_time = datetime.now(timezone.utc)
+            uptime = current_time - self.start_time
+            days = uptime.days
+            hours, remainder = divmod(uptime.seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
+
             embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
             embed.add_field(name="Version", value=f"v{__version__} ({__status__})")
             embed.add_field(name="Server Count", value=len(self.bot.guilds))
             embed.add_field(name="Library", value="Discord.py")
+            embed.add_field(name="Uptime", value=uptime_str)
             embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 310+ hours")
             embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
