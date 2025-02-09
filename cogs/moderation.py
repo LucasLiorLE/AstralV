@@ -188,9 +188,15 @@ class MessageCheck:
 class PurgeCommandGroup(app_commands.Group):
     def __init__(self, bot):
         super().__init__(name="purge", description="Purge commands for messages")
-
-        load_commands(self.commands, "purge")
         self.bot = bot
+
+        # Register all commands directly
+        # These act as attributes but are also commands
+        self.any = self.apurge
+        self.user = self.upurge  
+        self.embeds = self.epurge
+        self.attachments = self.attpurge  # Rename to avoid duplicate name
+        self.text = self.tpurge
 
     @app_commands.command(name="any")
     async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
@@ -233,7 +239,7 @@ class PurgeCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="embeds")
+    @app_commands.command(name="embeds") 
     async def epurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
@@ -254,7 +260,7 @@ class PurgeCommandGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="attachments")
-    async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
+    async def attpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."): # Renamed from apurge
         await interaction.response.defer(ephemeral=True)
         try:
             if not await check_mod(interaction, "manage_messages"):
@@ -293,6 +299,9 @@ class PurgeCommandGroup(app_commands.Group):
             )
         except Exception as e:
             await handle_logs(interaction, e)
+
+    def setup_commands(self):
+        load_commands(self, "info")
 
 class SetCommandGroup(app_commands.Group):
     def __init__(self, bot):
@@ -403,9 +412,12 @@ class LogPageSelect(discord.ui.Select):
 class ModerationCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.bot.tree.add_command(PurgeCommandGroup(self.bot))
         self.command_help = open_file("storage/command_help.json")
         
+        # Create and add purge group
+        purge_group = PurgeCommandGroup(bot)
+        self.bot.tree.add_command(purge_group)
+
         load_commands(self.__cog_app_commands__, "moderation")
 
     async def get_command_help_embed(self, command_name: str) -> discord.Embed:

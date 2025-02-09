@@ -28,7 +28,7 @@ class MinecraftCommandsGroup(app_commands.Group):
 
     @app_commands.command(name="avatar", description="Provides a Minecraft account's avatar.")
     @app_commands.describe(username="A Minecraft username")
-    async def minecraftavatar(self, interaction: discord.Interaction, username: str):
+    async def avatar(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
             uuid = await mc_fetchUUID(interaction, username)

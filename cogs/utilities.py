@@ -131,7 +131,7 @@ class UtilCog(commands.Cog):
         self.bot = bot
         self.bot.tree.add_command(ReminderGroup())
 
-        load_commands(self.__cog_app_commands__, "info")
+        load_commands(self.__cog_app_commands__, "utility")
 
     @app_commands.command(name="afk")
     async def afk(self, interaction: discord.Interaction, reason: str = None):

@@ -172,6 +172,20 @@
                     }
                 }
             }
+        },
+        "ban": {
+            "description": "Bans a member from the server",
+            "parameters": {
+                "member": "Member to ban",
+                "reason": "Reason for the ban"
+            }
+        },
+        "unban": {
+            "description": "Unbans a member from the server",
+            "parameters": {
+                "id": "Discord ID of the member to unban",
+                "reason": "Reason for the unban"
+            }
         }
     },
     "btd6": {
@@ -242,6 +256,9 @@
             "parameters": {
                 "amount": "Amount to deposit"
             }
+        },
+        "pay": {
+            "description": "Not coming soon..."
         },
         "beg": {
             "description": "Beg for money on the streets"
@@ -787,6 +804,21 @@
                 "ephemeral": "Should the response be ephemeral (Hidden)?"
             }
         },
+        "tlevel": {
+            "description": "Calculate Tower Defense levels and time to achieve them",
+            "parameters": {
+                "current_level": "Your current level",
+                "current_exp": "Your current EXP in that level",
+                "target_level": "The level you want to achieve (optional if target_exp provided)",
+                "target_exp": "The total EXP you want to achieve (optional if target_level provided)",
+                "target_date": "The date you want to achieve it by (MM/DD/YYYY)",
+                "games_per_day": "Optional: Daily games goal (if not using target date)",
+                "mode": "Game mode to play (easy/casual/intermediate/molten/fallen/hardcore)",
+                "vip": "Do you have VIP? (25% EXP boost)",
+                "vip_plus": "Do you have VIP+? (50% EXP boost)",
+                "ephemeral": "Should the response be ephemeral (Hidden)?"
+            }
+        },
         "level": {
             "description": "View your level globally or in your guild",
             "parameters": {
@@ -803,6 +835,12 @@
             "parameters": {
                 "type": "The type of alert",
                 "description": "Provide a brief description of what's going on"
+            }
+        },
+        "check": {
+            "description": "Check a new or specified alert",
+            "parameters": {
+                "id": "The ID of the alert to see"
             }
         }
     },
@@ -834,6 +872,14 @@
         }
     },
     "roblox": {
+        "cgloves": {
+            "description": "Check all the user's gloves in slap battles",
+            "parameters": {
+                "username": "The user to check gloves for (leave empty to check your own)",
+                "member": "Discord member to check (optional)",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
         "connect": {
             "description": "Connect with your Roblox account", 
             "parameters": {
@@ -907,18 +953,24 @@
         }
     },
     "utility": {
-        "cgloves": {
-            "description": "Check all the user's gloves in slap battles",
-            "parameters": {
-                "username": "The user to check gloves for (leave empty to check your own)",
-                "member": "Discord member to check (optional)",
-                "ephemeral": "If the message is hidden (Useful if no perms)"
-            }
-        },
         "afk": {
             "description": "AFK and set a status of why",
             "parameters": {
                 "reason": "Your reason to AFK"
+            }
+        }
+    },
+    "minecraft": {
+        "uuid": {
+            "description": "Get a Minecraft UUID based on a username",
+            "parameters": {
+                "username": "A Minecraft username"
+            }
+        },
+        "avatar": {
+            "description": "Provides a Minecraft account's avatar.",
+            "parameters": {
+                "username": "A Minecraft username"
             }
         }
     }

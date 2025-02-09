@@ -900,7 +900,6 @@ class EconomyCog(commands.Cog):
 
     @commands.group(name="shop", invoke_without_command=True)
     async def manual_shop(self, ctx):
-        """Shop commands"""
         await ctx.send("Available commands: shop view, shop buy <item> [quantity]")
 
     @manual_shop.command(name="view")

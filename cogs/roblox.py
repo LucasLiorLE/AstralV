@@ -317,7 +317,7 @@ class RobloxCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.tree.add_command(RobloxGroup())
-        load_commands(self.__cog_app_commands__, "cgloves")
+        load_commands(self.__cog_app_commands__, "roblox")
 
     @app_commands.command(name="cgloves")
     async def cgloves(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):

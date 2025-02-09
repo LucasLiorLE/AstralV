@@ -1,10 +1,10 @@
 from bot_utils import (
-    handle_logs,
-    open_file,
-    parse_duration,
+    get_dominant_color,
     __version__,
     __status__,
-    load_commands
+    load_commands,
+    open_file,
+    handle_logs,
 )
 
 import discord
@@ -17,33 +17,10 @@ from aiohttp import ClientSession, ClientError
 from datetime import datetime, timezone, timedelta
 from moviepy.editor import VideoFileClip, AudioFileClip
 from PIL import Image
-import io
 
 class AvatarGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="avatar")
-
-    async def get_dominant_color(self, url):
-        try:
-            async with ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        return 0x808080
-                    
-                    image_data = await response.read()
-                    image = Image.open(io.BytesIO(image_data))
-                    image = image.resize((50, 50))
-                    if image.mode != 'RGB':
-                        image = image.convert('RGB')
-                    pixels = image.getcolors(2500)
-                    
-                    if not pixels:
-                        return 0x808080
-                    sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
-                    dominant_color = sorted_pixels[0][1]
-                    return int('%02x%02x%02x' % dominant_color, 16)
-        except:
-            return 0x808080
 
     @app_commands.command(name="get")
     async def get(self, interaction: discord.Interaction, user: discord.User = None):
@@ -53,7 +30,7 @@ class AvatarGroup(app_commands.Group):
             avatar_url = user.avatar.url if user.avatar else None
             
             if avatar_url:
-                embed_color = await self.get_dominant_color(avatar_url)
+                embed_color = await get_dominant_color(avatar_url)
             else:
                 embed_color = 0x808080
                 
@@ -78,7 +55,7 @@ class AvatarGroup(app_commands.Group):
             avatar_url = user.display_avatar.url if user.display_avatar else None
             
             if avatar_url:
-                embed_color = await self.get_dominant_color(avatar_url)
+                embed_color = await get_dominant_color(avatar_url)
             else:
                 embed_color = 0x808080
                 
