@@ -186,6 +186,25 @@
                 "id": "Discord ID of the member to unban",
                 "reason": "Reason for the unban"
             }
+        },
+        "set": {
+            "description": "Server settings commands",
+            "subcommands": {
+                "logs": {
+                    "description": "Set log channels for different events",
+                    "parameters": {
+                        "option": "The type of logs to set",
+                        "channel": "The channel to send logs to"
+                    }
+                },
+                "roles": {
+                    "description": "Set server roles for different purposes",
+                    "parameters": {
+                        "option": "The type of role to set",
+                        "role": "The role to set"
+                    }
+                }
+            }
         }
     },
     "btd6": {

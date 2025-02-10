@@ -240,19 +240,19 @@ async def on_message(message):
     if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
         message_length = len(message.content)
         exp_gain = min(75, math.floor(message_length / 15)) + (random.randint(5, 15)) 
-        print(server_info)
+        # print(server_info)
 
         member_data[member_id]["EXP"] += exp_gain
 
         if "exp" not in server_info:
             server_info["exp"] = {}
-            print(server_info)
+            # print(server_info)
 
         if server_id not in server_info["exp"]:
             server_info["exp"][server_id] = {}
         server_info["exp"][server_id][member_id] = server_info["exp"][server_id].get(member_id, 0) + exp_gain
 
-        print(server_info)
+        # print(server_info)
 
         save_file("storage/member_info.json", member_data)
         save_file("storage/server_info.json", server_info)

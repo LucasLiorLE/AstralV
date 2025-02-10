@@ -138,7 +138,7 @@ class MessageCheck:
     @staticmethod
     def cleanCommand(message: discord.Message) -> bool:
         is_bot_message = message.author == message.guild.me
-        starts_with_question = message.content.startswith('>')  
+        starts_with_question = message.content.startswith('.')  
         return is_bot_message or starts_with_question
 
     @staticmethod
@@ -186,17 +186,8 @@ class MessageCheck:
         return []
 
 class PurgeCommandGroup(app_commands.Group):
-    def __init__(self, bot):
+    def __init__(self):
         super().__init__(name="purge", description="Purge commands for messages")
-        self.bot = bot
-
-        # Register all commands directly
-        # These act as attributes but are also commands
-        self.any = self.apurge
-        self.user = self.upurge  
-        self.embeds = self.epurge
-        self.attachments = self.attpurge  # Rename to avoid duplicate name
-        self.text = self.tpurge
 
     @app_commands.command(name="any")
     async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
@@ -213,7 +204,7 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                bot=self.bot
+                bot=interaction.client
             )
         except Exception as e:
             await handle_logs(interaction, e)
@@ -233,7 +224,7 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                bot=self.bot
+                bot=interaction.client
             )
 
         except Exception as e:
@@ -254,13 +245,13 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                bot=self.bot
+                bot=interaction.client
             )
         except Exception as e:
             await handle_logs(interaction, e)
 
     @app_commands.command(name="attachments")
-    async def attpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."): # Renamed from apurge
+    async def attpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
             if not await check_mod(interaction, "manage_messages"):
@@ -274,7 +265,7 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                bot=self.bot
+                bot=interaction.client
             )
         except Exception as e:
             await handle_logs(interaction, e)
@@ -295,22 +286,30 @@ class PurgeCommandGroup(app_commands.Group):
                 interaction.guild.id,
                 interaction.user,
                 reason=reason,
-                bot=self.bot
+                bot=interaction.client
             )
         except Exception as e:
             await handle_logs(interaction, e)
 
     def setup_commands(self):
-        load_commands(self, "info")
+        load_commands(self, "moderation")
 
 class SetCommandGroup(app_commands.Group):
     def __init__(self, bot):
         super().__init__(name="set", description="Set the server's preferences.")
-
-        load_commands(self.commands, "set")
         self.bot = bot
 
-    @app_commands.command(name="selogs")
+    def setup_commands(self):
+        load_commands(self, "moderation")
+        
+    @app_commands.command(name="logs")
+    @app_commands.choices(
+        option=[
+            app_commands.Choice(name="Message Logs", value="messageLogs"),
+            app_commands.Choice(name="DM Logs", value="dmLogs"),
+            app_commands.Choice(name="Mod Logs", value="modLogs"),
+        ]
+    )
     async def setlogs(self, interaction: discord.Interaction, option: app_commands.Choice[str], channel: discord.TextChannel):
         await interaction.response.defer()
         try:
@@ -330,7 +329,14 @@ class SetCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="seroles")
+    @app_commands.command(name="roles")
+    @app_commands.choices(
+        option=[
+            app_commands.Choice(name="Member", value="member"),
+            app_commands.Choice(name="Moderator", value="moderator"),
+            app_commands.Choice(name="Manager", value="manager")
+        ]
+    )
     async def setroles(self, interaction: discord.Interaction, option: str, role: discord.Role):
         await interaction.response.defer()
         try:
@@ -414,9 +420,13 @@ class ModerationCog(commands.Cog):
         self.bot = bot
         self.command_help = open_file("storage/command_help.json")
         
-        # Create and add purge group
-        purge_group = PurgeCommandGroup(bot)
+        purge_group = PurgeCommandGroup()
+        purge_group.setup_commands()
         self.bot.tree.add_command(purge_group)
+
+        set_group = SetCommandGroup(bot)
+        set_group.setup_commands()
+        self.bot.tree.add_command(set_group)
 
         load_commands(self.__cog_app_commands__, "moderation")
 
@@ -497,9 +507,21 @@ class ModerationCog(commands.Cog):
                 bot=self.bot
             )
 
-            await interaction.followup.send(text, delete_after=5)
+            await interaction.followup.send(text)  # Changed this line
         except Exception as e:
             await handle_logs(interaction, e)
+
+    @commands.command(name="clean")
+    @commands.has_permissions(manage_messages=True)
+    async def manual_clean(self, ctx, amount: int = 10, reason: str = "No reason provided"):
+        try:
+            await ctx.message.delete()
+            interaction = await create_interaction(ctx)
+            await self.clean.callback(self, interaction, amount, reason)
+
+            await ctx.send(f"Cleaned {amount} bot messages.", delete_after=5)
+        except Exception as e:
+            error(e)
 
     @app_commands.command(name="role")
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
@@ -1113,6 +1135,9 @@ class ModerationCog(commands.Cog):
             await ctx.message.delete()
             interaction = await create_interaction(ctx)
             await self.clean.callback(self, interaction, amount, reason)
+            # Add a self-deleting confirmation message
+            conf_msg = await ctx.send(f"Cleaned {amount} bot messages.")
+            await conf_msg.delete(delay=5)
         except Exception as e:
             error(e)
 
