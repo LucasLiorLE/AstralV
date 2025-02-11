@@ -183,7 +183,7 @@
         "unban": {
             "description": "Unbans a member from the server",
             "parameters": {
-                "id": "Discord ID of the member to unban",
+                "user": "The user to unban",
                 "reason": "Reason for the unban"
             }
         },

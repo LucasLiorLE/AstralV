@@ -507,7 +507,7 @@ class ModerationCog(commands.Cog):
                 bot=self.bot
             )
 
-            await interaction.followup.send(text)  # Changed this line
+            await interaction.followup.send(text)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -850,25 +850,34 @@ class ModerationCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="unban")
-    async def unban(self, interaction: discord.Interaction, id: int, reason: str = "No reason provided"):
+    async def unban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
             if not await check_mod(interaction, "ban_members"):
                 return
             
-            member = await self.bot.fetch_user(id)
-            member.unban(reason=reason)
+            if not user:
+                await interaction.followup.send("You must specify either a user or a user ID to unban.")
+                return
 
-            await dmbed(interaction, member, "unbanned", reason)
+            try:
+                await interaction.guild.unban(user, reason=reason)
+                await dmbed(interaction, user, "unbanned", reason)
 
-            await store_modlog(
-                modlog_type="Unban",
-                moderator=interaction.user,
-                user=member,
-                reason=reason,
-                server_id=interaction.guild_id,
-                bot=self.bot
-            )
+                await store_modlog(
+                    modlog_type="Unban",
+                    moderator=interaction.user,
+                    user=user,
+                    reason=reason,
+                    server_id=interaction.guild_id,
+                    bot=self.bot
+                )
+                
+                await interaction.followup.send(f"Successfully unbanned {user} (ID: {user.id})")
+            except discord.NotFound:
+                await interaction.followup.send("User not found or is not banned")
+            except discord.Forbidden:
+                await interaction.followup.send("I don't have permission to unban users")
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -1135,7 +1144,7 @@ class ModerationCog(commands.Cog):
             await ctx.message.delete()
             interaction = await create_interaction(ctx)
             await self.clean.callback(self, interaction, amount, reason)
-            # Add a self-deleting confirmation message
+
             conf_msg = await ctx.send(f"Cleaned {amount} bot messages.")
             await conf_msg.delete(delay=5)
         except Exception as e:
@@ -1187,11 +1196,22 @@ class ModerationCog(commands.Cog):
             error(e)
 
     @commands.command(name="unban")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_unban(self, ctx, id: int, reason: str = "No reason provided"):
+    @commands.has_permissions(ban_members=True)
+    async def manual_unban(self, ctx, user_input: str, *, reason: str = "No reason provided"):
         try:
             interaction = await create_interaction(ctx)
-            await self.unban.callback(self, interaction, id, reason)
+            
+            # Check if input is a user ID
+            try:
+                user_id = int(user_input)
+                await self.unban.callback(self, interaction, None, str(user_id), reason)
+            except ValueError:
+                # If not a valid ID, try to convert to user
+                try:
+                    user = await commands.UserConverter().convert(ctx, user_input)
+                    await self.unban.callback(self, interaction, user, None, reason)
+                except commands.UserNotFound:
+                    await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
         except Exception as e:
             error(e)
 

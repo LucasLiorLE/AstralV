@@ -194,7 +194,7 @@ async def create_interaction(ctx):
 
         return PseudoInteraction(ctx)
 
-def get_member_color(interaction: discord.Interaction, color: str) -> discord.Color:
+def get_member_color(interaction: discord.Interaction, color: str = None) -> discord.Color:
     """Retrieves the color of the member's highest role in the guild.
 
     Args:
