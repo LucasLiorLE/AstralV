@@ -153,7 +153,7 @@ class EconomyCog(commands.Cog):
             view = RestrictedView(interaction.user)
 
             withdraw_button = Button(label="Withdraw", style=ButtonStyle.red)
-            async def withdraw_callback(self, interaction: discord.Interaction):
+            async def withdraw_callback(interaction: discord.Interaction):
                 if interaction.user.id != user.id:
                     return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
 
@@ -162,24 +162,29 @@ class EconomyCog(commands.Cog):
                 modal.add_item(amount_input)
 
                 async def modal_callback(modal_interaction: discord.Interaction):
-                    amount = int(amount_input.value)
-                    success, transaction_result = await process_transaction(modal_interaction.user.id, "withdraw", amount)
-                    if success:
-                        eco[user_id]['balance']['purse'] += amount
-                        eco[user_id]['balance']['bank'] -= amount
-                        save_file(eco_path, eco)
+                    try:
+                        amount = abs(int(amount_input.value))
+                        success, transaction_result = await process_transaction(modal_interaction.user.id, "withdraw", amount)
+                        if success:
+                            eco = open_file(eco_path)
+                            eco[user_id]['balance']['purse'] += amount
+                            eco[user_id]['balance']['bank'] -= amount
+                            save_file(eco_path, eco)
 
-                        updated_embed = await update_embed()
-                        await interaction.message.edit(embed=updated_embed, view=view)
-                    await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                            updated_embed = await update_embed()
+                            await interaction.message.edit(embed=updated_embed, view=view)
+                        await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                    except ValueError:
+                        await modal_interaction.response.send_message("Please enter a valid number.", ephemeral=True)
 
                 modal.on_submit = modal_callback
                 await interaction.response.send_modal(modal)
+
             withdraw_button.callback = withdraw_callback
             view.add_item(withdraw_button)
 
             deposit_button = Button(label="Deposit", style=ButtonStyle.green)
-            async def deposit_callback(self, interaction: discord.Interaction):
+            async def deposit_callback(interaction: discord.Interaction):
                 if interaction.user.id != user.id:
                     return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
 
@@ -188,19 +193,24 @@ class EconomyCog(commands.Cog):
                 modal.add_item(amount_input)
 
                 async def modal_callback(modal_interaction: discord.Interaction):
-                    amount = int(amount_input.value)
-                    success, transaction_result = await process_transaction(modal_interaction.user.id, "deposit", amount)
-                    if success:
-                        eco[user_id]['balance']['purse'] -= amount
-                        eco[user_id]['balance']['bank'] += amount
-                        save_file(eco_path, eco)
+                    try:
+                        amount = abs(int(amount_input.value))
+                        success, transaction_result = await process_transaction(modal_interaction.user.id, "deposit", amount)
+                        if success:
+                            eco = open_file(eco_path)
+                            eco[user_id]['balance']['purse'] -= amount
+                            eco[user_id]['balance']['bank'] += amount
+                            save_file(eco_path, eco)
 
-                        updated_embed = await update_embed()
-                        await interaction.message.edit(embed=updated_embed, view=view)
-                    await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                            updated_embed = await update_embed()
+                            await interaction.message.edit(embed=updated_embed, view=view)
+                        await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                    except ValueError:
+                        await modal_interaction.response.send_message("Please enter a valid number.", ephemeral=True)
 
                 modal.on_submit = modal_callback
                 await interaction.response.send_modal(modal)
+
             deposit_button.callback = deposit_callback
             view.add_item(deposit_button)
 
@@ -686,16 +696,13 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
 
         try:
-            coin = random.choice(["Heads", "Tails"])
-            won = coin == guess
-
             if amount and not guess:
                 await interaction.followup.send("You need to guess heads or tails to bet an amount!")
                 return
 
-            if amount and guess:
+            if amount:
                 try:
-                    amount = convert_number(amount)
+                    amount = abs(convert_number(amount))
                 except ValueError:
                     await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
                     return
@@ -705,8 +712,8 @@ class EconomyCog(commands.Cog):
 
                 if user_id not in eco:
                     create_account(user_id)
+                    eco = open_file(eco_path)
 
-                eco = open_file(eco_path)
                 player_data = eco[user_id]
                 purse_balance = int(player_data["balance"]["purse"])
 
@@ -714,27 +721,29 @@ class EconomyCog(commands.Cog):
                     await interaction.followup.send("You don't have enough coins in your purse!")
                     return
 
+            coin = random.choice(["Heads", "Tails"])
+            won = coin == guess
+
+            if amount and guess:
                 if won:
-                    purse_balance += amount
-                    message = f"The coin landed on {coin.upper()}! You won {amount} coins!"
+                    player_data["balance"]["purse"] += amount
+                    message = f"The coin landed on {coin}! You won {amount:,} coins!"
                 else:
-                    purse_balance -= amount
-                    message = f"The coin landed on {coin.lower()}... You lost {amount} coins."
+                    player_data["balance"]["purse"] -= amount
+                    message = f"The coin landed on {coin}... You lost {amount:,} coins."
 
-                player_data["balance"]["purse"] = purse_balance
                 save_file(eco_path, eco)
-
                 await interaction.followup.send(message)
                 return
 
             if guess:
                 if won:
-                    await interaction.followup.send(f"Congrats! The coin landed on {coin.upper()}!")
+                    await interaction.followup.send(f"Congrats! The coin landed on {coin}!")
                 else:
-                    await interaction.followup.send(f"Bad luck! The coin landed on {coin.lower()}.")
+                    await interaction.followup.send(f"Bad luck! The coin landed on {coin}.")
                 return
 
-            await interaction.followup.send(f"The coin landed on {coin.lower()}!")
+            await interaction.followup.send(f"The coin landed on {coin}!")
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -783,6 +792,91 @@ class EconomyCog(commands.Cog):
                 )
 
             await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="view")
+    async def shop_view(self, interaction: discord.Interaction):
+        """View the current shop items"""
+        await interaction.response.defer()
+        try:
+            if not SHOP:
+                await handle_eco_shop()
+            
+            shop_items = SHOP
+            if not shop_items:
+                await interaction.followup.send("The shop is currently empty. Try again later!")
+                return
+
+            embed = discord.Embed(
+                title="Shop Items",
+                description="Current items available for purchase:",
+                color=discord.Color.blue()
+            )
+
+            for item in shop_items:
+                embed.add_field(
+                    name=f"{display_item_name(item['item'])} - {item['price']:,} coins",
+                    value=f"Type: {item['type']}\nDescription: {item['description']}\nStock: {item['amount']}",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="buy")
+    async def shop_buy(self, interaction: discord.Interaction, item_name: str, quantity: int = 1):
+        """Buy an item from the shop"""
+        await interaction.response.defer()
+        try:
+            if not SHOP:
+                await handle_eco_shop()
+
+            if quantity < 1:
+                await interaction.followup.send("Quantity must be positive!")
+                return
+
+            closest_item = find_closest_item(item_name, SHOP)
+            if not closest_item:
+                await interaction.followup.send(f"No item found matching '{item_name}'")
+                return
+
+            shop_item = next((item for item in SHOP if item["item"] == closest_item), None)
+            if not shop_item:
+                await interaction.followup.send("That item is not available in the shop right now!")
+                return
+
+            if shop_item["amount"] < quantity:
+                await interaction.followup.send("Not enough stock available!")
+                return
+
+            total_cost = shop_item["price"] * quantity
+            user_id = str(interaction.user.id)
+            eco = open_file(eco_path)
+
+            if user_id not in eco:
+                create_account(user_id)
+                eco = open_file(eco_path)
+
+            if eco[user_id]["balance"]["purse"] < total_cost:
+                await interaction.followup.send("You don't have enough coins!")
+                return
+
+            if "inventory" not in eco[user_id]:
+                eco[user_id]["inventory"] = {}
+            if shop_item["item"] not in eco[user_id]["inventory"]:
+                eco[user_id]["inventory"][shop_item["item"]] = 0
+            
+            eco[user_id]["inventory"][shop_item["item"]] += quantity
+            eco[user_id]["balance"]["purse"] -= total_cost
+
+            save_file(eco_path, eco)
+
+            await interaction.followup.send(
+                f"Successfully bought {quantity}x {display_item_name(shop_item['item'])} for {total_cost:,} coins!"
+            )
+
         except Exception as e:
             await handle_logs(interaction, e)
 
