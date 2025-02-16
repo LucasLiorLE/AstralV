@@ -56,8 +56,8 @@ from bot_utils import (
 
 # config
 botAdmins = [721151215010054165]
-botMods = []
-botTesters = []
+botMods = [721151215010054165]
+botTesters = [721151215010054165]
 
 # Bot status management
 class StatusManager:

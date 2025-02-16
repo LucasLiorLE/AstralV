@@ -1156,6 +1156,8 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             await self.warn.callback(self, interaction, member, reason)
+        except commands.MemberNotFound:
+            await ctx.send(f"Member '{member}' not found.", delete_after=5)
         except Exception as e:
             error(e)
 
@@ -1165,6 +1167,8 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             await self.mute.callback(self, interaction, member, duration, reason)
+        except commands.MemberNotFound:
+            await ctx.send(f"Member '{member}' not found.", delete_after=5)
         except Exception as e:
             error(e)
 
@@ -1174,6 +1178,8 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             await self.unmute.callback(self, interaction, member, reason)
+        except commands.MemberNotFound:
+            await ctx.send(f"Member '{member}' not found.", delete_after=5)
         except Exception as e:
             error(e)
 
@@ -1183,6 +1189,8 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             await self.kick.callback(self, interaction, member, reason)
+        except commands.MemberNotFound:
+            await ctx.send(f"Member '{member}' not found.", delete_after=5)
         except Exception as e:
             error(e)
 
@@ -1192,6 +1200,8 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             await self.ban.callback(self, interaction, member, reason)
+        except commands.MemberNotFound:
+            await ctx.send(f"Member '{member}' not found.", delete_after=5)
         except Exception as e:
             error(e)
 
@@ -1203,13 +1213,16 @@ class ModerationCog(commands.Cog):
             
             try:
                 user_id = int(user_input)
-                await self.unban.callback(self, interaction, None, str(user_id), reason)
+                user = await self.bot.fetch_user(user_id)
+                await self.unban.callback(self, interaction, user, reason)
             except ValueError:
                 try:
                     user = await commands.UserConverter().convert(ctx, user_input)
-                    await self.unban.callback(self, interaction, user, None, reason)
+                    await self.unban.callback(self, interaction, user, reason)
                 except commands.UserNotFound:
                     await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
+            except discord.NotFound:
+                await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
         except Exception as e:
             error(e)
 

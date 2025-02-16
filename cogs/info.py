@@ -283,6 +283,13 @@ class InfoCog(commands.Cog):
             if target_level is None and target_exp is None:
                 await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
                 return
+            
+            if (target_level > 1000 or current_level > 1000 or
+                target_level < 1 or current_level < 1 or
+                current_exp < 0 or target_exp < 0 or 
+                current_exp > 10000000 or target_exp > 10000000):
+                await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
+                return
 
             total_current_exp = self.exp_required(current_level) + current_exp
             
@@ -398,6 +405,13 @@ class InfoCog(commands.Cog):
         try:
             if target_level is None and target_exp is None:
                 await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
+                return
+            
+            if (current_level > 1000 or target_level > 1000 
+                or current_level < 1 or target_level < 1 
+                or current_exp < 0 or target_exp < 0
+                or current_exp > 10000000 or target_exp > 10000000):
+                await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
                 return
 
             mode_config = {
