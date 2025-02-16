@@ -1,5 +1,5 @@
 import discord
-import re, io
+import re, io, json, time
 
 from datetime import timedelta
 from typing import Optional, TypeVar, Generic
@@ -246,3 +246,46 @@ async def get_dominant_color(url: str = None, buffer: io.BytesIO = None) -> disc
         return int('%02x%02x%02x' % dominant_color, 16)
     except:
         return 0x808080
+
+def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = False) -> int:
+    """
+    Retrieves the time elapsed since the last command usage/message sent for a specific user.
+
+    Parameters:
+        user_id (discord.User): The user to check the cooldown for.
+        command (str): The name of the command to check.
+        exp (bool): Whether or not you want to check the exp cooldown.
+
+    Returns:
+        int: The number of seconds elapsed since the last command usage/message sent.
+
+             Returns 0 if the command has never been used.
+    """
+
+    def save_file():
+        with open("storage/member_info.json", "w") as f:
+            json.dump(member_info, f, indent=4, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o)
+
+    current_time = int(time.time())
+    user_id = str(user_id)
+    
+    try:
+        with open("storage/member_info.json", "r") as f:
+            member_info = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        member_info = {}
+
+    user_data = member_info.setdefault(user_id, {})
+    if exp:
+        user_exp = user_data.setdefault("EXP", {})
+        exp_cooldown = user_exp.setdefault("cooldown", 0)
+        save_file()
+
+        return current_time - exp_cooldown
+    
+    if command:
+        commands = user_data.setdefault("commands", {})
+        command_data = commands.setdefault(command, {"cooldown": 0})
+        save_file()
+        
+        return current_time - command_data["cooldown"]

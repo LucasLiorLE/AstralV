@@ -295,13 +295,9 @@ class PurgeCommandGroup(app_commands.Group):
         load_commands(self, "moderation")
 
 class SetCommandGroup(app_commands.Group):
-    def __init__(self, bot):
+    def __init__(self):
         super().__init__(name="set", description="Set the server's preferences.")
-        self.bot = bot
 
-    def setup_commands(self):
-        load_commands(self, "moderation")
-        
     @app_commands.command(name="logs")
     @app_commands.choices(
         option=[
@@ -355,6 +351,10 @@ class SetCommandGroup(app_commands.Group):
             await interaction.followup.send(f"The role '{role.name}' has been set for members.")
         except Exception as e:
             await handle_logs(interaction, e)
+
+    def setup_commands(self):
+        load_commands(self, "moderation")
+        
 class LogPaginator:
     def __init__(self, log_type: str, logs: dict, member: discord.Member, items_per_page: int = 25):
         self.log_type = log_type
@@ -424,7 +424,7 @@ class ModerationCog(commands.Cog):
         purge_group.setup_commands()
         self.bot.tree.add_command(purge_group)
 
-        set_group = SetCommandGroup(bot)
+        set_group = SetCommandGroup()
         set_group.setup_commands()
         self.bot.tree.add_command(set_group)
 
@@ -1201,12 +1201,10 @@ class ModerationCog(commands.Cog):
         try:
             interaction = await create_interaction(ctx)
             
-            # Check if input is a user ID
             try:
                 user_id = int(user_input)
                 await self.unban.callback(self, interaction, None, str(user_id), reason)
             except ValueError:
-                # If not a valid ID, try to convert to user
                 try:
                     user = await commands.UserConverter().convert(ctx, user_input)
                     await self.unban.callback(self, interaction, user, None, reason)

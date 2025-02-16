@@ -1,7 +1,7 @@
 import discord
 import time
 
-from typing import Optional, Tuple, Dict, Any, Union
+from typing import Optional, Tuple, Dict, Any
 from datetime import datetime, timezone
 
 from .file_handler import (

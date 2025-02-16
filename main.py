@@ -2,15 +2,17 @@
 #    - This is just my bot I made for fun, mostly during my free time.
 #    - Feel free to "steal" or take portions of my code.
 #    - Has a lot of usefull utilities!
-#    - /help for more info! (Ok tbh rn it doesn't crap :sob:)
+#    - /help for more info! (Ok tbh rn it doesn't do crap :sob:)
 #
 # Release Notes
 #    - Make command descriptions better (Helps with help command)
 #    - Avatar commands now display the main color of their pfp!
+#    - Unban & Ban command!
 #
 # Bug Fixes:
 #    - Fixed bug for every single command.
 #        - Might still have some minor bugs I did not find.
+#    - EXP system fixed
 #
 # Other stuff:
 #    - load_command() is now used to load command descriptions.
@@ -18,11 +20,10 @@
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
-#    - Level exp gain cd (1 min) cause for some reason it doesn't work when testing?
 #    - Except block for 400 bad request code 50007 for commands
 #    - Make auto mute a server set function.
 #
-# This was last updated: 2/5/2025 10:35 PM
+# This was last updated: 2/15/2025 4:31 PM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -30,13 +31,14 @@ from datetime import datetime, timedelta, timezone
 
 import discord
 from discord.ext import commands
-from aiohttp import ClientSession # I just don't want to use aiohttp.ClientSession()
+from aiohttp import ClientSession
 from ossapi import Ossapi # Osu API
 
 from bot_utils import (
     open_file,
     save_file,
     cr_fetchPlayerData,
+    get_member_cooldown,
     # debug,
     error,
     warn,
@@ -56,9 +58,6 @@ from bot_utils import (
 botAdmins = [721151215010054165]
 botMods = []
 botTesters = []
-
-# Custom exception/s
-class InvalidKeyError(Exception): ...
 
 # Bot status management
 class StatusManager:
@@ -180,7 +179,6 @@ async def check_apis():
 
 # Bot setup and other stuff
 bot = botMain()
-user_last_message_time = {}
 
 # Event handling stuff
 @bot.event
@@ -195,13 +193,11 @@ async def on_message(message):
 
     server_id = str(message.guild.id)
     member_id = str(message.author.id)
-    current_time = datetime.now(timezone.utc)
 
     server_info = open_file("storage/server_info.json")
     member_data = open_file("storage/member_info.json")
 
     afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
-    exp_data = server_info.setdefault(server_id, {}).setdefault("exp", {})
 
     if member_id in afk_data:
         original_name = afk_data[member_id].get("original_name")
@@ -229,30 +225,24 @@ async def on_message(message):
             )
             await message.channel.send(embed=embed)
 
-    if member_id not in member_data:
-        member_data[member_id] = {"EXP": 0}
-
-    if member_id not in exp_data:
-        exp_data[member_id] = {"EXP": 0}
-
-    last_message_time = user_last_message_time.get(member_id)
-
-    if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
+    cooldown = get_member_cooldown(member_id, exp=True)
+    if cooldown >= 60:
         message_length = len(message.content)
-        exp_gain = min(75, math.floor(message_length / 15)) + (random.randint(5, 15)) 
-        # print(server_info)
+        exp_gain = min(75, math.floor(message_length / 15)) + (random.randint(5, 15))
 
-        member_data[member_id]["EXP"] += exp_gain
+        if member_id not in member_data:
+            member_data[member_id] = {"EXP": {"total": 0, "cooldown": 0}}
+        
+        member_data[member_id]["EXP"]["total"] = member_data[member_id].get("EXP", {}).get("total", 0) + exp_gain
+        member_data[member_id]["EXP"]["cooldown"] = int(datetime.now(timezone.utc).timestamp())
 
         if "exp" not in server_info:
             server_info["exp"] = {}
-            # print(server_info)
-
         if server_id not in server_info["exp"]:
             server_info["exp"][server_id] = {}
-        server_info["exp"][server_id][member_id] = server_info["exp"][server_id].get(member_id, 0) + exp_gain
-
-        # print(server_info)
+        if member_id not in server_info["exp"][server_id]:
+            server_info["exp"][server_id][member_id] = 0
+        server_info["exp"][server_id][member_id] += exp_gain
 
         save_file("storage/member_info.json", member_data)
         save_file("storage/server_info.json", server_info)
