@@ -1,3 +1,8 @@
+from .file_handler import (
+    open_file,
+    save_file
+)
+
 import discord
 import re, io, json, time
 
@@ -262,37 +267,30 @@ def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = 
              Returns 0 if the command has never been used.
     """
 
-    def save_file():
-        with open("storage/member_info.json", "w") as f:
-            json.dump(member_info, f, indent=4, default=lambda o: o.to_dict() if hasattr(o, "to_dict") else o)
-
     current_time = int(time.time())
     user_id = str(user_id)
     
-    try:
-        with open("storage/member_info.json", "r") as f:
-            member_info = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        member_info = {}
+    member_info = open_file("storage/member_info.json")
+
 
     user_data = member_info.setdefault(user_id, {})
     if exp:
         user_exp = user_data.setdefault("EXP", {})
         exp_cooldown = user_exp.setdefault("cooldown", 0)
-        save_file()
+        save_file("storage/member_info.json", member_info)
 
         return current_time - exp_cooldown
     
     if command:
         commands = user_data.setdefault("commands", {})
         command_data = commands.setdefault(command, {"cooldown": 0})
-        save_file()
+        save_file("storage/member_info.json", member_info)
         
         return current_time - command_data["cooldown"]
     
 async def get_command_help_embed(command_name: str) -> discord.Embed:
-    with open("storage/command_help.json", "r") as f:
-        command_help = json.load(f)
+    command_help = open_file("storage/command_help.json")
+
     command_data = command_help.get("moderation", {}).get(command_name)
     if not command_data:
         return None

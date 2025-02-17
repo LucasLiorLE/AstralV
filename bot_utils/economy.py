@@ -202,4 +202,9 @@ class Gambling:
     def __init__(self, id):
         self.id = id
 
-    
+def check_user_exists(id):
+    players = open_file(eco_path)
+    if id not in players:
+        create_account(id)
+
+    return open_file(eco_path)
