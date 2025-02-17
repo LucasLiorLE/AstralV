@@ -783,7 +783,6 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="coinflip")
-    @app_commands.describe(guess="Heads or tails?", amount="Optional amount if you want to bet!")
     @app_commands.choices(
         guess=[
             app_commands.Choice(name="Heads", value="Heads"),
@@ -794,33 +793,35 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
         try:
             coin = random.choice(["Heads", "Tails"])
+
+            if amount < 1: 
+                return await interaction.followup.send("Please enter a value greater than 0.")
             
             if not guess:
                 return await interaction.followup.send(f"The coin landed on {coin}!")
 
             won = coin.lower() == guess.lower()
             if not amount:
-                return await interaction.followup.send(
-                    f"{'Congrats' if won else 'Bad luck'}! The coin landed on {coin}!"
-                )
-
-            try:
-                bet = abs(convert_number(amount))
-            except ValueError:
-                return await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
+                return await interaction.followup.send(f"{'Congrats' if won else 'Bad luck'}! The coin landed on {coin}!")
 
             user_id = str(interaction.user.id)
             eco = check_user_exists(user_id)
 
-            if eco[user_id]["balance"]["purse"] < bet:
-                return await interaction.followup.send("You don't have enough coins!")
+            if amount.lower() == "all":
+                bet = eco[user_id]["balance"]["purse"]
+            else:
+                try:
+                    bet = convert_number(amount)
+                except ValueError:
+                    return await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
+
+                if eco[user_id]["balance"]["purse"] < bet:
+                    return await interaction.followup.send("You don't have enough coins!")
 
             eco[user_id]["balance"]["purse"] += bet if won else -bet
             save_file(eco_path, eco)
 
-            return await interaction.followup.send(
-                f"The coin landed on {coin}! You {'won' if won else 'lost'} {bet:,} coins!"
-            )
+            return await interaction.followup.send(f"The coin landed on {coin}! You {'won' if won else 'lost'} {bet:,} coins!")
 
         except Exception as e:
             return await handle_logs(interaction, e)

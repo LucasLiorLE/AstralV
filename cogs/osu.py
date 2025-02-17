@@ -25,8 +25,11 @@ class OsuCommandGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             osu_api = OsuAPI(osuAPI, osuSecret)
-            user = await osu_api.user(username, key=UserLookupKey.USERNAME)
-            
+            try:
+                user = await osu_api.user(username, key=UserLookupKey.USERNAME)
+            except ValueError:
+                return await interaction.followup.send("Invalid username.")
+
             embed = discord.Embed(
                 title=f"osu! Profile: {user.username}",
                 url=f"https://osu.ppy.sh/users/{user.id}",

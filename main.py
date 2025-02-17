@@ -8,6 +8,7 @@
 #    - Make command descriptions better (Helps with help command)
 #    - Avatar commands now display the main color of their pfp!
 #    - Unban & Ban command!
+#    - Economy update, should be a lot more stable.
 #
 # Bug Fixes:
 #    - Fixed bug for every single command.
@@ -23,16 +24,16 @@
 #    - Except block for 400 bad request code 50007 for commands
 #    - Make auto mute a server set function.
 #
-# This was last updated: 2/15/2025 4:31 PM
+# This was last updated: 2/16/2025 10:42 PM
 
 import os, random, math, asyncio
 # import asyncpraw
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
 from aiohttp import ClientSession
-from ossapi import Ossapi # Osu API
+from ossapi import Ossapi
 
 from bot_utils import (
     open_file,
@@ -52,9 +53,6 @@ from bot_utils import (
     osuSecret,
     hypixelAPI,
     __version__,
-    get_command_help_embed,
-    create_interaction,
-    handle_logs
 )
 
 # config
@@ -81,7 +79,9 @@ class StatusManager:
             current_status = random.choice(self.status_messages)
             await self.bot.change_presence(
                 status=discord.Status.dnd, 
-                activity=discord.Game(name=current_status)
+                activity=discord.Game(
+                    name=current_status,
+                )
             )
             await asyncio.sleep(600)
 
