@@ -289,3 +289,30 @@ def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = 
         save_file()
         
         return current_time - command_data["cooldown"]
+    
+async def get_command_help_embed(command_name: str) -> discord.Embed:
+    with open("storage/command_help.json", "r") as f:
+        command_help = json.load(f)
+    command_data = command_help.get("moderation", {}).get(command_name)
+    if not command_data:
+        return None
+
+    embed = discord.Embed(
+        title=f"Command: {command_name}",
+        description=command_data.get("description", "No description available."),
+        color=discord.Color.blue()
+    )
+
+    if "parameters" in command_data:
+        parameters = []
+        for param_name, param_desc in command_data["parameters"].items():
+            parameters.append(f"• **{param_name}**: {param_desc}")
+        
+        if parameters:
+            embed.add_field(
+                name="Parameters",
+                value="\n".join(parameters),
+                inline=False
+            )
+
+    return embed

@@ -7,6 +7,7 @@ from bot_utils import (
     check_user,
     parse_duration,
     create_interaction,
+    get_command_help_embed,
     error,
     
     open_file,
@@ -57,6 +58,9 @@ class DelLog(discord.ui.Select):
         ]
 
     async def callback(self, interaction: discord.Interaction):
+        if not check_user(interaction, interaction.message.interaction.user):
+            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+        
         try:
             selected_index = self.values[0]
             server_info = open_file("storage/server_info.json")
@@ -124,8 +128,7 @@ class LogSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
+            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
 
         await interaction.response.defer()
         selected_page = int(self.values[0])
@@ -429,31 +432,6 @@ class ModerationCog(commands.Cog):
         self.bot.tree.add_command(set_group)
 
         load_commands(self.__cog_app_commands__, "moderation")
-
-    async def get_command_help_embed(self, command_name: str) -> discord.Embed:
-        command_data = self.command_help.get("moderation", {}).get(command_name)
-        if not command_data:
-            return None
-
-        embed = discord.Embed(
-            title=f"Command: {command_name}",
-            description=command_data.get("description", "No description available."),
-            color=discord.Color.blue()
-        )
-
-        if "parameters" in command_data:
-            parameters = []
-            for param_name, param_desc in command_data["parameters"].items():
-                parameters.append(f"• **{param_name}**: {param_desc}")
-            
-            if parameters:
-                embed.add_field(
-                    name="Parameters",
-                    value="\n".join(parameters),
-                    inline=False
-                )
-
-        return embed
 
     @commands.command(name="purge")
     @commands.has_permissions(manage_messages=True)
@@ -1280,7 +1258,6 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             error(e)
 
-
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         try:
@@ -1289,11 +1266,31 @@ class ModerationCog(commands.Cog):
             
             if isinstance(error, commands.MissingRequiredArgument):
                 command_name = ctx.command.name
-                help_embed = await self.get_command_help_embed(command_name)
-                if help_embed:
-                    help_embed.title = f"Missing Required Argument: {error.param.name}"
-                    await ctx.send(embed=help_embed, delete_after=30)
-                    return
+                if ctx.command.parent:
+                    command_name = f"{ctx.command.parent.name} {command_name}"
+                    
+                help_data = self.command_help.get("moderation", {}).get(command_name, {})
+                if not help_data:
+                    help_data = self.command_help.get(command_name, {})
+                
+                if help_data:
+                    embed = discord.Embed(
+                        title=f"Missing Required Argument: {error.param.name}",
+                        description=help_data.get("description", "No description available."),
+                        color=discord.Color.red()
+                    )
+                    
+                    if "parameters" in help_data:
+                        params = help_data["parameters"]
+                        param_text = "\n".join([f"**{param}**: {desc}" for param, desc in params.items()])
+                        embed.add_field(name="Parameters", value=param_text, inline=False)
+                    
+                    if "subcommands" in help_data:
+                        subcmd_text = "\n".join([f"**{cmd}**: {data.get('description', 'No description')}" 
+                                               for cmd, data in help_data["subcommands"].items()])
+                        embed.add_field(name="Subcommands", value=subcmd_text, inline=False)
+                        
+                    return await ctx.send(embed=embed, delete_after=30)
             
             interaction = await create_interaction(ctx)
             await handle_logs(interaction, error)
