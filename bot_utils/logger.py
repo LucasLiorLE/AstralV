@@ -55,9 +55,6 @@ def warn(
     
     Parameters:
         *values (object): The values to be printed
-    
-    Returns:
-        None
     """
     print("[WARNING]", *values)
 
@@ -69,9 +66,6 @@ def debug(
     
     Parameters:
         *values (object): The values to be printed
-    
-    Returns:
-        None
     """
     print("[DEBUG]", *values)
 
@@ -83,9 +77,6 @@ def error(
     
     Parameters:
         *values (object): The values to be printed
-    
-    Returns:
-        None
     """
     print("[ERROR]", *values)
 
@@ -101,11 +92,6 @@ async def handle_logs(
         interaction (discord.Interaction): The interaction context
         error (Exception): The error to be logged
         log_type (str): Category of log, defaults to "error"
-        
-    Notes:
-        - Sends an ephemeral message to the user with error details
-        - Stores full traceback in logs for debugging
-        - Prints log ID for reference
     """
     global log_id_counter
     log_type = log_type.title()

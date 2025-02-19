@@ -211,15 +211,13 @@ class ImageGroup(app_commands.Group):
 
     async def process_image(self, interaction: discord.Interaction, image: discord.Attachment = None, link: str = None):
         if image is None and link is None:
-                    await interaction.followup.send("Please provide an image attachment or a link to an image.", ephemeral=True)
-                    return
+            return await interaction.followup.send("Please provide an image attachment or a link to an image.", ephemeral=True)
                 
         if link is not None:
             async with ClientSession() as session:
                 async with session.get(link) as response:
                     if response.status != 200:
-                        await interaction.followup.send("Failed to fetch the image from the provided URL.", ephemeral=True)
-                        return
+                        return await interaction.followup.send("Failed to fetch the image from the provided URL.", ephemeral=True)
                     
                     image_data = await response.read()
 
@@ -228,8 +226,7 @@ class ImageGroup(app_commands.Group):
 
         else:
             if not image.content_type.startswith("image/"):
-                await interaction.followup.send("Please upload a valid image file.", ephemeral=True)
-                return
+                return await interaction.followup.send("Please upload a valid image file.", ephemeral=True)
 
             image_data = await image.read()
             filename = image.filename
@@ -523,15 +520,13 @@ class ImageGroup(app_commands.Group):
 
     async def context_randomize_callback(self, interaction: discord.Interaction, message: discord.Message):
         if not message.attachments:
-            await interaction.response.send_message("This message doesn't contain any images!", ephemeral=True)
-            return
+            return await interaction.response.send_message("This message doesn't contain any images!", ephemeral=True)
             
         image = next((attachment for attachment in message.attachments 
                     if attachment.content_type and attachment.content_type.startswith('image/')), None)
                     
         if not image:
-            await interaction.response.send_message("No valid image found in this message!", ephemeral=True)
-            return
+            return await interaction.response.send_message("No valid image found in this message!", ephemeral=True)
             
         await self.randomize_image(interaction, image=image, amount=3, ephemeral=False)
 

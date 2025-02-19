@@ -9,7 +9,7 @@ from .file_handler import (
     open_file
 )
 
-async def dmbed(
+async def dm_moderation_embed(
         interaction: discord.Interaction, 
         user: discord.User, 
         action: str, 
@@ -25,11 +25,6 @@ async def dmbed(
         action (str): Type of moderation action (e.g. ban, kick, mute, etc.)
         reason (str): Reason for the moderation action
         duration (str, optional): Duration of temporary actions like mutes/bans
-
-    The function will:
-    1. Create and send an embed to the server channel
-    2. Attempt to DM the affected user with details
-    3. Note in server embed if DM failed
     """
     embed = discord.Embed(
         title=f"Member {action}.", 
@@ -88,42 +83,62 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
 
     return server_info
 
-async def check_mod(
-        interaction: discord.Interaction, 
-        permission_name: str
+def check_moderation_info(
+        interaction,
+        permission_name: str,
+        role: str
     ) -> bool:
     """
-    Verifies if a user has moderator permissions either through Discord permissions or a mod role.
+    Verifies if a user has a certain role or permission.
 
     Parameters:
-        interaction (discord.Interaction): The interaction to check permissions for
+        interaction: The interaction used.
         permission_name (str): The Discord permission name to check (e.g. 'ban_members')
+        role (str): The custom role to check for (e.g. 'moderator', 'manager')
 
     Returns:
-        bool: True if user has mod permissions, False otherwise
-
-    The function will:
-    1. Initialize server data structures if they don't exist
-    2. Check for either:
-        - The specified Discord permission
-        - The configured moderator role
-    3. Send an error message if user lacks permissions
+        bool: True if the user has permissions, otherwise False.
     """
     guild_id = str(interaction.guild_id)
     server_info = check_mod_server_info(guild_id)
 
-    mod_role_id: Optional[int] = server_info["preferences"][guild_id].get("moderator")
+    mod_role_id: Optional[int] = server_info["preferences"][guild_id].get(role)
     has_permission: bool = getattr(interaction.user.guild_permissions, permission_name, False)
     has_role: bool = mod_role_id and discord.utils.get(interaction.user.roles, id=int(mod_role_id))
 
     if not (has_permission or has_role):
-        await interaction.followup.send(
-            f"You need the '{permission_name.replace('_', ' ').title()}' permission or the Moderator role to use this command.",
-            ephemeral=True
-        )
-        return False
+        return False, no_permission_embed(permission_name, role)
 
-    return True
+    return True, None
+
+def no_permission_embed(
+        permission: str = None,
+        role: str = None
+    ) -> discord.Embed:
+    """
+    An embed that says they do not have the required role/permission to use a command.
+
+    Parameters:
+        permission (str): The permission they are lacking.
+        role (str): The role they are lacking.
+
+    Returns:
+        discord.Embed: The embed saying they do not have permission.
+    """
+    embed = discord.Embed(
+        title="Missing Permissions",
+        description="❌ You do not have permission to use this command!",
+        color=0xFF0000
+    )
+
+    embed.set_footer(text=(
+                f"You need the "
+                f"{f"{permission.replace("_", " ").title()} permission" if permission else None} "
+                f"{"or" if permission and role else None} "
+                f"{f"{role} role" if role else None} to use this command."
+            )
+        )
+    return embed
 
 async def store_modlog(
         modlog_type: str,
@@ -150,14 +165,6 @@ async def store_modlog(
         arguments (str, optional): Additional context or arguments
         bot: Discord bot instance for sending logs
 
-    The function will:
-    1. Initialize required data structures
-    2. Create a detailed embed with action information
-    3. Store the log in the moderation database
-    4. Update mod statistics if applicable
-    5. Send the log to the configured modlog channel
-    6. Handle any special cases (warnings, etc.)
-    
     Raises:
         discord.Forbidden: If bot lacks permissions to send to modlog channel
         discord.HTTPException: If sending the modlog message fails
@@ -270,16 +277,6 @@ async def send_modlog_embed(
             - embed: discord.Embed containing the log entries
             - total_logs: Total number of logs for the user
             - total_pages: Total number of pages available
-
-    Features:
-    1. Paginates logs (10 entries per page)
-    2. Shows detailed information for each case including:
-        - Case number
-        - Action type
-        - Moderator
-        - Reason
-        - Timestamp
-    3. Includes footer with pagination info
     """
     server_info = open_file("storage/server_info.json")
     server_id = str(interaction.guild.id)

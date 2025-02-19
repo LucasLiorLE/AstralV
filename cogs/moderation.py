@@ -1,13 +1,13 @@
 from bot_utils import (
     send_modlog_embed,
     store_modlog,
-    check_mod,
-    dmbed,
+    check_moderation_info,
+    dm_moderation_embed,
 
     check_user,
     parse_duration,
     create_interaction,
-    get_command_help_embed,
+    get_member,
     error,
     
     open_file,
@@ -175,7 +175,7 @@ class MessageCheck:
             if len(messages_to_delete) > 1:
                 try:
                     await channel.delete_messages(messages_to_delete, reason=reason)
-                    await interaction.followup.send(f"Succesfully deleted {len(messages_to_delete)} messages", ephemeral=True)
+                    await interaction.followup.send(f"Succesfully deleted {len(messages_to_delete)} messages")
                     return messages_to_delete
                 except discord.HTTPException as e:
                     return []
@@ -196,8 +196,9 @@ class PurgeCommandGroup(app_commands.Group):
     async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             await interaction.channel.purge(limit=amount, reason=reason)
 
@@ -216,8 +217,9 @@ class PurgeCommandGroup(app_commands.Group):
     async def upurge(self, interaction: discord.Interaction, member: discord.Member, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             await MessageCheck.purge_messages(interaction.channel, amount, lambda msg: MessageCheck.is_from_user(msg, member), interaction, reason)
 
@@ -237,8 +239,9 @@ class PurgeCommandGroup(app_commands.Group):
     async def epurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             await MessageCheck.purge_messages(interaction.channel, amount, MessageCheck.has_embeds, interaction, reason)
 
@@ -257,8 +260,9 @@ class PurgeCommandGroup(app_commands.Group):
     async def attpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             await MessageCheck.purge_messages(interaction.channel, amount, MessageCheck.has_attachments, interaction, reason)
             
@@ -277,8 +281,9 @@ class PurgeCommandGroup(app_commands.Group):
     async def tpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             await MessageCheck.purge_messages(interaction.channel, amount, MessageCheck.is_text_only, interaction, reason)
 
@@ -315,8 +320,9 @@ class SetCommandGroup(app_commands.Group):
             server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
 
-            if not await check_mod(interaction, "administrator"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "administrator", "manager")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             if guild_id not in server_info["preferences"]:
                 server_info["preferences"][guild_id] = {}
@@ -342,8 +348,9 @@ class SetCommandGroup(app_commands.Group):
             server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
 
-            if not await check_mod(interaction, "administrator"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "administrator", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             if guild_id not in server_info["preferences"]:
                 server_info["preferences"][guild_id] = {}
@@ -351,7 +358,7 @@ class SetCommandGroup(app_commands.Group):
             server_info["preferences"][guild_id][option] = role.id
             save_file("storage/server_info.json", server_info)
 
-            await interaction.followup.send(f"The role '{role.name}' has been set for members.")
+            await interaction.followup.send(f"The role '{role.name}' has been set to: {option.title()}.")
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -433,45 +440,24 @@ class ModerationCog(commands.Cog):
 
         load_commands(self.__cog_app_commands__, "moderation")
 
-    @commands.command(name="purge")
-    @commands.has_permissions(manage_messages=True)
-    async def cpurge(self, ctx, amount: int, member: discord.Member = None):
-        if amount <= 0:
-            await ctx.send("The amount must be greater than zero.", delete_after=5)
-            return
-
-        messages_to_delete = []
-        
-        if member is None:
-            deleted_messages = await ctx.channel.purge(limit=amount)
-            messages_to_delete = deleted_messages
-        else:
-            async for message in ctx.channel.history(limit=1000):
-                if len(messages_to_delete) >= amount:
-                    break
-                if message.author.id == member.id:
-                    messages_to_delete.append(message)
-
-            await ctx.channel.delete_messages(messages_to_delete)
-
-        reason = f"Deleted {len(messages_to_delete)} message(s)"
-
-        await store_modlog(
-            modlog_type="Purge",
-            moderator=ctx.author,
-            channel=ctx.channel,
-            arguments=reason,
-            server_id=ctx.guild.id,
-            bot=self.bot
-        )
-
+    async def manual_get_user(self, ctx: commands.Context, user: str | int | discord.User) -> discord.User:
+        try:
+            user_id = int(user)
+            user = await self.bot.fetch_user(user_id)
+        except ValueError:
+            try:
+                user = await commands.UserConverter().convert(ctx, user)
+            except commands.UserNotFound:
+                return None
+        return user
+    
     @app_commands.command(name="clean")
     async def clean(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                await interaction.followup.send("You do not have permission to use this command.", ephemeral=True)
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             await MessageCheck.purge_messages(interaction.channel, amount, MessageCheck.cleanCommand, interaction, reason)
 
@@ -489,25 +475,14 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @commands.command(name="clean")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_clean(self, ctx, amount: int = 10, reason: str = "No reason provided"):
-        try:
-            await ctx.message.delete()
-            interaction = await create_interaction(ctx)
-            await self.clean.callback(self, interaction, amount, reason)
-
-            await ctx.send(f"Cleaned {amount} bot messages.", delete_after=5)
-        except Exception as e:
-            error(e)
-
     @app_commands.command(name="role")
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_roles"):
-                return
-        
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             if role in member.roles:
                 await member.remove_roles(role)
                 task = "removed from"
@@ -538,8 +513,10 @@ class ModerationCog(commands.Cog):
     async def lock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
 
             channel = channel or interaction.channel
             server_info = open_file("storage/server_info.json")
@@ -589,8 +566,9 @@ class ModerationCog(commands.Cog):
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
             
             channel = channel or interaction.channel
             server_info = open_file("storage/server_info.json")
@@ -634,13 +612,15 @@ class ModerationCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="slowmode")
-    @app_commands.checks.has_permissions(manage_messages=True)
     async def slowmode(self, interaction: discord.Interaction, channel: discord.TextChannel = None, delay: int = None):
         await interaction.response.defer()
         try:
             channel = channel or interaction.channel
-            if not await check_mod(interaction, "manage_messages"):
-                return
+
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             if delay is None or 0:
                 await channel.edit(slowmode_delay=0)
                 await interaction.followup.send(
@@ -684,8 +664,9 @@ class ModerationCog(commands.Cog):
     async def nick(self, interaction: discord.Interaction, member: discord.Member, new_nick: str):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_nicknames", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
             
             old_nick = member.display_name
             await member.edit(nick=new_nick)
@@ -714,14 +695,14 @@ class ModerationCog(commands.Cog):
     async def mute(self, interaction: discord.Interaction, member: discord.Member, duration: str, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "moderate_members"):
-                return
-            
+            has_mod, embed = check_moderation_info(interaction, "moderate_members", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             duration = parse_duration(duration)
 
             if not duration:
-                await interaction.followup.send("Invalid time format. Please use formats like `1h10m15s` or `15s1h10m`.")
-                return
+                return await interaction.followup.send("Invalid time format. Please use formats like `1h10m15s` or `15s1h10m`.")
 
             until = discord.utils.utcnow() + duration
             await member.timeout(until, reason=reason)
@@ -730,7 +711,7 @@ class ModerationCog(commands.Cog):
             minutes, seconds = divmod(remainder, 60)
             human_readable_time = (f"{int(hours)} hour(s) {int(minutes)} minute(s) {int(seconds)} second(s)")
 
-            await dmbed(interaction, member, "muted", reason, human_readable_time)
+            await dm_moderation_embed(interaction, member, "muted", reason, human_readable_time)
 
             await store_modlog(
                 modlog_type="Mute",
@@ -744,6 +725,9 @@ class ModerationCog(commands.Cog):
 
         except OverflowError:
             await interaction.followup.send("The duration is too long. Please provide a shorter duration.")
+    
+        except commands.MemberNotFound:
+            await interaction.followup.send("User not found.")
 
         except discord.Forbidden:
             await interaction.followup.send("I do not have the required permissions to mute this user.")
@@ -761,12 +745,14 @@ class ModerationCog(commands.Cog):
     async def unmute(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "moderate_members"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "moderate_members", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             
             await member.timeout(None, reason=reason)
 
-            await dmbed(interaction, member, "unmuted", reason)
+            await dm_moderation_embed(interaction, member, "unmuted", reason)
 
             await store_modlog(
                 modlog_type="Unmute",
@@ -784,12 +770,14 @@ class ModerationCog(commands.Cog):
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No Reason Provided."):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "kick_members"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "kick_members", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             
             await member.kick(reason=reason)
 
-            await dmbed(interaction, member, "kicked", reason)
+            await dm_moderation_embed(interaction, member, "kicked", reason)
 
             await store_modlog(
                 modlog_type="Kick",
@@ -803,26 +791,33 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-
     @app_commands.command(name="ban")
-    async def ban(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
+    async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "ban_members"):
-                return
-            
-            await member.ban(reason=reason)
+            has_mod, embed = check_moderation_info(interaction, "ban_members", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
-            await dmbed(interaction, member, "banned", reason)
+            if not user:
+                return await interaction.followup.send("You must specify either a user or a user ID to unban.")
+
+            await interaction.guild.ban(user, reason=reason)
+            await dm_moderation_embed(interaction, user, "banned", reason)
 
             await store_modlog(
                 modlog_type="Ban",
                 moderator=interaction.user,
-                user=member,
+                user=user,
                 reason=reason,
                 server_id=interaction.guild_id,
                 bot=self.bot
             )
+
+        except discord.NotFound:
+            await interaction.followup.send("This user does not exist.")
+        except discord.Forbidden:
+            await interaction.followup.send("I don't have permission to unban users")
             
         except Exception as e:
             await handle_logs(interaction, e)
@@ -831,16 +826,16 @@ class ModerationCog(commands.Cog):
     async def unban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "ban_members"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "ban_members", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
             
             if not user:
-                await interaction.followup.send("You must specify either a user or a user ID to unban.")
-                return
+                return await interaction.followup.send("You must specify either a user or a user ID to unban.")
 
             try:
                 await interaction.guild.unban(user, reason=reason)
-                await dmbed(interaction, user, "unbanned", reason)
+                await dm_moderation_embed(interaction, user, "unbanned", reason)
 
                 await store_modlog(
                     modlog_type="Unban",
@@ -850,8 +845,6 @@ class ModerationCog(commands.Cog):
                     server_id=interaction.guild_id,
                     bot=self.bot
                 )
-                
-                await interaction.followup.send(f"Successfully unbanned {user} (ID: {user.id})")
             except discord.NotFound:
                 await interaction.followup.send("User not found or is not banned")
             except discord.Forbidden:
@@ -864,11 +857,15 @@ class ModerationCog(commands.Cog):
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str, auto_mute: bool = False):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
             
-            if member == self.bot:
-                await interaction.followup.send("Why are you warning me 😭!")
+            if member.bot:
+                return await interaction.followup.send("You cannot warn a bot.")
+
+            if len(reason) > 100:
+                return await interaction.followup.send("Reason must be less than 100 characters.")
 
             server_info = open_file("storage/server_info.json")
             server_id = str(interaction.guild.id)
@@ -901,7 +898,7 @@ class ModerationCog(commands.Cog):
                 "time": int(time.time())
             }
 
-            await dmbed(interaction, member, "warn", reason)
+            await dm_moderation_embed(interaction, member, "warn", reason)
             await store_modlog(
                 modlog_type="Warn",
                 moderator=interaction.user,
@@ -934,13 +931,13 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-
     @app_commands.command(name="warns")
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
             
             member = member or interaction.user
             server_info = open_file("storage/server_info.json")
@@ -970,8 +967,12 @@ class ModerationCog(commands.Cog):
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
+            if len(note) > 100:
+                return await interaction.followup.send("Note must be less than 100 characters.")
             
             server_info = open_file("storage/server_info.json")
             member_notes = server_info["notes"].setdefault(str(interaction.guild.id), {}).setdefault(str(member.id), {})
@@ -994,9 +995,10 @@ class ModerationCog(commands.Cog):
     async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
-            
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             member = member or interaction.user
             server_info = open_file("storage/server_info.json")
             member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(member.id), {})
@@ -1023,8 +1025,10 @@ class ModerationCog(commands.Cog):
     async def modlogs(self, interaction: discord.Interaction, member: discord.Member, page: int = 1):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
+
             embed, _, total_pages = await send_modlog_embed(interaction, member, page)
 
             if embed is None:
@@ -1044,8 +1048,9 @@ class ModerationCog(commands.Cog):
     async def modstats(self, interaction: discord.Interaction, member: discord.Member = None):
         await interaction.response.defer()
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             member = member or interaction.user
             server_info = open_file("storage/server_info.json")
@@ -1115,8 +1120,19 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @commands.command(name="purge")
+    async def manuaL_purge(self, ctx, amount: int = 10, reason: str = "No reason provided"):
+        try:
+            await ctx.message.delete()
+            interaction = await create_interaction(ctx)
+            await self.PurgeCommandGroup.apurge.callback(self, interaction, amount, reason)
+
+            conf_msg = await ctx.send(f"Purged {amount} messages.")
+            await conf_msg.delete(delay=5)
+        except Exception as e:
+            error(e)
+
     @commands.command(name="clean")
-    @commands.has_permissions(manage_messages=True)
     async def manual_clean(self, ctx, amount: int = 10, reason: str = "No reason provided"):
         try:
             await ctx.message.delete()
@@ -1129,119 +1145,139 @@ class ModerationCog(commands.Cog):
             error(e)
 
     @commands.command(name="warn")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_warn(self, ctx, member: discord.Member, *, reason: str):
+    async def manual_warn(self, ctx, member: str, *, reason: str):
         try:
             interaction = await create_interaction(ctx)
-            await self.warn.callback(self, interaction, member, reason)
-        except commands.MemberNotFound:
-            await ctx.send(f"Member '{member}' not found.", delete_after=5)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.warn.callback(self, interaction, target_member, reason)
+
         except Exception as e:
             error(e)
 
     @commands.command(name="mute")
-    @commands.has_permissions(moderate_members=True)
-    async def manual_mute(self, ctx, member: discord.Member, duration: str, *, reason: str = "No reason provided"):
+    async def manual_mute(self, ctx, member: str, duration: str, *, reason: str = "No reason provided"):
         try:
             interaction = await create_interaction(ctx)
-            await self.mute.callback(self, interaction, member, duration, reason)
-        except commands.MemberNotFound:
-            await ctx.send(f"Member '{member}' not found.", delete_after=5)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.mute.callback(self, interaction, target_member, duration, reason)
         except Exception as e:
             error(e)
 
     @commands.command(name="unmute")
-    @commands.has_permissions(moderate_members=True)
-    async def manual_unmute(self, ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    async def manual_unmute(self, ctx, member: str, *, reason: str = "No reason provided"):
         try:
             interaction = await create_interaction(ctx)
-            await self.unmute.callback(self, interaction, member, reason)
-        except commands.MemberNotFound:
-            await ctx.send(f"Member '{member}' not found.", delete_after=5)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.unmute.callback(self, interaction, target_member, reason)
         except Exception as e:
             error(e)
 
     @commands.command(name="kick")
-    @commands.has_permissions(kick_members=True)
-    async def manual_kick(self, ctx, member: discord.Member, *, reason: str = "No reason provided"):
+    async def manual_kick(self, ctx, member: str, *, reason: str = "No reason provided"):
         try:
             interaction = await create_interaction(ctx)
-            await self.kick.callback(self, interaction, member, reason)
-        except commands.MemberNotFound:
-            await ctx.send(f"Member '{member}' not found.", delete_after=5)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.kick.callback(self, interaction, target_member, reason)
         except Exception as e:
             error(e)
 
     @commands.command(name="ban")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_ban(self, ctx, member: discord.Member, reason: str = "No reason provided"):
+    async def manual_ban(self, ctx, user: str, reason: str = "No reason provided"):
         try:
             interaction = await create_interaction(ctx)
-            await self.ban.callback(self, interaction, member, reason)
-        except commands.MemberNotFound:
-            await ctx.send(f"Member '{member}' not found.", delete_after=5)
+            user = await self.manual_get_user(ctx, user)
+
+            if not user:
+                return await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
+
+            await self.ban.callback(self, interaction, user, reason)
         except Exception as e:
             error(e)
 
     @commands.command(name="unban")
-    @commands.has_permissions(ban_members=True)
-    async def manual_unban(self, ctx, user_input: str, *, reason: str = "No reason provided"):
+    async def manual_unban(self, ctx, user: str, *, reason: str = "No reason provided"):
         try:
             interaction = await create_interaction(ctx)
-            
-            try:
-                user_id = int(user_input)
-                user = await self.bot.fetch_user(user_id)
-                await self.unban.callback(self, interaction, user, reason)
-            except ValueError:
-                try:
-                    user = await commands.UserConverter().convert(ctx, user_input)
-                    await self.unban.callback(self, interaction, user, reason)
-                except commands.UserNotFound:
-                    await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
-            except discord.NotFound:
-                await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
+            user = await self.manual_get_user(ctx, user)
+
+            if not user:
+                return await ctx.send("Could not find user. Please provide a valid user mention or ID.", delete_after=5)
+
+            await self.unban.callback(self, interaction, user, reason)
         except Exception as e:
             error(e)
 
     @commands.command(name="notes")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_notes(self, ctx, member: discord.Member = None):
+    async def manual_notes(self, ctx, member: str = None):
         try:
+            interaction = await create_interaction(ctx)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
             interaction = await create_interaction(ctx)
             await self.notes.callback(self, interaction, member or ctx.author)
         except Exception as e:
             error(e)
 
     @commands.command(name="note")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_note(self, ctx, member: discord.Member, *, note: str):
+    async def manual_note(self, ctx, member: str, *, note: str):
         try:
             interaction = await create_interaction(ctx)
-            await self.note.callback(self, interaction, member, note)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.note.callback(self, interaction, target_member, note)
         except Exception as e:
             error(e)
 
-    @commands.command(name="warns")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_warns(self, ctx, member: discord.Member = None):
+    @commands.command(name="warns", aliases=["warnings"])
+    async def manual_warns(self, ctx, member: str = None):
         try:
             interaction = await create_interaction(ctx)
-            await self.warns.callback(self, interaction, member or ctx.author)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            interaction = await create_interaction(ctx)
+            await self.warns.callback(self, interaction, target_member or ctx.author)
         except Exception as e:
             error(e)
 
     @commands.command(name="modlogs")
-    @commands.has_permissions(manage_messages=True)
-    async def manual_modlogs(self, ctx, member: discord.Member, page: int = 1):
+    async def manual_modlogs(self, ctx, member: str, page: int = 1):
         try:
             interaction = await create_interaction(ctx)
-            await self.modlogs.callback(self, interaction, member, page)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.modlogs.callback(self, interaction, target_member, page)
         except Exception as e:
             error(e)
 
     @commands.command(name="slowmode")
-    @commands.has_permissions(manage_messages=True)
     async def manual_slowmode(self, ctx, delay: int = None):
         try:
             interaction = await create_interaction(ctx)
@@ -1249,12 +1285,29 @@ class ModerationCog(commands.Cog):
         except Exception as e:
             error(e)
 
-    @commands.command(name="role")
-    @commands.has_permissions(manage_roles=True)
-    async def manual_role(self, ctx, member: discord.Member, role: discord.Role, *, reason: str = "No reason provided"):
+    @commands.command(name="nick", aliases=["nickname"])
+    async def manual_nick(self, ctx, member: str, new_nick: str):
         try:
             interaction = await create_interaction(ctx)
-            await self.role.callback(self, interaction, member, role, reason)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.nick.callback(self, interaction, target_member, new_nick)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="role")
+    async def manual_role(self, ctx, member: str, role: discord.Role, *, reason: str = "No reason provided"):
+        try:
+            interaction = await create_interaction(ctx)
+            target_member = await get_member(ctx, member)
+
+            if not target_member:
+                return await interaction.followup.send("User not found.")
+
+            await self.role.callback(self, interaction, target_member, role, reason)
         except Exception as e:
             error(e)
 

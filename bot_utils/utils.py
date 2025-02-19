@@ -4,7 +4,8 @@ from .file_handler import (
 )
 
 import discord
-import re, io, json, time
+from discord.ext import commands
+import re, io, time
 
 from datetime import timedelta
 from typing import Optional, TypeVar, Generic
@@ -314,3 +315,16 @@ async def get_command_help_embed(command_name: str) -> discord.Embed:
             )
 
     return embed
+
+async def get_member(ctx: commands.Context, member_str: str) -> discord.Member | None:
+	"""Find a member by mention, username, nickname, or ID."""
+	member_str = member_str.strip("<@!>")
+	
+	if member_str.isdigit():
+		try:
+			return await ctx.guild.fetch_member(int(member_str))
+		except discord.NotFound:
+			return None
+	else:
+		return discord.utils.get(ctx.guild.members, name=member_str) or \
+			   discord.utils.get(ctx.guild.members, display_name=member_str)
