@@ -8,6 +8,8 @@ from bot_utils import (
     parse_duration,
     create_interaction,
     get_member,
+    get_channel,
+    get_role,
     error,
     
     open_file,
@@ -517,7 +519,6 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
 
-
             channel = channel or interaction.channel
             server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
@@ -527,14 +528,11 @@ class ModerationCog(commands.Cog):
                 role = interaction.guild.get_role(role_id) if role_id else None
 
             if role is None:
-                await interaction.followup.send("No role found to lock the channel for.")
-                return
+                role = interaction.guild.default_role
 
-            if role not in channel.overwrites:
-                overwrites = {role: discord.PermissionOverwrite(send_messages=False)}
-                await channel.edit(overwrites=overwrites)
-            else:
-                await channel.set_permissions(role, send_messages=False)
+            overwrite = channel.overwrites_for(role)
+            overwrite.send_messages = False
+            await channel.set_permissions(role, overwrite=overwrite)
 
             embed = discord.Embed(
                 title="Channel Locked",
@@ -579,11 +577,11 @@ class ModerationCog(commands.Cog):
                 role = interaction.guild.get_role(role_id) if role_id else None
 
             if role is None:
-                await interaction.followup.send("No role found to unlock the channel for.")
-                return
+                role = interaction.guild.default_role
 
-            if role in channel.overwrites:
-                await channel.set_permissions(role, send_messages=True)
+            overwrite = channel.overwrites_for(role)
+            overwrite.send_messages = True
+            await channel.set_permissions(role, overwrite=overwrite)
 
             embed = discord.Embed(
                 title="Channel Unlocked",
@@ -1308,6 +1306,34 @@ class ModerationCog(commands.Cog):
                 return await interaction.followup.send("User not found.")
 
             await self.role.callback(self, interaction, target_member, role, reason)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="lock")
+    async def manual_lock(self, ctx, channel: str = None, role: str = None, reason: str = "No reason provided"):
+        try:
+            channel = await get_channel(ctx, channel)
+            role = await get_role(ctx, role)
+
+            if not channel or not role:
+                return await ctx.send("Invalid channel or role provided.", delete_after=5)
+
+            interaction = await create_interaction(ctx)
+            await self.lock.callback(self, interaction, channel, role, reason)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="unlock")
+    async def manual_unlock(self, ctx, channel: str = None, role: str = None, reason: str = "No reason provided"): 
+        try:
+            channel = await get_channel(ctx, channel)
+            role = await get_role(ctx, role)
+
+            if not channel or not role:
+                return await ctx.send("Invalid channel or role provided.", delete_after=5)
+
+            interaction = await create_interaction(ctx)
+            await self.unlock.callback(self, interaction, channel, role, reason)
         except Exception as e:
             error(e)
 

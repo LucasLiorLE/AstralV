@@ -23,7 +23,7 @@
 #    - get_member_color() is used to get the top role of the user.
 #    - Renamed some functions to easily understand them.
 #    - get_member_cooldown() for certain commands.
-#    - get_member_obj to get the member based off of a str.
+#    - get_member() to get the member based off of a str.
 #    - Some comment updates.
 # 
 # TODO/FIX:

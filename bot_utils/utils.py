@@ -328,3 +328,34 @@ async def get_member(ctx: commands.Context, member_str: str) -> discord.Member |
 	else:
 		return discord.utils.get(ctx.guild.members, name=member_str) or \
 			   discord.utils.get(ctx.guild.members, display_name=member_str)
+
+async def get_channel(ctx: commands.Context, channel_str: str) -> discord.TextChannel | None:
+    """Find a text channel by mention, name, or ID."""
+    if channel_str == None: return None
+    channel_str = channel_str.strip("<#>")
+    
+    if channel_str.isdigit():
+        try:
+            return await ctx.guild.fetch_channel(int(channel_str))
+        
+        except discord.NotFound:
+            return None
+        
+    else:
+        return discord.utils.get(ctx.guild.text_channels, name=channel_str) or \
+               discord.utils.get(ctx.guild.text_channels, mention=channel_str)
+    
+async def get_role(ctx: commands.Context, role_str: str | discord.Role) -> discord.Role | None:
+    """Find a role by mention, name, or ID."""
+    if role_str == None: return None
+    role_str = role_str.strip("<@&>")
+    
+    if role_str.isdigit():
+        try:
+            return ctx.guild.get_role(int(role_str))
+        except discord.NotFound:
+            return None
+        
+    else:
+        return discord.utils.get(ctx.guild.roles, name=role_str) or \
+               discord.utils.get(ctx.guild.roles, mention=role_str)
