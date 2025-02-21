@@ -1,3 +1,4 @@
+from shapely import is_valid
 from bot_utils import (
     get_dominant_color,
     __version__,
@@ -100,13 +101,21 @@ class InfoCog(commands.Cog):
 
         self.bot.tree.add_command(self.context_filedata)
 
-    def exp_required(self, level):
+    def exp_required(self, level: int) -> int:
         total_exp = 0
         for l in range(1, level + 1):
             total_exp += 5 * (l ** 2) + 50 * l + 100
         return total_exp
 
-    def exp_required_tower(self, level):
+    def is_valid_value(self, value: int, min_val: int, max_val: int) -> bool:
+        if value is None:
+            return True
+        try:
+            return min_val < value <= max_val
+        except TypeError:
+            return False
+
+    def exp_required_tower(self, level: int) -> int:
         if level <= 10:
             return 45 + (level * 3.5)
         elif level <= 40:
@@ -280,17 +289,18 @@ class InfoCog(commands.Cog):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             _t = target_exp
-            if target_level is None and target_exp is None:
-                await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
-                return
-            
-            if (target_level > 1000 or current_level > 1000 or
-                target_level < 1 or current_level < 1 or
-                current_exp < 0 or target_exp < 0 or 
-                current_exp > 10000000 or target_exp > 10000000):
-                await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
-                return
 
+            if (
+                self.is_valid_value(current_level, 1, 500) and 
+                self.is_valid_value(target_level, 2, 500) and 
+                self.is_valid_value(current_exp, 0, 1000000) and 
+                self.is_valid_value(target_exp, 1, 1000000)
+            ):
+                return await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
+
+            if target_level is None and target_exp is None:
+                return await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
+            
             total_current_exp = self.exp_required(current_level) + current_exp
             
             if target_exp is not None:
@@ -336,7 +346,10 @@ class InfoCog(commands.Cog):
                     return
                 
                 days_needed = round(required_exp / exp_per_day)
-                completion_date = datetime.now() + timedelta(days=days_needed)
+                try:
+                    completion_date = datetime.now() + timedelta(days=days_needed)
+                except OverflowError:
+                    return await interaction.followup.send("Pleae provide smaller target/current level/exp!")
                 required_daily_exp = exp_per_day
 
             embed = discord.Embed(
@@ -404,15 +417,15 @@ class InfoCog(commands.Cog):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             if target_level is None and target_exp is None:
-                await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
-                return
+                return await interaction.followup.send("You must provide either a target level or target EXP!", ephemeral=True)
             
-            if (current_level > 1000 or target_level > 1000 
-                or current_level < 1 or target_level < 1 
-                or current_exp < 0 or target_exp < 0
-                or current_exp > 10000000 or target_exp > 10000000):
-                await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
-                return
+            if (
+                self.is_valid_value(current_level, 1, 25000) and 
+                self.is_valid_value(target_level, 2, 25000) and 
+                self.is_valid_value(current_exp, 0, 100000) and 
+                self.is_valid_value(target_exp, 1, 100000)
+            ):
+                return await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
 
             mode_config = {
                 "easy": {"exp": 50, "time": 20, "reward": "250 coins", "reward_amount": 250, "type": "coins"},
@@ -488,7 +501,10 @@ class InfoCog(commands.Cog):
                 daily_games = games_per_day
                 avg_daily_exp = daily_games * base_exp_per_game * (5 + 4) / 7
                 days_needed = math.ceil(total_exp_needed / avg_daily_exp)
-                completion_date = datetime.now() + timedelta(days=days_needed)
+                try:
+                    completion_date = datetime.now() + timedelta(days=days_needed)
+                except OverflowError:
+                    return await interaction.followup.send("Pleae provide smaller target/current level/exp!")
 
             if target_date:
                 total_games = daily_games * days_until

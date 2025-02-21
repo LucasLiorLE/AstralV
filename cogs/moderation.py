@@ -53,7 +53,7 @@ class DelLog(discord.ui.Select):
         self.options = [
             discord.SelectOption(
                 label=f"{self.log_type.capitalize()} Case #{case_number}",
-                description=log["reason"] if "reason" in log else "No reason provided",
+                description=(log["reason"] if "reason" in log else "No reason provided.")[:100],
                 value=str(case_number)
             )
             for case_number, log in self.logs.items()
@@ -92,14 +92,14 @@ class DelLog(discord.ui.Select):
                         moderator_name = moderator.display_name if moderator else "Unknown"
                         self.embed.add_field(
                             name=f"Case #{index} - {self.log_type.capitalize()} by {moderator_name}",
-                            value=f"Reason: {log['reason']}\nTime: {time_str}",
+                            value=f"Reason: {log['reason'][:100]}\nTime: {time_str}",
                             inline=False
                         )
 
                     self.options = [
                         discord.SelectOption(
                             label=f"{self.log_type.capitalize()} Case #{index}",
-                            description=log["reason"],
+                            description=log["reason"][:100],
                             value=str(index)
                         )
                         for index, log in sorted(self.logs.items(), key=lambda x: int(x[0]))
@@ -669,7 +669,7 @@ class ModerationCog(commands.Cog):
             old_nick = member.display_name
             await member.edit(nick=new_nick)
 
-            arguments = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} for {member.display_name}."
+            arguments = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} ."
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="Nickname Changed", 
@@ -1284,7 +1284,7 @@ class ModerationCog(commands.Cog):
             error(e)
 
     @commands.command(name="nick", aliases=["nickname"])
-    async def manual_nick(self, ctx, member: str, new_nick: str):
+    async def manual_nick(self, ctx, member: str, *, new_nick: str):
         try:
             interaction = await create_interaction(ctx)
             target_member = await get_member(ctx, member)
