@@ -5,6 +5,7 @@ from bot_utils import (
     dm_moderation_embed,
 
     check_user,
+    get_role_hierarchy,
     parse_duration,
     create_interaction,
     get_member,
@@ -485,6 +486,12 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
 
+            if not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
+
+            if not get_role_hierarchy(interaction.user, role):
+                return await interaction.followup.send("You cannot manage a role higher than or equal to your highest role!")
+
             if role in member.roles:
                 await member.remove_roles(role)
                 task = "removed from"
@@ -666,6 +673,9 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
             
+            if not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
+
             old_nick = member.display_name
             await member.edit(nick=new_nick)
 
@@ -696,6 +706,9 @@ class ModerationCog(commands.Cog):
             has_mod, embed = check_moderation_info(interaction, "moderate_members", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
+
+            if not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
 
             duration = parse_duration(duration)
 
@@ -747,6 +760,8 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
 
+            if not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
             
             await member.timeout(None, reason=reason)
 
@@ -772,6 +787,8 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
 
+            if not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
             
             await member.kick(reason=reason)
 
@@ -852,18 +869,21 @@ class ModerationCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="warn")
-    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str, auto_mute: bool = False):
+    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
         await interaction.response.defer()
         try:
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
             
-            if member.bot:
-                return await interaction.followup.send("You cannot warn a bot.")
+            if (member.bot) or (member == interaction.user):
+                return await interaction.followup.send("You cannot warn a bot or yourself!")
 
-            if len(reason) > 100:
-                return await interaction.followup.send("Reason must be less than 100 characters.")
+            if not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
+
+            if len(reason) > 1024:
+                return await interaction.followup.send("Reason must be less than 1024 characters.")
 
             server_info = open_file("storage/server_info.json")
             server_id = str(interaction.guild.id)
@@ -905,26 +925,6 @@ class ModerationCog(commands.Cog):
                 server_id=interaction.guild_id,
                 bot=self.bot
             )
-
-            if auto_mute == True: 
-                mute_duration = 0
-                if len(member_warnings) > 2:
-                    mute_duration = (len(member_warnings) - 2) * 60 * 30
-
-                if mute_duration > 0:
-                    try:
-                        await member.timeout(timedelta(seconds=mute_duration))
-                        await interaction.followup.send(embed=discord.Embed(
-                            title="Member Muted",
-                            description=f"{member.mention} has been automatically muted for {mute_duration // 60} minutes due to {len(member_warnings) + 1} warnings.",
-                            color=0xFF0000
-                        ))
-                    except discord.Forbidden:
-                        await interaction.followup.send(embed=discord.Embed(
-                            title="Mute Failed",
-                            description=f"Failed to mute {member.mention} due to insufficient permissions.",
-                            color=0xFF0000
-                        ))
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -969,7 +969,7 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
 
-            if len(note) > 100:
+            if len(note) > 1024:
                 return await interaction.followup.send("Note must be less than 100 characters.")
             
             server_info = open_file("storage/server_info.json")

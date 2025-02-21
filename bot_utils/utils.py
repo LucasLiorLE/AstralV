@@ -316,6 +316,12 @@ async def get_command_help_embed(command_name: str) -> discord.Embed:
 
     return embed
 
+def get_role_hierarchy(main: discord.Member, check: discord.Member | discord.Role):
+    if isinstance(check, discord.Member):
+        return main.top_role.position > check.top_role.position
+    else:
+        return main.top_role.position > check.position
+    
 async def get_member(ctx: commands.Context, member_str: str) -> discord.Member | None:
 	"""Find a member by mention, username, nickname, or ID."""
 	member_str = member_str.strip("<@!>")

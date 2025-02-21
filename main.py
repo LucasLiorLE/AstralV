@@ -25,6 +25,7 @@
 #    - get_member_cooldown() for certain commands.
 #    - get_member() to get the member based off of a str.
 #    - Some comment updates.
+#    - Got rid of auto mute for now, will come back later.
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
@@ -34,7 +35,7 @@
 #    - Make a more efficient storage system using sql and json
 #    - Finally work on economy commands.
 #
-# This was last updated: 2/18/2025 11:34 PM
+# This was last updated: 2/21/2025 2:53 AM
 
 import os, random, math, asyncio
 # import asyncpraw
