@@ -176,7 +176,7 @@
         "ban": {
             "description": "Bans a member from the server",
             "parameters": {
-                "member": "Member to ban",
+                "user": "The user to ban",
                 "reason": "Reason for the ban"
             }
         },

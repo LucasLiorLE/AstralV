@@ -9,22 +9,36 @@
 #    - Avatar commands now display the main color of their pfp!
 #    - Unban & Ban command!
 #    - Economy update, should be a lot more stable.
+#    - All moderation commands now support prefixes.
+#        - They all also should work without bugs, or at least minor bugs.
 #
 # Bug Fixes:
 #    - Fixed bug for every single command.
 #        - Might still have some minor bugs I did not find.
 #    - EXP system fixed
+#    - Warnings display past 10
+#    - Deleted on manual commnds for warns and notes work.
 #
 # Other stuff:
 #    - load_command() is now used to load command descriptions.
 #    - get_member_color() is used to get the top role of the user.
+#    - Renamed some functions to easily understand them.
+#    - get_member_cooldown() for certain commands.
+#    - get_member() to get the member based off of a str.
+#    - Some comment updates.
+#    - Got rid of auto mute for now, will come back later.
+#    - Now using handle_warn/s and handle_note/s
+#    - Also some ctx and interaction combining stuff in utils.py
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.
 #    - Except block for 400 bad request code 50007 for commands
 #    - Make auto mute a server set function.
+#    - if isinstance(member, str): for all get_member_obj()
+#    - Make a more efficient storage system using sql and json
+#    - Finally work on economy commands.
 #
-# This was last updated: 2/16/2025 10:42 PM
+# This was last updated: 2/21/2025 2:53 AM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -271,6 +285,9 @@ async def main():
     except KeyboardInterrupt:
         print("Shutting down gracefully...")
     except Exception as e:
+        import traceback
+
+        print(traceback.format_exc())
         error(e)
     finally:
         print("Bot is shutting down.")

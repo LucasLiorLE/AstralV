@@ -1,7 +1,8 @@
 import time
 import discord
 import traceback
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
+from discord.ext import commands
 
 LogEntry = Dict[str, Any]
 LogStore = Dict[str, List[LogEntry]]
@@ -55,9 +56,6 @@ def warn(
     
     Parameters:
         *values (object): The values to be printed
-    
-    Returns:
-        None
     """
     print("[WARNING]", *values)
 
@@ -69,9 +67,6 @@ def debug(
     
     Parameters:
         *values (object): The values to be printed
-    
-    Returns:
-        None
     """
     print("[DEBUG]", *values)
 
@@ -83,14 +78,11 @@ def error(
     
     Parameters:
         *values (object): The values to be printed
-    
-    Returns:
-        None
     """
     print("[ERROR]", *values)
-
+    
 async def handle_logs(
-        interaction: discord.Interaction, 
+        ctx_or_interaction: Union[discord.Interaction, commands.Context], 
         error: Exception, 
         log_type: str = "error"
     ) -> None:
@@ -98,14 +90,9 @@ async def handle_logs(
     Processes and stores error logs while notifying users.
     
     Parameters:
-        interaction (discord.Interaction): The interaction context
+        ctx_or_interaction (Union[discord.Interaction, commands.Context]): The interaction or context
         error (Exception): The error to be logged
         log_type (str): Category of log, defaults to "error"
-        
-    Notes:
-        - Sends an ephemeral message to the user with error details
-        - Stores full traceback in logs for debugging
-        - Prints log ID for reference
     """
     global log_id_counter
     log_type = log_type.title()
@@ -114,10 +101,13 @@ async def handle_logs(
         embed = discord.Embed(title=f"An error occurred ({log_id_counter})", color=discord.Color.red())
         embed.add_field(name="Error", value=str(error), inline=False)
 
-        if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, ephemeral=True)
+        if isinstance(ctx_or_interaction, discord.Interaction):
+            if ctx_or_interaction.response.is_done():
+                await ctx_or_interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
         else:
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await ctx_or_interaction.send(embed=embed)
 
         full_error = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
         log_id = store_log(log_type, full_error)

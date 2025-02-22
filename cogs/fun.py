@@ -1,5 +1,5 @@
 from bot_utils import (
-    check_mod,
+    check_moderation_info,
     get_member_color,
     
     load_commands,
@@ -24,8 +24,9 @@ class FunCog(commands.Cog):
                   attachment: discord.Attachment = None, message_id: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
-            if not await check_mod(interaction, "manage_messages"):
-                return
+            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            if not has_mod:
+                return await interaction.followup.send(embed=embed)
 
             if not channel.permissions_for(channel.guild.me).send_messages:
                 await interaction.followup.send(f"I don't have permission to send messages in {channel.mention}")

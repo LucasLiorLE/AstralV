@@ -1,16 +1,18 @@
 import discord
 import time
 
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, Union
 from datetime import datetime, timezone
+
+from discord.ext import commands
 
 from .file_handler import (
     save_file,
     open_file
 )
 
-async def dmbed(
-        interaction: discord.Interaction, 
+async def dm_moderation_embed(
+        interaction: discord.Interaction | commands.Context, 
         user: discord.User, 
         action: str, 
         reason: str, 
@@ -20,16 +22,11 @@ async def dmbed(
     Sends moderation action embeds to both the server and target user's DMs.
     
     Parameters:
-        interaction (discord.Interaction): The interaction that triggered the moderation action
+        interaction (Union[discord.Interaction, commands.Context]): The interaction/context that triggered the action
         user (discord.User): The user receiving the moderation action
         action (str): Type of moderation action (e.g. ban, kick, mute, etc.)
         reason (str): Reason for the moderation action
         duration (str, optional): Duration of temporary actions like mutes/bans
-
-    The function will:
-    1. Create and send an embed to the server channel
-    2. Attempt to DM the affected user with details
-    3. Note in server embed if DM failed
     """
     embed = discord.Embed(
         title=f"Member {action}.", 
@@ -44,12 +41,15 @@ async def dmbed(
         embed.add_field(name="Duration", value=duration, inline=False)
 
     try:
+        guild_name = interaction.guild.name if isinstance(interaction, discord.Interaction) else interaction.guild.name
+        moderator = interaction.user if isinstance(interaction, discord.Interaction) else interaction.author
+        
         MemberEmbed = discord.Embed(
-            title=f"You have been {action} in {interaction.guild.name}.", 
+            title=f"You have been {action} in {guild_name}.",
             color=discord.Color.orange(),
             timestamp=datetime.now(timezone.utc)
         )
-        MemberEmbed.add_field(name="Moderator", value=interaction.user.mention, inline=False)
+        MemberEmbed.add_field(name="Moderator", value=moderator.mention, inline=False)
         MemberEmbed.add_field(name="Reason", value=reason, inline=False)
         if duration:
             MemberEmbed.add_field(name="Duration", value=duration, inline=False)
@@ -58,8 +58,14 @@ async def dmbed(
     except (discord.Forbidden, discord.HTTPException):
         embed.set_footer(text="I was unable to DM this user.")
 
-    await interaction.followup.send(embed=embed)
-
+    if isinstance(interaction, discord.Interaction):
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.response.send_message(embed=embed)
+    else:
+        await interaction.send(embed=embed)
+        
 def check_mod_server_info(id: int) -> Dict[str, Any]:
     """
     Checks whether basic moderation data is in server_info.json
@@ -88,42 +94,68 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
 
     return server_info
 
-async def check_mod(
-        interaction: discord.Interaction, 
-        permission_name: str
-    ) -> bool:
+def check_moderation_info(
+        ctx_or_interaction: Union[discord.Interaction, commands.Context],
+        permission_name: str,
+        role: str
+    ) -> Tuple[bool, Optional[discord.Embed]]:
     """
-    Verifies if a user has moderator permissions either through Discord permissions or a mod role.
+    Verifies if a user has a certain role or permission.
 
     Parameters:
-        interaction (discord.Interaction): The interaction to check permissions for
+        ctx_or_interaction: The interaction or context object
         permission_name (str): The Discord permission name to check (e.g. 'ban_members')
+        role (str): The custom role to check for (e.g. 'moderator', 'manager')
 
     Returns:
-        bool: True if user has mod permissions, False otherwise
-
-    The function will:
-    1. Initialize server data structures if they don't exist
-    2. Check for either:
-        - The specified Discord permission
-        - The configured moderator role
-    3. Send an error message if user lacks permissions
+        Tuple[bool, Optional[discord.Embed]]: (Has permission, Error embed if no permission)
     """
-    guild_id = str(interaction.guild_id)
+    if isinstance(ctx_or_interaction, discord.Interaction):
+        guild_id = str(ctx_or_interaction.guild_id)
+        user = ctx_or_interaction.user
+    else:
+        guild_id = str(ctx_or_interaction.guild.id)
+        user = ctx_or_interaction.author
+
     server_info = check_mod_server_info(guild_id)
 
-    mod_role_id: Optional[int] = server_info["preferences"][guild_id].get("moderator")
-    has_permission: bool = getattr(interaction.user.guild_permissions, permission_name, False)
-    has_role: bool = mod_role_id and discord.utils.get(interaction.user.roles, id=int(mod_role_id))
+    mod_role_id: Optional[int] = server_info["preferences"][guild_id].get(role)
+    has_permission: bool = getattr(user.guild_permissions, permission_name, False)
+    has_role: bool = mod_role_id and discord.utils.get(user.roles, id=int(mod_role_id))
 
     if not (has_permission or has_role):
-        await interaction.followup.send(
-            f"You need the '{permission_name.replace('_', ' ').title()}' permission or the Moderator role to use this command.",
-            ephemeral=True
-        )
-        return False
+        return False, no_permission_embed(permission_name, role)
 
-    return True
+    return True, None
+
+def no_permission_embed(
+        permission: str = None,
+        role: str = None
+    ) -> discord.Embed:
+    """
+    An embed that says they do not have the required role/permission to use a command.
+
+    Parameters:
+        permission (str): The permission they are lacking.
+        role (str): The role they are lacking.
+
+    Returns:
+        discord.Embed: The embed saying they do not have permission.
+    """
+    embed = discord.Embed(
+        title="Missing Permissions",
+        description="❌ You do not have permission to use this command!",
+        color=0xFF0000
+    )
+
+    embed.set_footer(text=(
+                f"You need the "
+                f"{f"{permission.replace("_", " ").title()} permission" if permission else None} "
+                f"{"or" if permission and role else None} "
+                f"{f"{role} role" if role else None} to use this command."
+            )
+        )
+    return embed
 
 async def store_modlog(
         modlog_type: str,
@@ -150,14 +182,6 @@ async def store_modlog(
         arguments (str, optional): Additional context or arguments
         bot: Discord bot instance for sending logs
 
-    The function will:
-    1. Initialize required data structures
-    2. Create a detailed embed with action information
-    3. Store the log in the moderation database
-    4. Update mod statistics if applicable
-    5. Send the log to the configured modlog channel
-    6. Handle any special cases (warnings, etc.)
-    
     Raises:
         discord.Forbidden: If bot lacks permissions to send to modlog channel
         discord.HTTPException: If sending the modlog message fails
@@ -270,16 +294,6 @@ async def send_modlog_embed(
             - embed: discord.Embed containing the log entries
             - total_logs: Total number of logs for the user
             - total_pages: Total number of pages available
-
-    Features:
-    1. Paginates logs (10 entries per page)
-    2. Shows detailed information for each case including:
-        - Case number
-        - Action type
-        - Moderator
-        - Reason
-        - Timestamp
-    3. Includes footer with pagination info
     """
     server_info = open_file("storage/server_info.json")
     server_id = str(interaction.guild.id)

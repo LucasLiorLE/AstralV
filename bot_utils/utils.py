@@ -4,7 +4,8 @@ from .file_handler import (
 )
 
 import discord
-import re, io, json, time
+from discord.ext import commands
+import re, io, time
 
 from datetime import timedelta
 from typing import Optional, TypeVar, Generic
@@ -314,3 +315,65 @@ async def get_command_help_embed(command_name: str) -> discord.Embed:
             )
 
     return embed
+
+def get_role_hierarchy(main: discord.Member, check: discord.Member | discord.Role):
+    if isinstance(check, discord.Member):
+        return main.top_role.position > check.top_role.position
+    else:
+        return main.top_role.position > check.position
+    
+async def get_member(ctx: commands.Context, member_str: str) -> discord.Member | None:
+	"""Find a member by mention, username, nickname, or ID."""
+	member_str = member_str.strip("<@!>")
+	
+	if member_str.isdigit():
+		try:
+			return await ctx.guild.fetch_member(int(member_str))
+		except discord.NotFound:
+			return None
+	else:
+		return discord.utils.get(ctx.guild.members, name=member_str) or \
+			   discord.utils.get(ctx.guild.members, display_name=member_str)
+
+async def get_channel(ctx: commands.Context, channel_str: str) -> discord.TextChannel | None:
+    """Find a text channel by mention, name, or ID."""
+    if channel_str == None: return None
+    channel_str = channel_str.strip("<#>")
+    
+    if channel_str.isdigit():
+        try:
+            return await ctx.guild.fetch_channel(int(channel_str))
+        
+        except discord.NotFound:
+            return None
+        
+    else:
+        return discord.utils.get(ctx.guild.text_channels, name=channel_str) or \
+               discord.utils.get(ctx.guild.text_channels, mention=channel_str)
+    
+async def get_role(ctx: commands.Context, role_str: str | discord.Role) -> discord.Role | None:
+    """Find a role by mention, name, or ID."""
+    if role_str == None: return None
+    role_str = role_str.strip("<@&>")
+    
+    if role_str.isdigit():
+        try:
+            return ctx.guild.get_role(int(role_str))
+        except discord.NotFound:
+            return None
+        
+    else:
+        return discord.utils.get(ctx.guild.roles, name=role_str) or \
+               discord.utils.get(ctx.guild.roles, mention=role_str)
+    
+def get_context_object(ctx_or_interaction):
+	"""Returns a dictionary with unified access to common attributes."""
+	is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
+	return {
+		"interaction": ctx_or_interaction if is_interaction else None,
+		"ctx": ctx_or_interaction if not is_interaction else None,
+		"user": ctx_or_interaction.user if is_interaction else ctx_or_interaction.author,
+		"guild": ctx_or_interaction.guild,
+		"guild_id": ctx_or_interaction.guild.id,
+		"send": ctx_or_interaction.followup.send if is_interaction else ctx_or_interaction.send
+	}

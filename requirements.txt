@@ -8,21 +8,22 @@ numpy==2.1.1
 opencv-python==4.11.0.86
 
 # Data processing and visualization
-pandas==2.2.3
-matplotlib==3.9.2
+pandas==2.2.3 # Currently not used.
+matplotlib==3.9.2 # Currently not used.
 
 # HTTP and API
 aiohttp==3.10.10
-requests==2.32.3
-asyncpraw==7.8.0
+requests==2.32.3 # Will be deleted in later versions.
+asyncpraw==7.8.0 # Currently not used.
 
 # Video processing
 moviepy==1.0.3
 
 # Utility
-humanize==4.10.0
+humanize==4.10.0 # Possibly will be deleted in later versions.
 python-dotenv==1.0.1
 pet-pet-gif==1.0.2
+mysql-connector-python==9.2.0
 
 # Game APIs
 ossapi==5.0.1  # osu! API
