@@ -17,6 +17,7 @@
 #        - Might still have some minor bugs I did not find.
 #    - EXP system fixed
 #    - Warnings display past 10
+#    - Deleted on manual commnds for warns and notes work.
 #
 # Other stuff:
 #    - load_command() is now used to load command descriptions.
@@ -26,6 +27,8 @@
 #    - get_member() to get the member based off of a str.
 #    - Some comment updates.
 #    - Got rid of auto mute for now, will come back later.
+#    - Now using handle_warn/s and handle_note/s
+#    - Also some ctx and interaction combining stuff in utils.py
 # 
 # TODO/FIX:
 #    - Other eco commands have the same timer.

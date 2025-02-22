@@ -1,8 +1,10 @@
 import discord
 import time
 
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, Union
 from datetime import datetime, timezone
+
+from discord.ext import commands
 
 from .file_handler import (
     save_file,
@@ -10,7 +12,7 @@ from .file_handler import (
 )
 
 async def dm_moderation_embed(
-        interaction: discord.Interaction, 
+        interaction: discord.Interaction | commands.Context, 
         user: discord.User, 
         action: str, 
         reason: str, 
@@ -20,7 +22,7 @@ async def dm_moderation_embed(
     Sends moderation action embeds to both the server and target user's DMs.
     
     Parameters:
-        interaction (discord.Interaction): The interaction that triggered the moderation action
+        interaction (Union[discord.Interaction, commands.Context]): The interaction/context that triggered the action
         user (discord.User): The user receiving the moderation action
         action (str): Type of moderation action (e.g. ban, kick, mute, etc.)
         reason (str): Reason for the moderation action
@@ -39,12 +41,15 @@ async def dm_moderation_embed(
         embed.add_field(name="Duration", value=duration, inline=False)
 
     try:
+        guild_name = interaction.guild.name if isinstance(interaction, discord.Interaction) else interaction.guild.name
+        moderator = interaction.user if isinstance(interaction, discord.Interaction) else interaction.author
+        
         MemberEmbed = discord.Embed(
-            title=f"You have been {action} in {interaction.guild.name}.", 
+            title=f"You have been {action} in {guild_name}.",
             color=discord.Color.orange(),
             timestamp=datetime.now(timezone.utc)
         )
-        MemberEmbed.add_field(name="Moderator", value=interaction.user.mention, inline=False)
+        MemberEmbed.add_field(name="Moderator", value=moderator.mention, inline=False)
         MemberEmbed.add_field(name="Reason", value=reason, inline=False)
         if duration:
             MemberEmbed.add_field(name="Duration", value=duration, inline=False)
@@ -53,8 +58,14 @@ async def dm_moderation_embed(
     except (discord.Forbidden, discord.HTTPException):
         embed.set_footer(text="I was unable to DM this user.")
 
-    await interaction.followup.send(embed=embed)
-
+    if isinstance(interaction, discord.Interaction):
+        if interaction.response.is_done():
+            await interaction.followup.send(embed=embed)
+        else:
+            await interaction.response.send_message(embed=embed)
+    else:
+        await interaction.send(embed=embed)
+        
 def check_mod_server_info(id: int) -> Dict[str, Any]:
     """
     Checks whether basic moderation data is in server_info.json
@@ -84,27 +95,33 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
     return server_info
 
 def check_moderation_info(
-        interaction,
+        ctx_or_interaction: Union[discord.Interaction, commands.Context],
         permission_name: str,
         role: str
-    ) -> bool:
+    ) -> Tuple[bool, Optional[discord.Embed]]:
     """
     Verifies if a user has a certain role or permission.
 
     Parameters:
-        interaction: The interaction used.
+        ctx_or_interaction: The interaction or context object
         permission_name (str): The Discord permission name to check (e.g. 'ban_members')
         role (str): The custom role to check for (e.g. 'moderator', 'manager')
 
     Returns:
-        bool: True if the user has permissions, otherwise False.
+        Tuple[bool, Optional[discord.Embed]]: (Has permission, Error embed if no permission)
     """
-    guild_id = str(interaction.guild_id)
+    if isinstance(ctx_or_interaction, discord.Interaction):
+        guild_id = str(ctx_or_interaction.guild_id)
+        user = ctx_or_interaction.user
+    else:
+        guild_id = str(ctx_or_interaction.guild.id)
+        user = ctx_or_interaction.author
+
     server_info = check_mod_server_info(guild_id)
 
     mod_role_id: Optional[int] = server_info["preferences"][guild_id].get(role)
-    has_permission: bool = getattr(interaction.user.guild_permissions, permission_name, False)
-    has_role: bool = mod_role_id and discord.utils.get(interaction.user.roles, id=int(mod_role_id))
+    has_permission: bool = getattr(user.guild_permissions, permission_name, False)
+    has_role: bool = mod_role_id and discord.utils.get(user.roles, id=int(mod_role_id))
 
     if not (has_permission or has_role):
         return False, no_permission_embed(permission_name, role)

@@ -365,3 +365,15 @@ async def get_role(ctx: commands.Context, role_str: str | discord.Role) -> disco
     else:
         return discord.utils.get(ctx.guild.roles, name=role_str) or \
                discord.utils.get(ctx.guild.roles, mention=role_str)
+    
+def get_context_object(ctx_or_interaction):
+	"""Returns a dictionary with unified access to common attributes."""
+	is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
+	return {
+		"interaction": ctx_or_interaction if is_interaction else None,
+		"ctx": ctx_or_interaction if not is_interaction else None,
+		"user": ctx_or_interaction.user if is_interaction else ctx_or_interaction.author,
+		"guild": ctx_or_interaction.guild,
+		"guild_id": ctx_or_interaction.guild.id,
+		"send": ctx_or_interaction.followup.send if is_interaction else ctx_or_interaction.send
+	}

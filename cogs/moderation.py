@@ -5,13 +5,14 @@ from bot_utils import (
     dm_moderation_embed,
 
     check_user,
+    get_context_object,
     get_role_hierarchy,
     parse_duration,
     create_interaction,
     get_member,
     get_channel,
     get_role,
-    error,
+    handle_logs,
     
     open_file,
     save_file,
@@ -32,7 +33,7 @@ class DelLog(discord.ui.Select):
         log_type,
         member: discord.Member,
         embed: discord.Embed,
-        interaction: discord.Interaction,
+        interaction: discord.Interaction | commands.Context,
         *args,
         **kwargs,
     ):
@@ -61,10 +62,18 @@ class DelLog(discord.ui.Select):
         ]
 
     async def callback(self, interaction: discord.Interaction):
-        if not check_user(interaction, interaction.message.interaction.user):
-            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-        
         try:
+            original_user = (
+                self.interaction.user if isinstance(self.interaction, discord.Interaction) 
+                else self.interaction.author
+            )
+            
+            if not check_user(interaction, original_user):
+                return await interaction.response.send_message(
+                    "You cannot interact with this button.", 
+                    ephemeral=True
+                )
+
             selected_index = self.values[0]
             server_info = open_file("storage/server_info.json")
 
@@ -88,8 +97,8 @@ class DelLog(discord.ui.Select):
                 if self.logs:
                     for index, log in sorted(self.logs.items(), key=lambda x: int(x[0])):
                         time_str = f"<t:{log['time']}:R>"
-                        moderator_id = int(log["moderator"])
-                        moderator = interaction.guild.get_member(moderator_id)
+                        moderator_id = log["moderator"]
+                        moderator = interaction.guild.get_member(int(moderator_id)) if moderator_id.isdigit() else None
                         moderator_name = moderator.display_name if moderator else "Unknown"
                         self.embed.add_field(
                             name=f"Case #{index} - {self.log_type.capitalize()} by {moderator_name}",
@@ -108,13 +117,23 @@ class DelLog(discord.ui.Select):
                 else:
                     self.embed.description = f"No {self.log_type}s left for {self.member.display_name}."
 
-                await interaction.response.edit_message(embed=self.embed, view=self.view)
-                await interaction.followup.send(f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.", ephemeral=True)
+                try:
+                    await interaction.response.edit_message(embed=self.embed, view=self.view)
+                    await interaction.followup.send(
+                        f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.", 
+                        ephemeral=True
+                    )
+                except discord.NotFound:
+                    await interaction.response.send_message(
+                        f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.",
+                        ephemeral=True
+                    )
             else:
-                await interaction.response.send_message("Invalid selection. Please choose a valid log to delete.", ephemeral=True)
+                await interaction.response.send_message(
+                    "Invalid selection. Please choose a valid log to delete.", 
+                    ephemeral=True
+                )
 
-        except ValueError:
-            await interaction.response.send_message("Invalid selection. Please try again.", ephemeral=True)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -454,6 +473,141 @@ class ModerationCog(commands.Cog):
                 return None
         return user
     
+    async def handle_warn(self, ctx_or_interaction, member: discord.Member, reason: str):
+        """Shared handler for both slash and manual warn commands"""
+        ctx = get_context_object(ctx_or_interaction)
+
+        has_mod, embed = check_moderation_info(ctx_or_interaction, "manage_messages", "moderator")
+        if not has_mod:
+            return await ctx["send"](embed=embed)
+
+        if member.id == ctx["user"].id:
+            return await ctx["send"]("You cannot warn yourself.", ephemeral=ctx["is_interaction"])
+
+        if member.bot:
+            return await ctx["send"]("You cannot warn bots.", ephemeral=ctx["is_interaction"])
+
+        if len(reason) > 1024:
+            return await ctx["send"]("Please provide a shorter reason.", ephemeral=ctx["is_interaction"])
+
+        server_info = open_file("storage/server_info.json")
+        guild_id = str(ctx["guild_id"])
+
+        server_info.setdefault("warnings", {}).setdefault(guild_id, {}).setdefault(str(member.id), {})
+        case_numbers = [int(x) for x in server_info["warnings"][guild_id][str(member.id)].keys()]
+        next_case = str(max(case_numbers + [0]) + 1)
+
+        server_info["warnings"][guild_id][str(member.id)][next_case] = {
+            "reason": reason,
+            "moderator": str(ctx["user"].id),
+            "time": int(time.time())
+        }
+        save_file("storage/server_info.json", server_info)
+
+        await dm_moderation_embed(ctx["interaction"], member, "warn", reason)
+
+        await store_modlog(
+            modlog_type="Warn",
+            moderator=ctx["user"],
+            user=member,
+            reason=reason,
+            server_id=ctx["guild_id"],
+            bot=self.bot
+        )
+
+    async def handle_warns(self, ctx_or_interaction, member: discord.Member = None, page: int = 1):
+        """Shared handler for both slash and manual warn commands"""
+        ctx = get_context_object(ctx_or_interaction)
+        member = member or ctx["user"]
+
+        has_mod, embed = check_moderation_info(ctx_or_interaction, "manage_messages", "moderator")
+        if not has_mod:
+            return await ctx["send"](embed=embed)
+
+        server_info = open_file("storage/server_info.json")
+        member_warnings = server_info["warnings"].get(str(ctx["guild_id"]), {}).get(str(member.id), {})
+
+        if member_warnings:
+            paginator = LogPaginator("warning", member_warnings, member)
+            if not 1 <= page <= paginator.total_pages:
+                page = 1
+
+            embed = paginator.get_page(page)
+
+            view = discord.ui.View()
+            if paginator.total_pages > 1:
+                view.add_item(LogPageSelect(paginator, page))
+            view.add_item(DelLog("warn", member, embed, ctx_or_interaction))
+
+            await ctx["send"](embed=embed, view=view)
+        else:
+            await ctx["send"](f"No warnings found for {member.display_name}.", ephemeral=ctx["is_interaction"])
+
+    async def handle_note(self, ctx_or_interaction, member: discord.Member, note: str):
+        """Shared handler for both slash and manual note commands"""
+        ctx = get_context_object(ctx_or_interaction)
+
+        has_mod, embed = check_moderation_info(ctx_or_interaction, "manage_messages", "moderator")
+        if not has_mod:
+            return await ctx["send"](embed=embed)
+
+        if len(note) > 1024:
+            return await ctx["send"]("Note must be less than 1024 characters.", ephemeral=ctx["is_interaction"])
+
+        server_info = open_file("storage/server_info.json")
+        guild_id = str(ctx["guild_id"])
+
+        server_info.setdefault("notes", {}).setdefault(guild_id, {}).setdefault(str(member.id), {})
+        case_numbers = [int(x) for x in server_info["notes"][guild_id][str(member.id)].keys()]
+        next_case = str(max(case_numbers + [0]) + 1)
+
+        server_info["notes"][guild_id][str(member.id)][next_case] = {
+            "reason": note,
+            "moderator": str(ctx["user"].id),
+            "time": int(time.time())
+        }
+        save_file("storage/server_info.json", server_info)
+
+        embed = discord.Embed(
+            title=f"Member note.",
+            color=discord.Color.yellow(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        embed.add_field(name="Member", value=member.mention, inline=False)
+        embed.add_field(name="Action", value="Note", inline=False) 
+        embed.add_field(name="Reason", value=note, inline=False)
+
+        await ctx["send"](embed=embed)
+
+    async def handle_notes(self, ctx_or_interaction, member: discord.Member = None, page: int = 1):
+        """Shared handler for both slash and manual note commands"""
+        ctx = get_context_object(ctx_or_interaction)
+        member = member or ctx["user"]
+
+        has_mod, embed = check_moderation_info(ctx_or_interaction, "manage_messages", "moderator")
+        if not has_mod:
+            return await ctx["send"](embed=embed)
+
+        server_info = open_file("storage/server_info.json")
+        member_notes = server_info["notes"].get(str(ctx["guild_id"]), {}).get(str(member.id), {})
+
+        if member_notes:
+            paginator = LogPaginator("note", member_notes, member)
+            if not 1 <= page <= paginator.total_pages:
+                page = 1
+
+            embed = paginator.get_page(page)
+
+            view = discord.ui.View()
+            if paginator.total_pages > 1:
+                view.add_item(LogPageSelect(paginator, page))
+            view.add_item(DelLog("note", member, embed, ctx_or_interaction))
+
+            await ctx["send"](embed=embed, view=view)
+        else:
+            await ctx["send"](f"No notes found for {member.display_name}.", ephemeral=ctx["is_interaction"])
+
     @app_commands.command(name="clean")
     async def clean(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
         await interaction.response.defer(ephemeral=True)
@@ -647,7 +801,7 @@ class ModerationCog(commands.Cog):
             else:
                 await interaction.followup.send(
                     embed=discord.Embed(
-                        title="Slowmode Error", 
+                        title="Slowmode handle_logs", 
                         description="Please provide a delay between 0 and 21600 seconds.", 
                         color=discord.Color.red()
                     )
@@ -673,9 +827,6 @@ class ModerationCog(commands.Cog):
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
             
-            if not get_role_hierarchy(interaction.user, member):
-                return await interaction.followup.send("You require a higher role hierachy than the target user!")
-
             old_nick = member.display_name
             await member.edit(nick=new_nick)
 
@@ -747,7 +898,7 @@ class ModerationCog(commands.Cog):
             if e.code == 50013:
                 await interaction.followup.send("I do not have the required permissions to mute this user.")
             else:
-                await interaction.followup.send("An error occurred while trying to mute this user.")
+                await interaction.followup.send("An handle_logs occurred while trying to mute this user.")
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -901,7 +1052,7 @@ class ModerationCog(commands.Cog):
 
                     if int(time.time()) - last_warning_time < 60:
                         await interaction.followup.send(embed=discord.Embed(
-                            title="Warning Error",
+                            title="Warn warning",
                             description=f"{member.mention} has been warned recently and cannot be warned again yet.",
                             color=0xFF0000
                         ))
@@ -933,31 +1084,7 @@ class ModerationCog(commands.Cog):
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
-            if not has_mod:
-                return await interaction.followup.send(embed=embed)
-            
-            member = member or interaction.user
-            server_info = open_file("storage/server_info.json")
-            server_id = str(interaction.guild.id)
-            
-            member_warnings = server_info["warnings"].get(server_id, {}).get(str(member.id), {})
-
-            if member_warnings:
-                paginator = LogPaginator("warning", member_warnings, member)
-                if not 1 <= page <= paginator.total_pages:
-                    page = 1
-                
-                embed = paginator.get_page(page)
-                
-                view = discord.ui.View()
-                if paginator.total_pages > 1:
-                    view.add_item(LogPageSelect(paginator, page))
-                view.add_item(DelLog("warn", member, embed, interaction))
-                
-                await interaction.followup.send(embed=embed, view=view)
-            else:
-                await interaction.followup.send(f"No warnings found for {member.display_name}.", ephemeral=True)
+            await self.handle_warns(interaction, member, page)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -965,156 +1092,15 @@ class ModerationCog(commands.Cog):
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
         await interaction.response.defer()
         try:
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
-            if not has_mod:
-                return await interaction.followup.send(embed=embed)
-
-            if len(note) > 1024:
-                return await interaction.followup.send("Note must be less than 100 characters.")
-            
-            server_info = open_file("storage/server_info.json")
-            member_notes = server_info["notes"].setdefault(str(interaction.guild.id), {}).setdefault(str(member.id), {})
-            case_number = str(max(map(int, member_notes.keys()), default=0) + 1)
-            member_notes[case_number] = {
-                "reason": note,
-                "moderator": str(interaction.user.id),
-                "time": int(time.time())
-            }
-            save_file("storage/server_info.json", server_info)
-            await interaction.followup.send(embed=discord.Embed(
-                title="Note Added",
-                description=f"Added note to: {member.mention}\nCase #{case_number}\n{note}",
-                color=discord.Color.yellow()
-            ))
+            await self.handle_note(interaction, member, note)
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="notes")
+    @app_commands.command(name="notes") 
     async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
         await interaction.response.defer()
         try:
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
-            if not has_mod:
-                return await interaction.followup.send(embed=embed)
-
-            member = member or interaction.user
-            server_info = open_file("storage/server_info.json")
-            member_notes = server_info["notes"].get(str(interaction.guild.id), {}).get(str(member.id), {})
-
-            if member_notes:
-                paginator = LogPaginator("note", member_notes, member)
-                if not 1 <= page <= paginator.total_pages:
-                    page = 1
-                
-                embed = paginator.get_page(page)
-                
-                view = discord.ui.View()
-                if paginator.total_pages > 1:
-                    view.add_item(LogPageSelect(paginator, page))
-                view.add_item(DelLog("note", member, embed, interaction))
-                
-                await interaction.followup.send(embed=embed, view=view)
-            else:
-                await interaction.followup.send(f"No notes found for {member.display_name}.", ephemeral=True)
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @app_commands.command(name="modlogs")
-    async def modlogs(self, interaction: discord.Interaction, member: discord.Member, page: int = 1):
-        await interaction.response.defer()
-        try:
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
-            if not has_mod:
-                return await interaction.followup.send(embed=embed)
-
-            embed, _, total_pages = await send_modlog_embed(interaction, member, page)
-
-            if embed is None:
-                return
-
-            options = [discord.SelectOption(label=f"Page {i + 1}", value=str(i + 1)) for i in range(total_pages)]
-
-            select_menu = LogSelect(options, interaction, member, page)
-            view = discord.ui.View()
-            view.add_item(select_menu)
-
-            await interaction.followup.send(embed=embed, view=view)
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @app_commands.command(name="modstats")
-    async def modstats(self, interaction: discord.Interaction, member: discord.Member = None):
-        await interaction.response.defer()
-        try:
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
-            if not has_mod:
-                return await interaction.followup.send(embed=embed)
-
-            member = member or interaction.user
-            server_info = open_file("storage/server_info.json")
-
-            stats = {
-                "warn": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-                "kick": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-                "mute": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-                "ban": {"last 7 days": 0, "last 30 days": 0, "all time": 0},
-            }
-
-            totals = {"last 7 days": 0, "last 30 days": 0, "all time": 0}
-            now = datetime.now(timezone.utc)
-            seven_days_ago = now - timedelta(days=7)
-            thirty_days_ago = now - timedelta(days=30)
-
-            for _, moderators in server_info["modstats"].items():
-                user_stats = moderators.get(str(member.id), {})
-
-                for _, action in user_stats.items():
-                    action_type = action["type"].lower()
-                    action_time = datetime.fromtimestamp(action["timestamp"], timezone.utc)
-
-                    if action_type in stats:
-                        if action_time > seven_days_ago:
-                            stats[action_type]["last 7 days"] += 1
-                            totals["last 7 days"] += 1
-                        if action_time > thirty_days_ago:
-                            stats[action_type]["last 30 days"] += 1
-                            totals["last 30 days"] += 1
-                        stats[action_type]["all time"] += 1
-                        totals["all time"] += 1
-
-            embed = discord.Embed(
-                title=f"Moderation Statistics",
-                color=discord.Color.orange(),
-                timestamp=now
-            )
-            embed.set_author(
-                name=f"{member.display_name}", 
-                icon_url=member.avatar.url
-            )
-
-            embed.add_field(name="Mutes (last 7 days):", value=stats["mute"]["last 7 days"])
-            embed.add_field(name="Mutes (last 30 days):", value=stats["mute"]["last 30 days"])
-            embed.add_field(name="Mutes (all time):", value=stats["mute"]["all time"])
-
-            embed.add_field(name="Bans (last 7 days):", value=stats["ban"]["last 7 days"])
-            embed.add_field(name="Bans (last 30 days):", value=stats["ban"]["last 30 days"])
-            embed.add_field(name="Bans (all time):", value=stats["ban"]["all time"])
-
-            embed.add_field(name="Kicks (last 7 days):", value=stats["kick"]["last 7 days"])
-            embed.add_field(name="Kicks (last 30 days):", value=stats["kick"]["last 30 days"])
-            embed.add_field(name="Kicks (all time):", value=stats["kick"]["all time"])
-
-            embed.add_field(name="Warns (last 7 days):", value=stats["warn"]["last 7 days"])
-            embed.add_field(name="Warns (last 30 days):", value=stats["warn"]["last 30 days"])
-            embed.add_field(name="Warns (all time):", value=stats["warn"]["all time"])
-
-            embed.add_field(name="Total (last 7 days):", value=totals["last 7 days"])
-            embed.add_field(name="Total (last 30 days):", value=totals["last 30 days"])
-            embed.add_field(name="Total (all time):", value=totals["all time"])
-
-            embed.set_footer(text=f"ID: {member.id}")
-
-            await interaction.followup.send(embed=embed)
+            await self.handle_notes(interaction, member, page)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -1128,7 +1114,7 @@ class ModerationCog(commands.Cog):
             conf_msg = await ctx.send(f"Purged {amount} messages.")
             await conf_msg.delete(delay=5)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="clean")
     async def manual_clean(self, ctx, amount: int = 10, reason: str = "No reason provided"):
@@ -1140,21 +1126,18 @@ class ModerationCog(commands.Cog):
             conf_msg = await ctx.send(f"Cleaned {amount} bot messages.")
             await conf_msg.delete(delay=5)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="warn")
     async def manual_warn(self, ctx, member: str, *, reason: str):
         try:
-            interaction = await create_interaction(ctx)
             target_member = await get_member(ctx, member)
-
             if not target_member:
-                return await interaction.followup.send("User not found.")
-
-            await self.warn.callback(self, interaction, target_member, reason)
-
+                return await ctx.send("User not found.")
+            
+            await self.handle_warn(ctx, target_member, reason)
         except Exception as e:
-            error(e)
+            await handle_logs(ctx, e)
 
     @commands.command(name="mute")
     async def manual_mute(self, ctx, member: str, duration: str, *, reason: str = "No reason provided"):
@@ -1167,7 +1150,7 @@ class ModerationCog(commands.Cog):
 
             await self.mute.callback(self, interaction, target_member, duration, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="unmute")
     async def manual_unmute(self, ctx, member: str, *, reason: str = "No reason provided"):
@@ -1180,7 +1163,7 @@ class ModerationCog(commands.Cog):
 
             await self.unmute.callback(self, interaction, target_member, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="kick")
     async def manual_kick(self, ctx, member: str, *, reason: str = "No reason provided"):
@@ -1193,7 +1176,7 @@ class ModerationCog(commands.Cog):
 
             await self.kick.callback(self, interaction, target_member, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="ban")
     async def manual_ban(self, ctx, user: str, reason: str = "No reason provided"):
@@ -1206,7 +1189,7 @@ class ModerationCog(commands.Cog):
 
             await self.ban.callback(self, interaction, user, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="unban")
     async def manual_unban(self, ctx, user: str, *, reason: str = "No reason provided"):
@@ -1219,48 +1202,40 @@ class ModerationCog(commands.Cog):
 
             await self.unban.callback(self, interaction, user, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="notes")
-    async def manual_notes(self, ctx, member: str = None):
+    async def manual_notes(self, ctx, member: str = None, page: int = 1):
         try:
-            interaction = await create_interaction(ctx)
             target_member = await get_member(ctx, member)
-
             if not target_member:
-                return await interaction.followup.send("User not found.")
-
-            interaction = await create_interaction(ctx)
-            await self.notes.callback(self, interaction, member or ctx.author)
+                return await ctx.send("User not found.")
+            
+            await self.handle_notes(ctx, target_member, page)
         except Exception as e:
-            error(e)
+            await handle_logs(ctx, e)
 
     @commands.command(name="note")
     async def manual_note(self, ctx, member: str, *, note: str):
         try:
-            interaction = await create_interaction(ctx)
             target_member = await get_member(ctx, member)
-
             if not target_member:
-                return await interaction.followup.send("User not found.")
-
-            await self.note.callback(self, interaction, target_member, note)
+                return await ctx.send("User not found.")
+            
+            await self.handle_note(ctx, target_member, note)
         except Exception as e:
-            error(e)
+            await handle_logs(ctx, e)
 
     @commands.command(name="warns", aliases=["warnings"])
-    async def manual_warns(self, ctx, member: str = None):
+    async def manual_warns(self, ctx, member: str = None, page: int = 1):
         try:
-            interaction = await create_interaction(ctx)
             target_member = await get_member(ctx, member)
-
             if not target_member:
-                return await interaction.followup.send("User not found.")
-
-            interaction = await create_interaction(ctx)
-            await self.warns.callback(self, interaction, target_member or ctx.author)
+                return await ctx.send("User not found.")
+            
+            await self.handle_warns(ctx, target_member, page)
         except Exception as e:
-            error(e)
+            await handle_logs(ctx, e)
 
     @commands.command(name="modlogs")
     async def manual_modlogs(self, ctx, member: str, page: int = 1):
@@ -1273,7 +1248,7 @@ class ModerationCog(commands.Cog):
 
             await self.modlogs.callback(self, interaction, target_member, page)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="slowmode")
     async def manual_slowmode(self, ctx, delay: int = None):
@@ -1281,7 +1256,7 @@ class ModerationCog(commands.Cog):
             interaction = await create_interaction(ctx)
             await self.slowmode.callback(self, interaction, ctx.channel, delay)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="nick", aliases=["nickname"])
     async def manual_nick(self, ctx, member: str, *, new_nick: str):
@@ -1293,8 +1268,11 @@ class ModerationCog(commands.Cog):
                 return await interaction.followup.send("User not found.")
 
             await self.nick.callback(self, interaction, target_member, new_nick)
+
+        except discord.Forbidden:
+            await interaction.followup.send("I cannot change this member's nickname.")
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="role")
     async def manual_role(self, ctx, member: str, role: discord.Role, *, reason: str = "No reason provided"):
@@ -1307,7 +1285,7 @@ class ModerationCog(commands.Cog):
 
             await self.role.callback(self, interaction, target_member, role, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="lock")
     async def manual_lock(self, ctx, channel: str = None, role: str = None, reason: str = "No reason provided"):
@@ -1321,7 +1299,7 @@ class ModerationCog(commands.Cog):
             interaction = await create_interaction(ctx)
             await self.lock.callback(self, interaction, channel, role, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.command(name="unlock")
     async def manual_unlock(self, ctx, channel: str = None, role: str = None, reason: str = "No reason provided"): 
@@ -1335,15 +1313,15 @@ class ModerationCog(commands.Cog):
             interaction = await create_interaction(ctx)
             await self.unlock.callback(self, interaction, channel, role, reason)
         except Exception as e:
-            error(e)
+            handle_logs(ctx, e)
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_handle_logs(self, ctx, handle_logs):
         try:
-            if isinstance(error, discord.ext.commands.errors.CommandNotFound):
+            if isinstance(handle_logs, discord.ext.commands.handle_logss.CommandNotFound):
                 return
             
-            if isinstance(error, commands.MissingRequiredArgument):
+            if isinstance(handle_logs, commands.MissingRequiredArgument):
                 command_name = ctx.command.name
                 if ctx.command.parent:
                     command_name = f"{ctx.command.parent.name} {command_name}"
@@ -1354,7 +1332,7 @@ class ModerationCog(commands.Cog):
                 
                 if help_data:
                     embed = discord.Embed(
-                        title=f"Missing Required Argument: {error.param.name}",
+                        title=f"Missing Required Argument: {handle_logs.param.name}",
                         description=help_data.get("description", "No description available."),
                         color=discord.Color.red()
                     )
@@ -1372,9 +1350,9 @@ class ModerationCog(commands.Cog):
                     return await ctx.send(embed=embed, delete_after=30)
             
             interaction = await create_interaction(ctx)
-            await handle_logs(interaction, error)
+            await handle_logs(interaction, handle_logs)
         except Exception as e:
-            await ctx.send(f"An error occurred: {str(e)}", delete_after=5)
+            await ctx.send(f"An handle_logs occurred: {str(e)}", delete_after=5)
 
 async def setup(bot):
     await bot.add_cog(ModerationCog(bot))
