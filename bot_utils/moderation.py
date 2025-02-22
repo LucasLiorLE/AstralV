@@ -11,6 +11,20 @@ from .file_handler import (
     open_file
 )
 
+def is_valid_bot_instance(interaction_or_context: Union[discord.Interaction, commands.Context]) -> bool:
+    """
+    Checks if the bot is running as a proper bot application and not a user account.
+    
+    Parameters:
+        interaction_or_context: The interaction or context to check
+        
+    Returns:
+        bool: True if running as bot application, False if user account
+    """
+    if isinstance(interaction_or_context, discord.Interaction):
+        return interaction_or_context.client.user.bot
+    return interaction_or_context.bot.user.bot
+
 async def dm_moderation_embed(
         interaction: discord.Interaction | commands.Context, 
         user: discord.User, 
@@ -28,6 +42,21 @@ async def dm_moderation_embed(
         reason (str): Reason for the moderation action
         duration (str, optional): Duration of temporary actions like mutes/bans
     """
+    if not is_valid_bot_instance(interaction):
+        embed = discord.Embed(
+            title="Error",
+            description="❌ This bot cannot be used as a user account.",
+            color=discord.Color.red()
+        )
+        if isinstance(interaction, discord.Interaction):
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed, ephemeral=True)
+            else:
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+        else:
+            await interaction.send(embed=embed)
+        return
+
     embed = discord.Embed(
         title=f"Member {action}.", 
         color=discord.Color.orange(),
@@ -41,11 +70,18 @@ async def dm_moderation_embed(
         embed.add_field(name="Duration", value=duration, inline=False)
 
     try:
-        guild_name = interaction.guild.name if isinstance(interaction, discord.Interaction) else interaction.guild.name
-        moderator = interaction.user if isinstance(interaction, discord.Interaction) else interaction.author
-        
+        if isinstance(interaction, discord.Interaction):
+            guild = interaction.guild
+            moderator = interaction.user
+        else:
+            guild = interaction.guild
+            moderator = interaction.author
+
+        if guild is None:
+            raise ValueError("Could not determine guild from interaction/context")
+
         MemberEmbed = discord.Embed(
-            title=f"You have been {action} in {guild_name}.",
+            title=f"You have been {action} in {guild.name}.",
             color=discord.Color.orange(),
             timestamp=datetime.now(timezone.utc)
         )
@@ -57,6 +93,8 @@ async def dm_moderation_embed(
         await user.send(embed=MemberEmbed)
     except (discord.Forbidden, discord.HTTPException):
         embed.set_footer(text="I was unable to DM this user.")
+    except ValueError as e:
+        embed.set_footer(text=str(e))
 
     if isinstance(interaction, discord.Interaction):
         if interaction.response.is_done():
@@ -110,6 +148,13 @@ def check_moderation_info(
     Returns:
         Tuple[bool, Optional[discord.Embed]]: (Has permission, Error embed if no permission)
     """
+    if not is_valid_bot_instance(ctx_or_interaction):
+        return False, discord.Embed(
+            title="Error",
+            description="❌ This bot cannot be used as a user account.",
+            color=discord.Color.red()
+        )
+
     if isinstance(ctx_or_interaction, discord.Interaction):
         guild_id = str(ctx_or_interaction.guild_id)
         user = ctx_or_interaction.user
@@ -187,6 +232,9 @@ async def store_modlog(
         discord.HTTPException: If sending the modlog message fails
         ValueError: If channel ID format is invalid
     """
+    if bot and not bot.user.bot:
+        raise ValueError("This bot cannot be used as a user account.")
+
     server_info = open_file("storage/server_info.json")
     for key in ["preferences", "modlogs", "modstats", "warnings"]:
         server_info.setdefault(key, {})
@@ -295,6 +343,17 @@ async def send_modlog_embed(
             - total_logs: Total number of logs for the user
             - total_pages: Total number of pages available
     """
+    if not is_valid_bot_instance(interaction):
+        await interaction.followup.send(
+            embed=discord.Embed(
+                title="Error",
+                description="❌ This bot cannot be used as a user account.",
+                color=discord.Color.red()
+            ),
+            ephemeral=True
+        )
+        return None, 0, 0
+
     server_info = open_file("storage/server_info.json")
     server_id = str(interaction.guild.id)
     user_id = str(user.id)

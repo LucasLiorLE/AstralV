@@ -504,7 +504,7 @@ class ModerationCog(commands.Cog):
         }
         save_file("storage/server_info.json", server_info)
 
-        await dm_moderation_embed(ctx["interaction"], member, "warn", reason)
+        await dm_moderation_embed(ctx_or_interaction, member, "warn", reason)
 
         await store_modlog(
             modlog_type="Warn",
