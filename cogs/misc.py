@@ -41,6 +41,16 @@ class GiveawayButtonView(discord.ui.View):
             giveaway = server_info[self.server_id]["giveaways"][self.giveaway_id]
             participants = giveaway["participants"]
 
+            required_role_id = giveaway.get("requirement")
+            if required_role_id:
+                member_roles = [role.id for role in interaction.user.roles]
+                if required_role_id not in member_roles:
+                    await interaction.response.send_message(
+                        "You don't have the required role to enter this giveaway!", 
+                        ephemeral=True
+                    )
+                    return
+
             if interaction.user.id in participants:
                 try:
                     participants.remove(interaction.user.id)
@@ -49,7 +59,9 @@ class GiveawayButtonView(discord.ui.View):
                 message = "You have left the giveaway."
             else:
                 participants.append(interaction.user.id)
-                message = "You have joined the giveaway."
+                winners = giveaway.get("winners", 1)
+                chance = (winners / len(participants)) * 100
+                message = f"You have joined the giveaway! Your chance of winning is {chance:.1f}%"
 
             embed = interaction.message.embeds[0]
             description_lines = embed.description.split("\n")
@@ -93,11 +105,11 @@ async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, serve
         participants = giveaway.get("participants", [])
         winners_count = giveaway.get("winners", 1)
 
-        if participants:
+        if not participants:
+            formatted_winners = "No one entered the giveaway!"
+        else:
             winner_list = random.sample(participants, k=min(winners_count, len(participants)))
             formatted_winners = ', '.join(f'<@{winner}>' for winner in winner_list)
-        else:
-            formatted_winners = "No participants."
 
         embed = discord.Embed(
             title=f"🎉 Giveaway Ended: {giveaway['prize']} 🎉",

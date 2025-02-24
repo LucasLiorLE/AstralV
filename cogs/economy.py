@@ -794,9 +794,6 @@ class EconomyCog(commands.Cog):
         try:
             coin = random.choice(["Heads", "Tails"])
 
-            if amount < 1: 
-                return await interaction.followup.send("Please enter a value greater than 0.")
-            
             if not guess:
                 return await interaction.followup.send(f"The coin landed on {coin}!")
 
@@ -812,6 +809,8 @@ class EconomyCog(commands.Cog):
             else:
                 try:
                     bet = convert_number(amount)
+                    if bet < 1:
+                        return await interaction.followup.send("Please enter a value greater than 0.")
                 except ValueError:
                     return await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
 

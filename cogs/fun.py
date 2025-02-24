@@ -29,8 +29,10 @@ class FunCog(commands.Cog):
                 return await interaction.followup.send(embed=embed)
 
             if not channel.permissions_for(channel.guild.me).send_messages:
-                await interaction.followup.send(f"I don't have permission to send messages in {channel.mention}")
-                return
+                return await interaction.followup.send(f"I don't have permission to send messages in {channel.mention}")
+            
+            if not message and not attachment:
+                return await interaction.followup.send("You must provide either a message or an attachment!")
 
             reference_message = None
 
@@ -38,15 +40,14 @@ class FunCog(commands.Cog):
                 try:
                     reference_message = await channel.fetch_message(int(message_id))
                 except discord.NotFound:
-                    await interaction.followup.send(f"Message with ID {message_id} not found in {channel.mention}.")
-                    return
+                    return await interaction.followup.send(f"Message with ID {message_id} not found in {channel.mention}.")
+
                 except discord.HTTPException as e:
-                    await interaction.followup.send(f"An error occurred while fetching the message: {e}")
-                    return
-                
+                    return await interaction.followup.send(f"An error occurred while fetching the message: {e}")
+
             await channel.send(content=message, file=await attachment.to_file() if attachment else None, reference=reference_message)
 
-            await interaction.followup.send(f"Sent '{message}' to {channel.mention}")
+            await interaction.followup.send(f"Message sent to {channel.mention}")
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -55,22 +56,20 @@ class FunCog(commands.Cog):
                 attachment: discord.Attachment = None):
         await interaction.response.defer()
         try:
+            if not message and not attachment:
+                return await interaction.followup.send("You must provide either a message or an attachment!")
+
             try:
-                await member.send()
+                await member.send(content=message, file=await attachment.to_file() if attachment else None)
+                await interaction.followup.send(f"Message sent to {member}")
             except discord.Forbidden:
                 await interaction.followup.send(f"I cannot send messages to {member.mention}. They might have their DMs closed.")
-                return
-            except:
-                pass
-            
-            await member.send(content=message, file=await attachment.to_file() if attachment else None)
-            await interaction.followup.send(f"Sent '{message}' to {member}")   
+            except Exception as e:
+                await interaction.followup.send(f"Failed to send message: {str(e)}")
 
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="fact")
     async def fact(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -92,8 +91,6 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="joke")
     async def joke(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -118,8 +115,6 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="cat")
     async def cat(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -141,8 +136,6 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="dog")
     async def dog(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -164,8 +157,6 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
             
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="duck")
     async def duck(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -189,8 +180,6 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="quote")
     async def quote(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -212,11 +201,9 @@ class FunCog(commands.Cog):
                         await interaction.followup.send("An error occurred while fetching the quote.")
         except Exception as e:
             await handle_logs(interaction, e)
-            
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+
     @app_commands.command(name="meme")
-    async def meme(self, interaction: discord.Interaction, allow_nsfw: bool = False, 
+    async def meme(self, interaction: discord.Interaction, # allow_nsfw: bool = False, Removing allow_nsfw since people don't want it, you can easily add it back.
                   allow_spoilers: bool = False, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -227,7 +214,7 @@ class FunCog(commands.Cog):
                         if response.status == 200:  
                             meme_data = await response.json()
                             
-                            if not allow_nsfw and meme_data.get('nsfw', False):
+                            if not False and meme_data.get('nsfw', False):
                                 continue
                                 
                             if not allow_spoilers and meme_data.get('spoiler', False):
@@ -259,11 +246,9 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name='8ball')
-    async def eight_ball(self, interaction: discord.Interaction, question: str):
-        await interaction.response.defer()
+    async def eight_ball(self, interaction: discord.Interaction, question: str, ephemeral: bool = False):
+        await interaction.response.defer(ephemeral=ephemeral)
         try:
             responses = [
                 "Yes, definitely.",
@@ -288,8 +273,6 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="xkcd")
     async def xkcd(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)

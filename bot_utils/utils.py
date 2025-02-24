@@ -6,9 +6,10 @@ from .file_handler import (
 import discord
 from discord.ext import commands
 import re, io, time
+import asyncio
 
 from datetime import timedelta
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, Union, Dict, Any
 from aiohttp import ClientSession
 from PIL import Image
 
@@ -217,40 +218,48 @@ def get_member_color(interaction: discord.Interaction, color: str = None) -> dis
             return member.top_role.color
     return 0xDA8EE7 if color is None else color
 
-async def get_dominant_color(url: str = None, buffer: io.BytesIO = None) -> discord.Color:
+async def _process_image(image: Image.Image) -> int:
+    """Helper function to process image and get dominant color."""
+    image = image.resize((50, 50))
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    pixels = image.getcolors(2500)
+
+    if not pixels:
+        return 0x808080
+    sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
+    dominant_color = sorted_pixels[0][1]
+    return int('%02x%02x%02x' % dominant_color, 16)
+
+async def get_dominant_color(url: str = None, buffer: io.BytesIO = None, timeout: int = 5) -> discord.Color:
     """
-    Retrieves the dominant color from an image.
+    Retrieves the dominant color from an image with timeout handling.
 
     Parameters:
         url (str): The URL of the image to analyze.
         buffer (io.BytesIO): A buffer containing the image data.
+        timeout (int): The amount of time to attempt to process the color.
 
     Returns:
         discord.Color: The dominant color in the image as a Discord color object.
+                      Returns 0x808080 (gray) if processing fails or times out.
     """
     try:
-        if buffer:
-            image = Image.open(buffer)
-        else:
-            async with ClientSession() as session:
-                async with session.get(url) as response:
-                    if response.status != 200:
-                        return 0x808080
-                    
-                    image_data = await response.read()
-                    image = Image.open(io.BytesIO(image_data))
-        
-        image = image.resize((50, 50))
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        pixels = image.getcolors(2500)
+        async def process():
+            if buffer:
+                image = Image.open(buffer)
+            else:
+                async with ClientSession() as session:
+                    async with session.get(url) as response:
+                        if response.status != 200:
+                            return 0x808080
+                        image_data = await response.read()
+                        image = Image.open(io.BytesIO(image_data))
+            
+            return await _process_image(image)
 
-        if not pixels:
-            return 0x808080
-        sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
-        dominant_color = sorted_pixels[0][1]
-        return int('%02x%02x%02x' % dominant_color, 16)
-    except:
+        return await asyncio.wait_for(process(), timeout=timeout)
+    except (asyncio.TimeoutError, Exception):
         return 0x808080
 
 def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = False) -> int:
@@ -366,7 +375,7 @@ async def get_role(ctx: commands.Context, role_str: str | discord.Role) -> disco
         return discord.utils.get(ctx.guild.roles, name=role_str) or \
                discord.utils.get(ctx.guild.roles, mention=role_str)
     
-def get_context_object(ctx_or_interaction):
+def get_context_object(ctx_or_interaction: Union[commands.Context, discord.Interaction]) -> Dict[str, Any]:
 	"""Returns a dictionary with unified access to common attributes."""
 	is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
 	return {
@@ -377,3 +386,7 @@ def get_context_object(ctx_or_interaction):
 		"guild_id": ctx_or_interaction.guild.id,
 		"send": ctx_or_interaction.followup.send if is_interaction else ctx_or_interaction.send
 	}
+
+def check_in_server(interaction: discord.Interaction) -> bool:
+    """Checks if the interaction is in a server."""
+    return interaction.guild is not None
