@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
-# Find and load secrets.env from the storage folder
-root_dir = Path(__file__).parent.parent  # Go up one level from bot_utils
+from ossapi import UserLookupKey, Ossapi
+
+root_dir = Path(__file__).parent.parent
 secrets_path = root_dir / "storage" / "secrets.env"
 
 if not secrets_path.exists():
@@ -23,9 +24,8 @@ osuAPI = os.getenv("osu_api")
 osuSecret = os.getenv("osu_secret")
 hypixelAPI = os.getenv("hypixel_api")
 
-# Add error checking for required token
 if not token:
-    print(f"ERROR: Token not found in {secrets_path}")
+    print(f"[ERROR]: Token not found in {secrets_path}")
     print("Please ensure your secrets.env file contains a line with: token=your_bot_token_here")
     raise ValueError("Discord bot token not found in environment variables")
 
@@ -41,6 +41,23 @@ class ClanData(TypedDict):
     description: str
     type: str
 
+class OsuAPI:
+    """
+    A class to interact with the osu! API.
+
+    Attributes:
+        api (Ossapi): An instance of the Ossapi class for making API requests.
+
+    ## Methods:
+        user(username: str, key: UserLookupKey):
+        Fetches user data from the osu! API based on the provided username and lookup key.
+    """
+    def __init__(self, client_id: str, client_secret: str):
+        self.api = Ossapi(client_id, client_secret)
+
+    async def user(self, username: str, key: UserLookupKey):
+        return self.api.user(username, key=key)
+
 """
 CLASH ROYALE COMMANDS
 """
@@ -53,7 +70,7 @@ async def cr_fetchPlayerData(tag: str) -> Optional[Dict[str, Any]]:
         tag (str): Player's unique identifier
         
     Returns:
-        Optional[Dict[str, Any]]: Player data if found, None if not found
+        Optional(Dict[str, Any]): Player data if found, None if not found
         
     Raises:
         aiohttp.ClientError: On API connection issues
@@ -78,7 +95,7 @@ async def cr_fetchClanData(clan_tag: str) -> Optional[ClanData]:
         clan_tag (str): Clan's unique identifier
         
     Returns:
-        Optional[ClanData]: Structured clan data if found, None if not found
+        Optional(ClanData): Structured clan data if found, None if not found
     """
     api_url = f"https://api.clashroyale.com/v1/clans/{clan_tag}"
     headers = {"Authorization": f"Bearer {crAPI}"}
@@ -101,7 +118,6 @@ async def cr_fetchClanData(clan_tag: str) -> Optional[ClanData]:
             else:
                 return None
 
-
 """
 ROBLOX COMMANDS
 """
@@ -114,7 +130,7 @@ async def rbx_fetchUserBio(roblox_user_id) -> Optional[str]:
         roblox_user_id (int): The ID to the account.
         
     Returns:
-        Optional[str]: The Roblox bio of the user.
+        Optional(str): The Roblox bio of the user.
         """
     async with ClientSession() as session:
         url = f"https://users.roblox.com/v1/users/{roblox_user_id}"
@@ -130,7 +146,7 @@ async def rbx_fetchUserID(roblox_username) -> Optional[int]:
         roblox_username (str): The username to the account.
 
     Returns:
-        Optional[int]: The user ID.
+        Optional(int): The user ID.
     """
     async with ClientSession() as session:
         response = await session.post(
@@ -157,7 +173,8 @@ async def mc_fetchUUID(interaction: discord.Interaction, username: str) -> Union
         username (str): The username to the account.
         
     Returns:
-        Union[str, False]: The UUID of the account."""
+        Union(str, False): The UUID of the account.
+    """
     async with ClientSession() as session:
         async with session.get(f"https://api.mojang.com/users/profiles/minecraft/{username}") as response:
             if response.status == 200:

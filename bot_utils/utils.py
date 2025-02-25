@@ -1,26 +1,35 @@
+from .file_handler import (
+    open_file,
+    save_file
+)
+
 import discord
-import re
+from discord.ext import commands
+import re, io, time
+import asyncio
 
 from datetime import timedelta
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, Union, Dict, Any
+from aiohttp import ClientSession
+from PIL import Image
 
 def parse_duration(duration_str: str) -> Optional[timedelta]:
     """
     Parses a duration string in the format 'XdYhZmWs' into a timedelta object.
 
     Parameters:
-    - duration_str (str): The duration string to parse, where:
-      - 'd' represents days,
-      - 'h' represents hours,
-      - 'm' represents minutes,
-      - 's' represents seconds.
+        duration_str (str): The duration string to parse, where:
+            'd' represents days,
+            'h' represents hours,
+            'm' represents minutes,
+            's' represents seconds.
 
     Returns:
-    - Optional[timedelta]: A `timedelta` object representing the total duration if the format is valid, otherwise `None`.
+        Optional[timedelta]: A `timedelta` object representing the total duration if the format is valid, otherwise `None`.
 
     Example:
-    - Input: "1d2h30m15s"
-    - Output: timedelta(days=1, hours=2, minutes=30, seconds=15)
+        - Input: "1d2h30m15s"
+        - Output: timedelta(days=1, hours=2, minutes=30, seconds=15)
     """
     duration_regex = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
     match = duration_regex.match(duration_str)
@@ -47,11 +56,11 @@ def check_user(interaction: discord.Interaction, original_user: discord.User) ->
     Checks if the interaction is performed by the original user.
 
     Parameters:
-    - interaction (discord.Interaction): The interaction object triggered by the user.
-    - original_user (discord.User): The user who is allowed to interact.
+        interaction (discord.Interaction): The interaction object triggered by the user.
+        original_user (discord.User): The user who is allowed to interact.
 
     Returns:
-    - bool: True if the interaction user matches the original user, otherwise False.
+        bool: True if the interaction user matches the original user, otherwise False.
     """
     return interaction.user.id == original_user.id
 
@@ -59,16 +68,17 @@ def check_user(interaction: discord.Interaction, original_user: discord.User) ->
 def convert_number(number: str) -> int:
     """
     Converts shorthand notations like 50m, 1b, 10k to full numbers.
-    Ex. 
-    50m -> 50000000
-    1b -> 1000000000
-    10k -> 10000
 
     Args:
         number (str): The shorthand number as a string.
 
     Returns:
         int: The full numeric value.
+
+    Example:
+        - 50m -> 50000000
+        - 1b -> 1000000000
+        - 10k -> 10000
     """
     suffixes = {'k': 1_000, 'm': 1_000_000, 'b': 1_000_000_000, 't': 1_000_000_000_000}
     if not number:
@@ -80,7 +90,7 @@ def convert_number(number: str) -> int:
         return int(float(number[:-1]) * multiplier)
     return int(number)
 
-T = TypeVar('T')  # Generic type for RestrictedView
+T = TypeVar('T')
 
 class RestrictedView(discord.ui.View, Generic[T]):
     """
@@ -103,7 +113,18 @@ class RestrictedView(discord.ui.View, Generic[T]):
         return check_user(interaction, self.original_user)
 
 async def create_interaction(ctx):
-    """Creates a pseudo-interaction from a command context"""
+    """Creates a pseudo-interaction from a command context.
+
+    This function simulates a Discord interaction using the provided command context.
+    It creates a pseudo-interaction object that mimics the behavior of a real interaction,
+    allowing for deferred responses and follow-up messages.
+
+    Args:
+        ctx: The command context from which to create the pseudo-interaction.
+
+    Returns:
+        PseudoInteraction: An object that simulates a Discord interaction.
+    """
     async with ctx.typing():
         class Response:
             def __init__(self, ctx):
@@ -112,13 +133,32 @@ async def create_interaction(ctx):
                 self._responded = False
 
             async def defer(self, ephemeral=False):
+                """Marks the interaction as deferred.
+
+                Args:
+                    ephemeral (bool): Whether the deferred response should be ephemeral (default is False).
+                """
                 self._deferred = True
 
             async def send_message(self, *args, **kwargs):
+                """Sends a message in response to the interaction.
+
+                Args:
+                    *args: Positional arguments to pass to the send method.
+                    **kwargs: Keyword arguments to pass to the send method.
+
+                Returns:
+                    The message that was sent.
+                """
                 self._responded = True
                 return await self.ctx.send(*args, **kwargs)
 
             def is_done(self):
+                """Checks if the interaction has been deferred.
+
+                Returns:
+                    bool: True if the interaction has been deferred, otherwise False.
+                """
                 return self._deferred
 
         class Followup:
@@ -127,6 +167,15 @@ async def create_interaction(ctx):
                 self._last_message = None
 
             async def send(self, content=None, **kwargs):
+                """Sends a follow-up message, deleting the previous one if it exists.
+
+                Args:
+                    content: The content of the follow-up message.
+                    **kwargs: Additional keyword arguments to pass to the send method.
+
+                Returns:
+                    The follow-up message that was sent.
+                """
                 if self._last_message:
                     try:
                         await self._last_message.delete()
@@ -151,3 +200,193 @@ async def create_interaction(ctx):
                 self.message = ctx.message
 
         return PseudoInteraction(ctx)
+
+def get_member_color(interaction: discord.Interaction, color: str = None) -> discord.Color:
+    """Retrieves the color of the member's highest role in the guild.
+
+    Args:
+        interaction (discord.Interaction): The interaction object containing user and guild information.
+        color (str): The default color to return if the member is not found or the color is None.
+
+    Returns:
+        discord.Color: The color of the member's highest role.
+                      Returns 0xDA8EE7 if the member is not found or the color is None.
+    """
+    if interaction.guild:
+        member = interaction.guild.get_member(interaction.user.id)
+        if member:
+            return member.top_role.color
+    return 0xDA8EE7 if color is None else color
+
+async def _process_image(image: Image.Image) -> int:
+    """Helper function to process image and get dominant color."""
+    image = image.resize((50, 50))
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    pixels = image.getcolors(2500)
+
+    if not pixels:
+        return 0x808080
+    sorted_pixels = sorted(pixels, key=lambda x: x[0], reverse=True)
+    dominant_color = sorted_pixels[0][1]
+    return int('%02x%02x%02x' % dominant_color, 16)
+
+async def get_dominant_color(url: str = None, buffer: io.BytesIO = None, timeout: int = 5) -> discord.Color:
+    """
+    Retrieves the dominant color from an image with timeout handling.
+
+    Parameters:
+        url (str): The URL of the image to analyze.
+        buffer (io.BytesIO): A buffer containing the image data.
+        timeout (int): The amount of time to attempt to process the color.
+
+    Returns:
+        discord.Color: The dominant color in the image as a Discord color object.
+                      Returns 0x808080 (gray) if processing fails or times out.
+    """
+    try:
+        async def process():
+            if buffer:
+                image = Image.open(buffer)
+            else:
+                async with ClientSession() as session:
+                    async with session.get(url) as response:
+                        if response.status != 200:
+                            return 0x808080
+                        image_data = await response.read()
+                        image = Image.open(io.BytesIO(image_data))
+            
+            return await _process_image(image)
+
+        return await asyncio.wait_for(process(), timeout=timeout)
+    except (asyncio.TimeoutError, Exception):
+        return 0x808080
+
+def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = False) -> int:
+    """
+    Retrieves the time elapsed since the last command usage/message sent for a specific user.
+
+    Parameters:
+        user_id (discord.User): The user to check the cooldown for.
+        command (str): The name of the command to check.
+        exp (bool): Whether or not you want to check the exp cooldown.
+
+    Returns:
+        int: The number of seconds elapsed since the last command usage/message sent.
+
+             Returns 0 if the command has never been used.
+    """
+
+    current_time = int(time.time())
+    user_id = str(user_id)
+    
+    member_info = open_file("storage/member_info.json")
+
+
+    user_data = member_info.setdefault(user_id, {})
+    if exp:
+        user_exp = user_data.setdefault("EXP", {})
+        exp_cooldown = user_exp.setdefault("cooldown", 0)
+        save_file("storage/member_info.json", member_info)
+
+        return current_time - exp_cooldown
+    
+    if command:
+        commands = user_data.setdefault("commands", {})
+        command_data = commands.setdefault(command, {"cooldown": 0})
+        save_file("storage/member_info.json", member_info)
+        
+        return current_time - command_data["cooldown"]
+    
+async def get_command_help_embed(command_name: str) -> discord.Embed:
+    command_help = open_file("storage/command_help.json")
+
+    command_data = command_help.get("moderation", {}).get(command_name)
+    if not command_data:
+        return None
+
+    embed = discord.Embed(
+        title=f"Command: {command_name}",
+        description=command_data.get("description", "No description available."),
+        color=discord.Color.blue()
+    )
+
+    if "parameters" in command_data:
+        parameters = []
+        for param_name, param_desc in command_data["parameters"].items():
+            parameters.append(f"• **{param_name}**: {param_desc}")
+        
+        if parameters:
+            embed.add_field(
+                name="Parameters",
+                value="\n".join(parameters),
+                inline=False
+            )
+
+    return embed
+
+def get_role_hierarchy(main: discord.Member, check: discord.Member | discord.Role):
+    if isinstance(check, discord.Member):
+        return main.top_role.position > check.top_role.position
+    else:
+        return main.top_role.position > check.position
+    
+async def get_member(ctx: commands.Context, member_str: str) -> discord.Member | None:
+	"""Find a member by mention, username, nickname, or ID."""
+	member_str = member_str.strip("<@!>")
+	
+	if member_str.isdigit():
+		try:
+			return await ctx.guild.fetch_member(int(member_str))
+		except discord.NotFound:
+			return None
+	else:
+		return discord.utils.get(ctx.guild.members, name=member_str) or \
+			   discord.utils.get(ctx.guild.members, display_name=member_str)
+
+async def get_channel(ctx: commands.Context, channel_str: str) -> discord.TextChannel | None:
+    """Find a text channel by mention, name, or ID."""
+    if channel_str == None: return None
+    channel_str = channel_str.strip("<#>")
+    
+    if channel_str.isdigit():
+        try:
+            return await ctx.guild.fetch_channel(int(channel_str))
+        
+        except discord.NotFound:
+            return None
+        
+    else:
+        return discord.utils.get(ctx.guild.text_channels, name=channel_str) or \
+               discord.utils.get(ctx.guild.text_channels, mention=channel_str)
+    
+async def get_role(ctx: commands.Context, role_str: str | discord.Role) -> discord.Role | None:
+    """Find a role by mention, name, or ID."""
+    if role_str == None: return None
+    role_str = role_str.strip("<@&>")
+    
+    if role_str.isdigit():
+        try:
+            return ctx.guild.get_role(int(role_str))
+        except discord.NotFound:
+            return None
+        
+    else:
+        return discord.utils.get(ctx.guild.roles, name=role_str) or \
+               discord.utils.get(ctx.guild.roles, mention=role_str)
+    
+def get_context_object(ctx_or_interaction: Union[commands.Context, discord.Interaction]) -> Dict[str, Any]:
+	"""Returns a dictionary with unified access to common attributes."""
+	is_interaction = isinstance(ctx_or_interaction, discord.Interaction)
+	return {
+		"interaction": ctx_or_interaction if is_interaction else None,
+		"ctx": ctx_or_interaction if not is_interaction else None,
+		"user": ctx_or_interaction.user if is_interaction else ctx_or_interaction.author,
+		"guild": ctx_or_interaction.guild,
+		"guild_id": ctx_or_interaction.guild.id,
+		"send": ctx_or_interaction.followup.send if is_interaction else ctx_or_interaction.send
+	}
+
+def check_in_server(interaction: discord.Interaction) -> bool:
+    """Checks if the interaction is in a server."""
+    return interaction.guild is not None

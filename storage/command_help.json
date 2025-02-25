@@ -172,6 +172,39 @@
                     }
                 }
             }
+        },
+        "ban": {
+            "description": "Bans a member from the server",
+            "parameters": {
+                "user": "The user to ban",
+                "reason": "Reason for the ban"
+            }
+        },
+        "unban": {
+            "description": "Unbans a member from the server",
+            "parameters": {
+                "user": "The user to unban",
+                "reason": "Reason for the unban"
+            }
+        },
+        "set": {
+            "description": "Server settings commands",
+            "subcommands": {
+                "logs": {
+                    "description": "Set log channels for different events",
+                    "parameters": {
+                        "option": "The type of logs to set",
+                        "channel": "The channel to send logs to"
+                    }
+                },
+                "roles": {
+                    "description": "Set server roles for different purposes",
+                    "parameters": {
+                        "option": "The type of role to set",
+                        "role": "The role to set"
+                    }
+                }
+            }
         }
     },
     "btd6": {
@@ -243,6 +276,9 @@
                 "amount": "Amount to deposit"
             }
         },
+        "pay": {
+            "description": "Not coming soon..."
+        },
         "beg": {
             "description": "Beg for money on the streets"
         },
@@ -306,7 +342,7 @@
                 "channel": "The channel to send the message to",
                 "message": "The message to send",
                 "attachment": "An optional attachment to include",
-                "message_id": "An optional message to reply to",
+                "reply": "An optional message to reply to",
                 "ephemeral": "Whether the interaction will be ephemeral or not"
             }
         },
@@ -357,13 +393,15 @@
         "meme": {
             "description": "Fetches a funny meme!",
             "parameters": {
+                "allow_spoilers": "Allow spoilers in the meme.",
                 "ephemeral": "If the message is hidden (Useful if no perms)"
             }
         },
         "8ball": {
             "description": "Ask the magic 8-ball a question",
             "parameters": {
-                "question": "Ask it a question!"
+                "question": "Ask it a question!",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
             }
         },
         "xkcd": {
@@ -744,8 +782,14 @@
         "serverinfo": {
             "description": "Shows information about the server"
         },
+        "emojiinfo": {
+            "description": "Displays information for an emoji",
+            "parameters": {
+                "emoji": "The emoji to get the info for"
+            }
+        },
         "roleinfo": {
-            "description": "Provides information for a role",
+            "description": "Displays information for a role",
             "parameters": {
                 "role": "The role to get the info for"
             }
@@ -787,6 +831,21 @@
                 "ephemeral": "Should the response be ephemeral (Hidden)?"
             }
         },
+        "tlevel": {
+            "description": "Calculate Tower Defense levels and time to achieve them",
+            "parameters": {
+                "current_level": "Your current level",
+                "current_exp": "Your current EXP in that level",
+                "target_level": "The level you want to achieve (optional if target_exp provided)",
+                "target_exp": "The total EXP you want to achieve (optional if target_level provided)",
+                "target_date": "The date you want to achieve it by (MM/DD/YYYY)",
+                "games_per_day": "Optional: Daily games goal (if not using target date)",
+                "mode": "Game mode to play (easy/casual/intermediate/molten/fallen/hardcore)",
+                "vip": "Do you have VIP? (25% EXP boost)",
+                "vip_plus": "Do you have VIP+? (50% EXP boost)",
+                "ephemeral": "Should the response be ephemeral (Hidden)?"
+            }
+        },
         "level": {
             "description": "View your level globally or in your guild",
             "parameters": {
@@ -803,6 +862,12 @@
             "parameters": {
                 "type": "The type of alert",
                 "description": "Provide a brief description of what's going on"
+            }
+        },
+        "check": {
+            "description": "Check a new or specified alert",
+            "parameters": {
+                "id": "The ID of the alert to see"
             }
         }
     },
@@ -834,6 +899,14 @@
         }
     },
     "roblox": {
+        "cgloves": {
+            "description": "Check all the user's gloves in slap battles",
+            "parameters": {
+                "username": "The user to check gloves for (leave empty to check your own)",
+                "member": "Discord member to check (optional)",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
+            }
+        },
         "connect": {
             "description": "Connect with your Roblox account", 
             "parameters": {
@@ -907,18 +980,24 @@
         }
     },
     "utility": {
-        "cgloves": {
-            "description": "Check all the user's gloves in slap battles",
-            "parameters": {
-                "username": "The user to check gloves for (leave empty to check your own)",
-                "member": "Discord member to check (optional)",
-                "ephemeral": "If the message is hidden (Useful if no perms)"
-            }
-        },
         "afk": {
             "description": "AFK and set a status of why",
             "parameters": {
                 "reason": "Your reason to AFK"
+            }
+        }
+    },
+    "minecraft": {
+        "uuid": {
+            "description": "Get a Minecraft UUID based on a username",
+            "parameters": {
+                "username": "A Minecraft username"
+            }
+        },
+        "avatar": {
+            "description": "Provides a Minecraft account's avatar.",
+            "parameters": {
+                "username": "A Minecraft username"
             }
         }
     }

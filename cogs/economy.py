@@ -1,22 +1,28 @@
 from bot_utils import (
-    open_file,
-    save_file,
-    convert_number,
     RestrictedView,
+
+    eco_path,
     create_account,
     check_user_stat,
+    check_user_exists,
     process_transaction,
-    eco_path,
+
+    convert_number,
     create_interaction,
     error,
+
+    open_file,
+    save_file,
     load_commands,
     handle_logs
 )
 
+from main import botAdmins
+
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands, ButtonStyle
-from discord.ui import Button, View, button, Modal, TextInput
+from discord.ui import Button, Modal, TextInput
 
 import random
 from datetime import datetime, timezone, timedelta
@@ -47,11 +53,144 @@ class MarketGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="market", description="Not coming soon.")
         load_commands(self.commands, "economy")
-        
+
+class EcoAdminGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="ecoadmin", description="Economy admin commands.")
+        load_commands(self, "economy")
+
+    @app_commands.command(name="give")
+    async def give(self, interaction: discord.Interaction, member: discord.Member, amount: int):
+        await interaction.response.defer()
+        try:
+            if interaction.user.id not in botAdmins:
+                return await interaction.followup.send("You do not have permission to use this command.")
+
+            user_id = str(member.id)
+            eco = check_user_exists(user_id)
+
+            eco[user_id]['balance']['purse'] += amount
+            save_file(eco_path, eco)
+
+            await interaction.followup.send(f"Successfully gave {amount} coins to {member.display_name}!")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="set")
+    async def set(self, interaction: discord.Interaction, member: discord.Member, amount: int):
+        await interaction.response.defer()
+        try:
+            if interaction.user.id not in botAdmins:
+                return await interaction.followup.send("You do not have permission to use this command.")
+
+            user_id = str(member.id)
+            eco = check_user_exists(user_id)
+
+            eco[user_id]['balance']['purse'] = amount
+            save_file(eco_path, eco)
+
+            await interaction.followup.send(f"Successfully set {member.display_name}'s coins to {amount}!")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="item")
+    async def item(self, interaction: discord.Interaction, member: discord.Member, item_name: str, quantity: int):
+        await interaction.response.defer()
+        try:
+            if interaction.user.id not in botAdmins:
+                return await interaction.followup.send("You do not have permission to use this command.")
+
+            user_id = str(member.id)
+            eco = check_user_exists(user_id)
+
+            item_name = normalize_item_name(item_name)
+            if item_name not in eco[user_id].get('inventory', {}):
+                eco[user_id]['inventory'][item_name] = 0
+
+            eco[user_id]['inventory'][item_name] += quantity
+            save_file(eco_path, eco)
+
+            await interaction.followup.send(f"Successfully added {quantity}x {item_name} to {member.display_name}'s inventory!")
+        except Exception as e:
+            await handle_logs(interaction, e)
 class ShopGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="shop", description="Shop commands.")
         load_commands(self, "economy")
+
+    @app_commands.command(name="view")
+    async def view(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            if not SHOP:
+                await handle_eco_shop()
+            
+            shop_items = SHOP
+            if not shop_items:
+                return await interaction.followup.send("The shop is currently empty. Try again later!")
+
+            embed = discord.Embed(
+                title="Shop Items",
+                description="Current items available for purchase:",
+                color=discord.Color.blue()
+            )
+
+            for item in shop_items:
+                stock_display = "∞" if item['amount'] == -1 else item['amount']
+                embed.add_field(
+                    name=f"{display_item_name(item['item'])} - {item['price']:,} coins",
+                    value=f"Type: {item['type']}\nDescription: {item['description']}\nStock: {stock_display}",
+                    inline=False
+                )
+
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="buy")
+    async def buy(self, interaction: discord.Interaction, item_name: str, quantity: int = 1):
+        await interaction.response.defer()
+        try:
+            if not SHOP:
+                await handle_eco_shop()
+
+            if quantity < 1:
+                return await interaction.followup.send("Quantity must be positive!")
+
+            closest_item = find_closest_item(item_name, SHOP)
+            if not closest_item:
+                return await interaction.followup.send(f"No item found matching '{item_name}'")
+
+            shop_item = next((item for item in SHOP if item["item"] == closest_item), None)
+            if not shop_item:
+                return await interaction.followup.send("That item is not available in the shop right now!")
+
+            if shop_item["amount"] < quantity:
+                return await interaction.followup.send("Not enough stock available!")
+
+            total_cost = shop_item["price"] * quantity
+            user_id = str(interaction.user.id)
+            eco = check_user_exists(user_id)
+
+            if eco[user_id]["balance"]["purse"] < total_cost:
+                return await interaction.followup.send("You don't have enough coins!")
+
+            if "inventory" not in eco[user_id]:
+                eco[user_id]["inventory"] = {}
+            if shop_item["item"] not in eco[user_id]["inventory"]:
+                eco[user_id]["inventory"][shop_item["item"]] = 0
+            
+            eco[user_id]["inventory"][shop_item["item"]] += quantity
+            eco[user_id]["balance"]["purse"] -= total_cost
+
+            save_file(eco_path, eco)
+
+            await interaction.followup.send(
+                f"Successfully bought {quantity}x {display_item_name(shop_item['item'])} for {total_cost:,} coins!"
+            )
+
+        except Exception as e:
+            await handle_logs(interaction, e)
 
 class AuctionGroup(app_commands.Group):
     def __init__(self):
@@ -83,12 +222,13 @@ def find_closest_item(search_term: str, shop_items: list) -> str:
 class EconomyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.command_help = open_file("storage/command_help.json")
         handle_eco_shop.start()
+        bot.tree.add_command(EcoAdminGroup())
         bot.tree.add_command(MarketGroup())
         bot.tree.add_command(ShopGroup())
         bot.tree.add_command(AuctionGroup())
         
-        # Change this line to use __cog_app_commands__
         load_commands(self.__cog_app_commands__, "economy")
 
     def cog_unload(self):
@@ -98,9 +238,11 @@ class EconomyCog(commands.Cog):
         if isinstance(error, app_commands.CommandOnCooldown):
             retry_after = int(error.retry_after)
             retry_time = int((discord.utils.utcnow() + timedelta(seconds=retry_after)).timestamp())
-            await interaction.response.send_message(f"Command on cooldown. Try again <t:{retry_time}:R>", ephemeral=True)
-        else:
-            await handle_logs(interaction, error)
+            return await interaction.response.send_message(
+                f"Command on cooldown. Try again <t:{retry_time}:R>", 
+                ephemeral=True
+            )
+        return await handle_logs(interaction, error)
 
     @app_commands.command(name="balance")
     async def balance(self, interaction: discord.Interaction, member: discord.Member = None):
@@ -115,8 +257,7 @@ class EconomyCog(commands.Cog):
                 if user_id == str(interaction.user.id):
                     create_account(user_id)
                 else:
-                    await interaction.followup.send("The user does not have an account.")
-                    return
+                    return await interaction.followup.send("The user does not have an account.")
                 
                 eco = open_file(eco_path)
 
@@ -135,7 +276,7 @@ class EconomyCog(commands.Cog):
             )
             embed.set_footer(text=f"Requested by {interaction.user.display_name}")
 
-            async def update_embed():
+            async def update_embed(eco):
                 updated_embed = discord.Embed(
                     title=f"{user.display_name}'s Balance",
                     description=(
@@ -151,7 +292,7 @@ class EconomyCog(commands.Cog):
             view = RestrictedView(interaction.user)
 
             withdraw_button = Button(label="Withdraw", style=ButtonStyle.red)
-            async def withdraw_callback(self, interaction: discord.Interaction):
+            async def withdraw_callback(interaction: discord.Interaction):
                 if interaction.user.id != user.id:
                     return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
 
@@ -160,24 +301,25 @@ class EconomyCog(commands.Cog):
                 modal.add_item(amount_input)
 
                 async def modal_callback(modal_interaction: discord.Interaction):
-                    amount = int(amount_input.value)
-                    success, transaction_result = await process_transaction(modal_interaction.user.id, "withdraw", amount)
-                    if success:
-                        eco[user_id]['balance']['purse'] += amount
-                        eco[user_id]['balance']['bank'] -= amount
-                        save_file(eco_path, eco)
-
-                        updated_embed = await update_embed()
-                        await interaction.message.edit(embed=updated_embed, view=view)
-                    await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                    try:
+                        amount = abs(int(amount_input.value))
+                        success, transaction_result = await process_transaction(modal_interaction.user.id, "withdraw", amount)
+                        if success:
+                            eco = open_file(eco_path)
+                            updated_embed = await update_embed(eco)
+                            await modal_interaction.message.edit(embed=updated_embed)
+                        await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                    except ValueError:
+                        await modal_interaction.response.send_message("Please enter a valid number.", ephemeral=True)
 
                 modal.on_submit = modal_callback
                 await interaction.response.send_modal(modal)
+
             withdraw_button.callback = withdraw_callback
             view.add_item(withdraw_button)
 
             deposit_button = Button(label="Deposit", style=ButtonStyle.green)
-            async def deposit_callback(self, interaction: discord.Interaction):
+            async def deposit_callback(interaction: discord.Interaction):
                 if interaction.user.id != user.id:
                     return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
 
@@ -186,19 +328,20 @@ class EconomyCog(commands.Cog):
                 modal.add_item(amount_input)
 
                 async def modal_callback(modal_interaction: discord.Interaction):
-                    amount = int(amount_input.value)
-                    success, transaction_result = await process_transaction(modal_interaction.user.id, "deposit", amount)
-                    if success:
-                        eco[user_id]['balance']['purse'] -= amount
-                        eco[user_id]['balance']['bank'] += amount
-                        save_file(eco_path, eco)
-
-                        updated_embed = await update_embed()
-                        await interaction.message.edit(embed=updated_embed, view=view)
-                    await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                    try:
+                        amount = abs(int(amount_input.value))
+                        success, transaction_result = await process_transaction(modal_interaction.user.id, "deposit", amount)
+                        if success:
+                            eco = open_file(eco_path)
+                            updated_embed = await update_embed(eco)
+                            await modal_interaction.message.edit(embed=updated_embed)
+                        await modal_interaction.response.send_message(transaction_result, ephemeral=True)
+                    except ValueError:
+                        await modal_interaction.response.send_message("Please enter a valid number.", ephemeral=True)
 
                 modal.on_submit = modal_callback
                 await interaction.response.send_modal(modal)
+
             deposit_button.callback = deposit_callback
             view.add_item(deposit_button)
 
@@ -244,11 +387,8 @@ class EconomyCog(commands.Cog):
     async def beg(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
-            eco = open_file(eco_path)
             user_id = str(interaction.user.id)
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
+            eco = check_user_exists(user_id)
             
             coin_boost = eco[user_id]['boosts']['coins']
             base_amount = random.randint(80, 150)
@@ -302,17 +442,12 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
         try:
             user_id = str(interaction.user.id)
-            eco = open_file(eco_path)
-
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
+            eco = check_user_exists(user_id)
 
             has_rod = 'fishing_rod' in eco[user_id].get('inventory', {})
             
             if not has_rod:
-                await interaction.followup.send("You need a fishing rod to fish! Buy one from the shop.")
-                return
+                return await interaction.followup.send("You need a fishing rod to fish! Buy one from the shop.")
 
             base_amount = random.randint(500, 1200)
             coin_boost = eco[user_id]['boosts']['coins']
@@ -345,17 +480,12 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
         try:
             user_id = str(interaction.user.id)
-            eco = open_file(eco_path)
-
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
+            eco = check_user_exists(user_id)
 
             has_rifle = 'rifle' in eco[user_id].get('inventory', {})
             
             if not has_rifle:
-                await interaction.followup.send("You need a rifle to hunt! Buy one from the shop.")
-                return
+                return await interaction.followup.send("You need a rifle to hunt! Buy one from the shop.")
 
             base_amount = random.randint(500, 1200)
             coin_boost = eco[user_id]['boosts']['coins']
@@ -384,17 +514,12 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
         try:
             user_id = str(interaction.user.id)
-            eco = open_file(eco_path)
-
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
+            eco = check_user_exists(user_id)
 
             has_shovel = 'shovel' in eco[user_id].get('inventory', {})
             
             if not has_shovel:
-                await interaction.followup.send("You need a shovel to dig! Buy one from the shop.")
-                return
+                return await interaction.followup.send("You need a shovel to dig! Buy one from the shop.")
 
             base_amount = random.randint(500, 1200)
             coin_boost = eco[user_id]['boosts']['coins']
@@ -423,11 +548,7 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
         try:
             user_id = str(interaction.user.id)
-            eco = open_file(eco_path)
-
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
+            eco = check_user_exists(user_id)
 
             base_amount = random.randint(80, 150)
             coin_boost = eco[user_id]['boosts']['coins']
@@ -477,11 +598,7 @@ class EconomyCog(commands.Cog):
         await interaction.response.defer()
         try:
             user_id = str(interaction.user.id)
-            eco = open_file(eco_path)
-
-            if user_id not in eco:
-                create_account(user_id)
-                eco = open_file(eco_path)
+            eco = check_user_exists(user_id)
 
             base_amount = random.randint(80, 150)
             coin_boost = eco[user_id]['boosts']['coins']
@@ -548,8 +665,7 @@ class EconomyCog(commands.Cog):
                 time_left = last_daily + timedelta(days=1) - now
                 hours, remainder = divmod(int(time_left.total_seconds()), 3600)
                 minutes, seconds = divmod(remainder, 60)
-                await interaction.followup.send(f"You can claim your daily reward in {hours}h {minutes}m {seconds}s")
-                return
+                return await interaction.followup.send(f"You can claim your daily reward in {hours}h {minutes}m {seconds}s")
 
             streak = eco[user_id]['streaks']['daily']
             
@@ -601,8 +717,7 @@ class EconomyCog(commands.Cog):
                 time_left = last_weekly + timedelta(days=7) - now
                 days = time_left.days
                 hours = time_left.seconds // 3600
-                await interaction.followup.send(f"You can claim your weekly reward in {days}d {hours}h")
-                return
+                return await interaction.followup.send(f"You can claim your weekly reward in {days}d {hours}h")
 
             coin_boost = eco[user_id]['boosts']['coins']
             streak = eco[user_id]['streaks']['weekly']
@@ -645,8 +760,7 @@ class EconomyCog(commands.Cog):
                 time_left = last_monthly + timedelta(days=30) - now
                 days = time_left.days
                 hours = time_left.seconds // 3600
-                await interaction.followup.send(f"You can claim your monthly reward in {days}d {hours}h")
-                return
+                return await interaction.followup.send(f"You can claim your monthly reward in {days}d {hours}h")
 
             coin_boost = eco[user_id]['boosts']['coins']
             streak = eco[user_id]['streaks']['monthly']
@@ -668,12 +782,7 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    """
-    GAME COMMANDS (PART OF ECO)
-    """
-
     @app_commands.command(name="coinflip")
-    @app_commands.describe(guess="Heads or tails?", amount="Optional amount if you want to bet!")
     @app_commands.choices(
         guess=[
             app_commands.Choice(name="Heads", value="Heads"),
@@ -682,60 +791,39 @@ class EconomyCog(commands.Cog):
     )
     async def coinflip(self, interaction: discord.Interaction, guess: str = None, amount: str = None):
         await interaction.response.defer()
-
         try:
             coin = random.choice(["Heads", "Tails"])
-            won = coin == guess
 
-            if amount and not guess:
-                await interaction.followup.send("You need to guess heads or tails to bet an amount!")
-                return
+            if not guess:
+                return await interaction.followup.send(f"The coin landed on {coin}!")
 
-            if amount and guess:
+            won = coin.lower() == guess.lower()
+            if not amount:
+                return await interaction.followup.send(f"{'Congrats' if won else 'Bad luck'}! The coin landed on {coin}!")
+
+            user_id = str(interaction.user.id)
+            eco = check_user_exists(user_id)
+
+            if amount.lower() == "all":
+                bet = eco[user_id]["balance"]["purse"]
+            else:
                 try:
-                    amount = convert_number(amount)
+                    bet = convert_number(amount)
+                    if bet < 1:
+                        return await interaction.followup.send("Please enter a value greater than 0.")
                 except ValueError:
-                    await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
-                    return
+                    return await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
 
-                user_id = str(interaction.user.id)
-                eco = open_file(eco_path)
+                if eco[user_id]["balance"]["purse"] < bet:
+                    return await interaction.followup.send("You don't have enough coins!")
 
-                if user_id not in eco:
-                    create_account(user_id)
+            eco[user_id]["balance"]["purse"] += bet if won else -bet
+            save_file(eco_path, eco)
 
-                eco = open_file(eco_path)
-                player_data = eco[user_id]
-                purse_balance = int(player_data["balance"]["purse"])
-
-                if amount > purse_balance:
-                    await interaction.followup.send("You don't have enough coins in your purse!")
-                    return
-
-                if won:
-                    purse_balance += amount
-                    message = f"The coin landed on {coin.upper()}! You won {amount} coins!"
-                else:
-                    purse_balance -= amount
-                    message = f"The coin landed on {coin.lower()}... You lost {amount} coins."
-
-                player_data["balance"]["purse"] = purse_balance
-                save_file(eco_path, eco)
-
-                await interaction.followup.send(message)
-                return
-
-            if guess:
-                if won:
-                    await interaction.followup.send(f"Congrats! The coin landed on {coin.upper()}!")
-                else:
-                    await interaction.followup.send(f"Bad luck! The coin landed on {coin.lower()}.")
-                return
-
-            await interaction.followup.send(f"The coin landed on {coin.lower()}!")
+            return await interaction.followup.send(f"The coin landed on {coin}! You {'won' if won else 'lost'} {bet:,} coins!")
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            return await handle_logs(interaction, e)
 
     @app_commands.command(name="inventory")
     @app_commands.describe(member="The user whose inventory you want to check.")
@@ -751,14 +839,12 @@ class EconomyCog(commands.Cog):
                     create_account(user_id)
                     eco = open_file(eco_path)
                 else:
-                    await interaction.followup.send("This user doesn't have an account!")
-                    return
+                    return await interaction.followup.send("This user doesn't have an account!")
 
             inventory = eco[user_id].get('inventory', {})
             
             if not inventory:
-                await interaction.followup.send(f"{user.display_name}'s inventory is empty!")
-                return
+                return await interaction.followup.send(f"{user.display_name}'s inventory is empty!")
 
             embed = discord.Embed(
                 title=f"{user.display_name}'s Inventory",
@@ -898,21 +984,40 @@ class EconomyCog(commands.Cog):
 
     @commands.group(name="shop", invoke_without_command=True)
     async def manual_shop(self, ctx):
-        """Shop commands"""
-        await ctx.send("Available commands: shop view, shop buy <item> [quantity]")
+        try:
+            interaction = await create_interaction(ctx)
+            shop_cmd = self.bot.tree.get_command("shop")
+            await shop_cmd.get_command("view").callback(shop_cmd, interaction)
+        except Exception as e:
+            error(e)
 
     @manual_shop.command(name="view")
     async def manual_shop_view(self, ctx):
         try:
             interaction = await create_interaction(ctx) 
             shop_cmd = self.bot.tree.get_command("shop")
-            await shop_cmd.get_command("view").callback(self, interaction)
+            await shop_cmd.get_command("view").callback(shop_cmd, interaction)
         except Exception as e:
             error(e)
 
     @manual_shop.command(name="buy")
-    async def manual_shop_buy(self, ctx, item_name: str, quantity: int = 1):
+    async def manual_shop_buy(self, ctx, item_name: str = None, quantity: int = 1):
         try:
+            if not item_name:
+                help_data = self.command_help.get("economy", {}).get("shop", {}).get("subcommands", {}).get("buy", {})
+                if help_data:
+                    embed = discord.Embed(
+                        title="Missing Required Argument: item_name",
+                        description=help_data.get("description", "No description available."),
+                        color=discord.Color.red()
+                    )
+                    if "parameters" in help_data:
+                        params = help_data["parameters"]
+                        param_text = "\n".join([f"**{param}**: {desc}" for param, desc in params.items()])
+                        embed.add_field(name="Parameters", value=param_text, inline=False)
+                    return await ctx.send(embed=embed, delete_after=30)
+                return
+
             interaction = await create_interaction(ctx)
             
             if not SHOP:
@@ -924,7 +1029,7 @@ class EconomyCog(commands.Cog):
                 return
 
             shop_cmd = self.bot.tree.get_command("shop")
-            await shop_cmd.get_command("buy").callback(self, interaction, closest_item, quantity)
+            await shop_cmd.get_command("buy").callback(shop_cmd, interaction, closest_item, quantity)
             
         except Exception as e:
             error(e)

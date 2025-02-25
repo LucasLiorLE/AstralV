@@ -2,7 +2,7 @@ from bot_utils import (
     open_file,
     save_file,
     load_commands,
-    handle_logs
+    handle_logs,
 )
 
 import discord
@@ -19,11 +19,12 @@ class Room:
         self.members: Set[str] = set()
         self.guild_names: Dict[str, str] = {}
         self.anonymous_names: Dict[str, Dict[int, str]] = {}
+        self.is_anonymous: bool = False
 
     def get_anonymous_name(self, channel_id: str, user_id: int) -> str:
-        if channel_id not in self.anonymous_names:
+        if (channel_id not in self.anonymous_names):
             self.anonymous_names[channel_id] = {}
-        if user_id not in self.anonymous_names[channel_id]:
+        if (user_id not in self.anonymous_names[channel_id]):
             anon_id = len(self.anonymous_names[channel_id]) + 1
             self.anonymous_names[channel_id][user_id] = f"anonymous{anon_id}"
         return self.anonymous_names[channel_id][user_id]
@@ -40,7 +41,7 @@ class UserphoneGroup(app_commands.Group):
         try:
             await interaction.response.defer()
             channel_id = str(interaction.channel_id)
-            if channel_id in self.rooms:
+            if (channel_id in self.rooms):
                 await interaction.followup.send("This channel already has a room!", ephemeral=True)
                 return
 
@@ -71,35 +72,35 @@ class UserphoneGroup(app_commands.Group):
             channel_id = str(interaction.channel_id)
             
             for room in self.rooms.values():
-                if channel_id in room.members:
+                if (channel_id in room.members):
                     await interaction.followup.send("This channel is already in a room!", ephemeral=True)
                     return
 
-            if room_id is None:
+            if (room_id is None):
                 public_rooms = [r for r in self.rooms.values() if not r.password]
-                if not public_rooms:
+                if (not public_rooms):
                     await interaction.followup.send("No public rooms available!", ephemeral=True)
                     return
                 room = random.choice(public_rooms)
                 room_id = room.channel_id
 
-            if room_id not in self.rooms:
+            if (room_id not in self.rooms):
                 await interaction.followup.send("Room not found!", ephemeral=True)
                 return
 
             room = self.rooms[room_id]
 
-            if room.password and password != room.password:
+            if (room.password and password != room.password):
                 await interaction.followup.send("Invalid password!", ephemeral=True)
                 return
 
-            if anonymous and not room.is_anonymous:
-                if len(room.members) == 0:
+            if (anonymous and not room.is_anonymous):
+                if (len(room.members) == 0):
                     room.is_anonymous = True
                 else:
                     await interaction.followup.send("Cannot join as anonymous - room is not anonymous!", ephemeral=True)
                     return
-            elif not anonymous and room.is_anonymous:
+            elif (not anonymous and room.is_anonymous):
                 await interaction.followup.send("This is an anonymous room - must join as anonymous!", ephemeral=True)
                 return
 
@@ -107,13 +108,13 @@ class UserphoneGroup(app_commands.Group):
             room.guild_names[channel_id] = interaction.guild.name
 
             join_message = f"📞 {interaction.guild.name} joined the room!"
-            if room.is_anonymous:
+            if (room.is_anonymous):
                 join_message = f"📞 Someone joined the room!"
 
             for member_channel in room.members:
                 try:
                     channel = interaction.client.get_channel(int(member_channel))
-                    if channel:
+                    if (channel):
                         await channel.send(join_message)
                 except Exception:
                     pass
@@ -126,7 +127,7 @@ class UserphoneGroup(app_commands.Group):
     @app_commands.command(name="list")
     async def list_rooms(self, interaction: discord.Interaction):
         try:
-            if not self.rooms:
+            if (not self.rooms):
                 await interaction.response.send_message("No active rooms!", ephemeral=True)
                 return
 
@@ -138,7 +139,7 @@ class UserphoneGroup(app_commands.Group):
                 color=discord.Color.blue()
             )
 
-            for room_id, room in sorted_rooms:
+            for (room_id, room) in sorted_rooms:
                 embed.add_field(
                     name=f"Room {room_id} ({len(room.members)} members)",
                     value=f"Members from: {', '.join(room.guild_names.values())}\nJoin with: `/userphone join {room_id}`",
@@ -155,18 +156,18 @@ class UserphoneGroup(app_commands.Group):
         try:
             channel_id = str(interaction.channel_id)
             
-            for room_id, room in self.rooms.items():
-                if channel_id in room.members:
+            for (room_id, room) in self.rooms.items():
+                if (channel_id in room.members):
                     room.members.remove(channel_id)
                     del room.guild_names[channel_id]
 
-                    if not room.members:
+                    if (not room.members):
                         del self.rooms[room_id]
                     else:
                         for member_channel in room.members:
                             try:
                                 channel = interaction.client.get_channel(int(member_channel))
-                                if channel:
+                                if (channel):
                                     await channel.send(f"📞 {interaction.guild.name} left the room!")
                             except Exception:
                                 pass
@@ -188,26 +189,27 @@ class UserphoneGroup(app_commands.Group):
             
             in_room = False
             for room in self.rooms.values():
-                if channel_id in room.members:
+                if (channel_id in room.members):
                     in_room = True
                     break
                     
-            if not in_room:
+            if (not in_room):
                 await interaction.followup.send("You must be in a room to toggle anonymous mode!", ephemeral=True)
                 return
 
-            anon_data = open_file("storage/anonymous_users.json")
-            if "userphone" not in anon_data:
-                anon_data["userphone"] = {}
+            member_data = open_file("storage/member_info.json")
             
-            if user_id in anon_data["userphone"]:
-                del anon_data["userphone"][user_id]
-                await interaction.followup.send("Anonymous mode disabled.", ephemeral=True)
-            else:
-                anon_data["userphone"][user_id] = True
+            if (user_id not in member_data):
+                member_data[user_id] = {"userphone_anom": False}
+            
+            member_data[user_id]["userphone_anom"] = not member_data[user_id].get("userphone_anom", False)
+            
+            if (member_data[user_id]["userphone_anom"]):
                 await interaction.followup.send("Anonymous mode enabled.", ephemeral=True)
+            else:
+                await interaction.followup.send("Anonymous mode disabled.", ephemeral=True)
             
-            save_file("storage/anonymous_users.json", anon_data)
+            save_file("storage/member_info.json", member_data)
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -220,22 +222,22 @@ class UserphoneCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.author.bot:
+        if (message.author.bot):
             return
 
         channel_id = str(message.channel.id)
         
         for room in self.userphone_group.rooms.values():
-            if channel_id in room.members:
-                anon_data = open_file("storage/anonymous_users.json")
-                is_anonymous = str(message.author.id) in anon_data.get("userphone", {})
+            if (channel_id in room.members):
+                member_data = open_file("storage/member_info.json")
+                is_anonymous = member_data.get(str(message.author.id), {}).get("user_anom", False)
 
                 for other_channel_id in room.members:
-                    if other_channel_id != channel_id:
+                    if (other_channel_id != channel_id):
                         try:
                             channel = self.bot.get_channel(int(other_channel_id))
-                            if channel:
-                                if is_anonymous:
+                            if (channel):
+                                if (is_anonymous):
                                     anon_name = room.get_anonymous_name(channel_id, message.author.id)
                                     await channel.send(f"**{anon_name}**: {message.content}")
                                 else:

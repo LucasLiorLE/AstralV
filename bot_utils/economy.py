@@ -139,7 +139,7 @@ async def process_transaction(user_id, transaction_type, amount):
     max_bank = int(player_data["balance"]["maxBank"])
 
     if int(amount) <= 0:
-        return "The amount must be a positive number."
+        return False, "The amount must be a positive number."
 
     if transaction_type == "deposit":
         if purse_balance < int(amount):
@@ -159,7 +159,7 @@ async def process_transaction(user_id, transaction_type, amount):
     save_file(eco_path, eco)
     
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
-
+"""
 def gambling_stats(user_id, game):
     eco = open_file(eco_path)
     if user_id not in eco:
@@ -196,4 +196,15 @@ def update_stats(user_id, game, result, amount=0):
 
     eco[user_id][game] = stats
     save_file(eco_path, eco)
+"""
 
+class Gambling:
+    def __init__(self, id):
+        self.id = id
+
+def check_user_exists(id):
+    players = open_file(eco_path)
+    if id not in players:
+        create_account(id)
+
+    return open_file(eco_path)

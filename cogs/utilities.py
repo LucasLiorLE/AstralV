@@ -1,13 +1,14 @@
+from bot_utils import (
+    parse_duration,
+
+    open_file,
+    save_file,
+    load_commands,
+    handle_logs,
+)
+
 import time, asyncio
 from datetime import datetime, timezone
-
-from bot_utils import (
-    handle_logs,
-    save_file,
-    open_file,
-    load_commands,
-    parse_duration
-)
 
 import discord
 from discord.ext import commands
@@ -32,7 +33,7 @@ class ReminderGroup(app_commands.Group):
                 await interaction.followup.send("Reminder time must be greater than 0 seconds.")
                 return
 
-            if duration_delta.total_seconds() > 2592000:  # 30 days
+            if duration_delta.total_seconds() > 2592000:
                 await interaction.followup.send("Reminder time cannot be longer than 30 days.")
                 return
 
@@ -130,7 +131,7 @@ class UtilCog(commands.Cog):
         self.bot = bot
         self.bot.tree.add_command(ReminderGroup())
 
-        load_commands(self.__cog_app_commands__, "info")
+        load_commands(self.__cog_app_commands__, "utility")
 
     @app_commands.command(name="afk")
     async def afk(self, interaction: discord.Interaction, reason: str = None):
@@ -158,8 +159,12 @@ class UtilCog(commands.Cog):
             
             save_file("storage/server_info.json", server_info)
 
-            await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
-            await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
+            try:
+                await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
+                await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
+            except discord.errors.Forbidden:
+                await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}\nI was unable to change your name.")
+
         except Exception as e:
             await handle_logs(interaction, e)
 

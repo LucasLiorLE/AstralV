@@ -2,36 +2,56 @@
 #    - This is just my bot I made for fun, mostly during my free time.
 #    - Feel free to "steal" or take portions of my code.
 #    - Has a lot of usefull utilities!
-#    - /help for more info! (Ok tbh rn it doesn't crap :sob:)
+#    - /help for more info! (Ok tbh rn it doesn't do crap :sob:)
 #
 # Release Notes
 #    - Make command descriptions better (Helps with help command)
-
+#    - Avatar commands now display the main color of their pfp!
+#    - Unban & Ban command!
+#    - Economy update, should be a lot more stable.
+#    - All moderation commands now support prefixes.
+#        - They all also should work without bugs, or at least minor bugs.
+#    - Emojiinfo command to complete the 3.
+#
+# Bug Fixes:
+#    - Fixed bug for every single command.
+#        - Might still have some minor bugs I did not find.
+#    - EXP system fixed
+#    - Warnings display past 10
+#    - Deleted on manual commnds for warns and notes work.
+#
 # Other stuff:
-#    - load_command() as a new helper thing.
+#    - load_command() is now used to load command descriptions.
+#    - get_member_color() is used to get the top role of the user.
+#    - Renamed some functions to easily understand them.
+#    - get_member_cooldown() for certain commands.
+#    - get_member() to get the member based off of a str.
+#    - Some comment updates.
+#    - Got rid of auto mute for now, will come back later.
+#    - Now using handle_warn/s and handle_note/s
+#    - Also some ctx and interaction combining stuff in utils.py
 # 
 # TODO/FIX:
-#    - Other eco commands have the same timer.
-#    - Level exp gain cd (1 min) cause for some reason it doesn't work when testing?
-#    - Except block for 400 bad request code 50007 for commands
-#    - Make auto mute a server set function.
+#    - Make auto mute a server set function. (2.5.0)
+#    - Make a more efficient storage system using sql and json (2.4.0)
+#    - Finally work on economy commands. (2.6.0)
 #
-# This was last updated: 2/2/2025 8:12 PM
+# This was last updated: 2/23/2025 12:38 AM
 
 import os, random, math, asyncio
 # import asyncpraw
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
-from aiohttp import ClientSession # I just don't want to use aiohttp.ClientSession()
-from ossapi import Ossapi # Osu API
+from aiohttp import ClientSession
+from ossapi import Ossapi
 
 from bot_utils import (
     open_file,
     save_file,
     cr_fetchPlayerData,
+    get_member_cooldown,
     # debug,
     error,
     warn,
@@ -44,16 +64,13 @@ from bot_utils import (
     # osuAPI,
     osuSecret,
     hypixelAPI,
-    __version__
+    __version__,
 )
 
 # config
 botAdmins = [721151215010054165]
-botMods = []
-botTesters = []
-
-# Custom exception/s
-class InvalidKeyError(Exception): ...
+botMods = [721151215010054165]
+botTesters = [721151215010054165, 776139231583010846]
 
 # Bot status management
 class StatusManager:
@@ -74,7 +91,9 @@ class StatusManager:
             current_status = random.choice(self.status_messages)
             await self.bot.change_presence(
                 status=discord.Status.dnd, 
-                activity=discord.Game(name=current_status)
+                activity=discord.Game(
+                    name=current_status,
+                )
             )
             await asyncio.sleep(600)
 
@@ -96,6 +115,8 @@ class botMain(commands.Bot):
         self.status_manager = StatusManager(self)
 
     async def setup_hook(self):
+        self.loop.create_task(self.status_manager.change_status())
+        
         # import logging
         # logging.basicConfig(level=logging.INFO)
         # logger = logging.getLogger("discord")
@@ -104,9 +125,8 @@ class botMain(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
-                # Delete all commands
-                for guild in bot.guilds:
-                    await bot.tree.clear_commands(guild=guild)
+                # for guild in bot.guilds:
+                #     await bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
                 await bot.tree.sync()
                 print("Commands successfully synced.")
@@ -126,6 +146,7 @@ async def load_cogs():
             except Exception as e:
                 # import traceback
                 # traceback.print_exc()
+                # del traceback
 
                 error(f"Failed to load {filename}: {e}")
 
@@ -165,15 +186,14 @@ async def check_apis():
     #         user_agent=user_agent,
     #     ) 
     #     print("Reddit API is valid.")
-    except Exception as e:
-        print(f"Reddit API error: {e}")
-        return False
+    # except Exception as e:
+    #     print(f"Reddit API error: {e}")
+    #     return False
     
     return True
 
 # Bot setup and other stuff
 bot = botMain()
-user_last_message_time = {}
 
 # Event handling stuff
 @bot.event
@@ -188,13 +208,11 @@ async def on_message(message):
 
     server_id = str(message.guild.id)
     member_id = str(message.author.id)
-    current_time = datetime.now(timezone.utc)
 
     server_info = open_file("storage/server_info.json")
     member_data = open_file("storage/member_info.json")
 
     afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
-    exp_data = server_info.setdefault(server_id, {}).setdefault("exp", {})
 
     if member_id in afk_data:
         original_name = afk_data[member_id].get("original_name")
@@ -222,25 +240,24 @@ async def on_message(message):
             )
             await message.channel.send(embed=embed)
 
-    if member_id not in member_data:
-        member_data[member_id] = {"EXP": 0}
-
-    if member_id not in exp_data:
-        exp_data[member_id] = {"EXP": 0}
-
-    last_message_time = user_last_message_time.get(member_id)
-
-    if last_message_time is None or current_time - last_message_time >= timedelta(minutes=1):
+    cooldown = get_member_cooldown(member_id, exp=True)
+    if cooldown >= 60:
         message_length = len(message.content)
-        exp_gain = min(75, math.floor(message_length / 15)) + (random.randint(5, 15)) 
+        exp_gain = min(75, math.floor(message_length / 15)) + (random.randint(5, 15))
 
-        member_data[member_id]["EXP"] += exp_gain
+        if member_id not in member_data:
+            member_data[member_id] = {"EXP": {"total": 0, "cooldown": 0}}
+        
+        member_data[member_id]["EXP"]["total"] = member_data[member_id].get("EXP", {}).get("total", 0) + exp_gain
+        member_data[member_id]["EXP"]["cooldown"] = int(datetime.now(timezone.utc).timestamp())
 
         if "exp" not in server_info:
             server_info["exp"] = {}
         if server_id not in server_info["exp"]:
             server_info["exp"][server_id] = {}
-        server_info["exp"][server_id][member_id] = server_info["exp"][server_id].get(member_id, 0) + exp_gain
+        if member_id not in server_info["exp"][server_id]:
+            server_info["exp"][server_id][member_id] = 0
+        server_info["exp"][server_id][member_id] += exp_gain
 
         save_file("storage/member_info.json", member_data)
         save_file("storage/server_info.json", server_info)
@@ -266,6 +283,9 @@ async def main():
     except KeyboardInterrupt:
         print("Shutting down gracefully...")
     except Exception as e:
+        import traceback
+
+        print(traceback.format_exc())
         error(e)
     finally:
         print("Bot is shutting down.")

@@ -1,7 +1,6 @@
 from bot_utils import (
     load_commands,
     handle_logs,
-    open_file
 )
 
 import discord
