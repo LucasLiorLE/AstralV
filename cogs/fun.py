@@ -21,7 +21,7 @@ class FunCog(commands.Cog):
 
     @app_commands.command(name="say")
     async def say(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str = None, 
-                  attachment: discord.Attachment = None, message_id: str = None, ephemeral: bool = True):
+                  attachment: discord.Attachment = None, reply: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
@@ -36,11 +36,11 @@ class FunCog(commands.Cog):
 
             reference_message = None
 
-            if message_id:
+            if reply:
                 try:
-                    reference_message = await channel.fetch_message(int(message_id))
+                    reference_message = await channel.fetch_message(int(reply))
                 except discord.NotFound:
-                    return await interaction.followup.send(f"Message with ID {message_id} not found in {channel.mention}.")
+                    return await interaction.followup.send(f"Message with ID {reply} not found in {channel.mention}.")
 
                 except discord.HTTPException as e:
                     return await interaction.followup.send(f"An error occurred while fetching the message: {e}")
@@ -53,8 +53,8 @@ class FunCog(commands.Cog):
 
     @app_commands.command(name="dm")
     async def dm(self, interaction: discord.Interaction, member: discord.Member, message: str = None,
-                attachment: discord.Attachment = None):
-        await interaction.response.defer()
+                attachment: discord.Attachment = None, ephemeral: bool = True):
+        await interaction.response.defer(ephemeral=ephemeral)
         try:
             if not message and not attachment:
                 return await interaction.followup.send("You must provide either a message or an attachment!")
@@ -229,8 +229,8 @@ class FunCog(commands.Cog):
                             embed.set_image(url=meme_data["url"])
                             
                             footer_text = f"👍 {meme_data['ups']} | Posted by u/{meme_data['author']}"
-                            if meme_data.get('nsfw'):
-                                footer_text += " | 🔞 NSFW"
+                            # if meme_data.get('nsfw'):
+                            #     footer_text += " | 🔞 NSFW"
                             if meme_data.get('spoiler'):
                                 footer_text += " | ⚠️ Spoiler"
                             footer_text += f" | Requested by {interaction.user.display_name}"

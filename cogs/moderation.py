@@ -731,11 +731,10 @@ class ModerationCog(commands.Cog):
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.command(name="clean")
     async def clean(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
-        await interaction.response.defer(ephemeral=True)
         try:
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
-                return await interaction.followup.send(embed=embed)
+                return await interaction.response.send_message(embed=embed, ephemeral=True)
 
             await MessageCheck.purge_messages(interaction.channel, amount, MessageCheck.cleanCommand, interaction, reason)
 
@@ -749,26 +748,25 @@ class ModerationCog(commands.Cog):
                 bot=self.bot
             )
 
-            await interaction.followup.send(text)
+            await interaction.response.send_message(text, ephemeral=True)
         except Exception as e:
             await handle_logs(interaction, e)
 
     @app_commands.command(name="role")
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
-        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
+                return await interaction.response.send_message("This command can only be used in a server.")
 
             has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
             if not has_mod:
-                return await interaction.followup.send(embed=embed)
+                return await interaction.response.send_message(embed=embed)
 
             if not get_role_hierarchy(interaction.user, member):
-                return await interaction.followup.send("You require a higher role hierachy than the target user!")
+                return await interaction.response.send_message("You require a higher role hierachy than the target user!")
 
             if not get_role_hierarchy(interaction.user, role):
-                return await interaction.followup.send("You cannot manage a role higher than or equal to your highest role!")
+                return await interaction.response.send_message("You cannot manage a role higher than or equal to your highest role!")
 
             if role in member.roles:
                 await member.remove_roles(role)
@@ -783,7 +781,7 @@ class ModerationCog(commands.Cog):
                     color=discord.Color.orange(),
                     timestamp=datetime.now(timezone.utc)
                 )
-            await interaction.followup.send(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
             await store_modlog(
                 modlog_type="Role",
@@ -902,17 +900,16 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="slowmode")
     async def slowmode(self, interaction: discord.Interaction, channel: discord.TextChannel = None, delay: int = None):
-        await interaction.response.defer()
         try:
             channel = channel or interaction.channel
 
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
-                return await interaction.followup.send(embed=embed)
+                return await interaction.response.send_message(embed=embed)
 
             if delay is None or 0:
                 await channel.edit(slowmode_delay=0)
-                await interaction.followup.send(
+                await interaction.response.send_message(
                     embed=discord.Embed(
                         title="Slowmode", 
                         description="Slowmode has been removed.",
@@ -921,7 +918,7 @@ class ModerationCog(commands.Cog):
                 )
             elif 0 < delay <= 21600:
                 await channel.edit(slowmode_delay=delay)
-                await interaction.followup.send(
+                await interaction.response.send_message(
                     embed=discord.Embed(
                         title="Slowmode", 
                         description=f"Slowmode set to {delay} seconds.", 
@@ -929,7 +926,7 @@ class ModerationCog(commands.Cog):
                     )
                 )
             else:
-                await interaction.followup.send(
+                await interaction.response.send_message(
                     embed=discord.Embed(
                         title="Slowmode handle_logs", 
                         description="Please provide a delay between 0 and 21600 seconds.", 
@@ -950,20 +947,19 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="nick")
     async def nick(self, interaction: discord.Interaction, member: discord.Member, new_nick: str):
-        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
+                return await interaction.response.send_message("This command can only be used in a server.")
 
             has_mod, embed = check_moderation_info(interaction, "manage_nicknames", "moderator")
             if not has_mod:
-                return await interaction.followup.send(embed=embed)
+                return await interaction.response.send_message(embed=embed)
             
             old_nick = member.display_name
             await member.edit(nick=new_nick)
 
             arguments = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} ."
-            await interaction.followup.send(
+            await interaction.response.send_message(
                 embed=discord.Embed(
                     title="Nickname Changed", 
                     description=arguments, 

@@ -32,12 +32,9 @@
 #    - Also some ctx and interaction combining stuff in utils.py
 # 
 # TODO/FIX:
-#    - Except block for 400 bad request code 50007 for commands
-#    - Make auto mute a server set function.
-#    - if isinstance(member, str): for all get_member_obj()
-#    - Make a more efficient storage system using sql and json
-#    - Finally work on economy commands.
-#    - Merge handle_note/s and warn/s into 2 defs instead of 4
+#    - Make auto mute a server set function. (2.5.0)
+#    - Make a more efficient storage system using sql and json (2.4.0)
+#    - Finally work on economy commands. (2.6.0)
 #
 # This was last updated: 2/23/2025 12:38 AM
 

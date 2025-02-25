@@ -125,7 +125,6 @@ class InfoCog(commands.Cog):
 
 	@app_commands.command(name="help")
 	async def help(self, interaction: discord.Interaction, command: str, ephemeral: bool = True):
-		await interaction.response.defer(ephemeral=ephemeral)
 		try:
 			command_help = open_file("storage/command_help.json")
 
@@ -162,10 +161,10 @@ class InfoCog(commands.Cog):
 										inline=False
 									)
 							
-							await interaction.followup.send(embed=embed)
+							await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 							return
 						
-				await interaction.followup.send(f"No help found for command: {command}")
+				await interaction.response.send_message(f"No help found for command: {command}", ephemeral=ephemeral)
 				return
 
 			embed = discord.Embed(
@@ -184,7 +183,7 @@ class InfoCog(commands.Cog):
 							inline=False
 						)
 
-			await interaction.followup.send(embed=embed)
+			await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
 		except Exception as e:
 			await handle_logs(interaction, e)
@@ -288,7 +287,7 @@ class InfoCog(commands.Cog):
 					exp_per_day: int = None, mee6_pro: bool = False, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)
 		try:
-			_t = target_exp
+			old_target_exp = target_exp
 
 			if (
 				self.is_valid_value(current_level, 1, 500) and 
@@ -386,7 +385,7 @@ class InfoCog(commands.Cog):
 
 			other_info = (
 				f"Current Level/EXP: {current_level}/{current_exp:,}\n"
-				f"Target Level/EXP: {target_level}/{_t if _t else 0:,}\n"
+				f"Target Level/EXP: {target_level}/{old_target_exp if old_target_exp else 0:,}\n"
 				f"Total current level EXP: {total_current_exp:,}\n"
 				f"Total target level EXP: {target_exp if target_exp else self.exp_required(target_level):,}"
 			)
@@ -566,52 +565,46 @@ class InfoCog(commands.Cog):
 
 	@app_commands.command(name="ping")
 	async def ping(self, interaction: discord.Interaction):
-		await interaction.response.defer(ephemeral=True)
-		try:
-			start_time = time.perf_counter()
-			command_start = time.time()
-			
-			bot_latency = round(self.bot.latency * 1000)
-			
-			ws_latency = round((time.perf_counter() - start_time) * 1000)
-			
-			api_start = time.perf_counter()
-			await interaction.followup.send("Measuring...", ephemeral=True)
-			api_end = time.perf_counter()
-			api_latency = round((api_end - api_start) * 1000)
-			
-			response_time = round((time.time() - command_start) * 1000)
-			
-			worst_latency = max(bot_latency, ws_latency, api_latency)
-			color = (0x00FF00 if worst_latency < 150 
-					else 0xFFFF00 if worst_latency < 300 
-					else 0xFF0000)
-			
-			def get_status(latency):
-				return "Low" if latency < 150 else "Medium" if latency < 300 else "High"
-			
-			latency_info = (
-				f"```\n"
-				f"Bot Latency:     {bot_latency}ms ({get_status(bot_latency)})\n"
-				f"WebSocket:       {ws_latency}ms ({get_status(ws_latency)})\n"
-				f"API Latency:     {api_latency}ms ({get_status(api_latency)})\n"
-				f"Response Time:   {response_time}ms\n"
-				f"```"
-			)
-			
-			embed = discord.Embed(
-				title="🏓 Pong!",
-				description=latency_info,
-				color=color
-			)
-			
-			await interaction.edit_original_response(content=None, embed=embed)
-		except Exception as error:
-			await handle_logs(interaction, error)
+		start_time = time.perf_counter()
+		command_start = time.time()
+		
+		bot_latency = round(self.bot.latency * 1000)
+		ws_latency = round((time.perf_counter() - start_time) * 1000)
+		
+		api_start = time.perf_counter()
+		await interaction.response.send_message("Measuring...", ephemeral=True)
+		api_end = time.perf_counter()
+		api_latency = round((api_end - api_start) * 1000)
+		
+		response_time = round((time.time() - command_start) * 1000)
+		
+		worst_latency = max(bot_latency, ws_latency, api_latency)
+		color = (0x00FF00 if worst_latency < 150 
+				else 0xFFFF00 if worst_latency < 300 
+				else 0xFF0000)
+		
+		def get_status(latency):
+			return f"{latency}ms ({"Low" if latency < 150 else "Medium" if latency < 300 else "High"})"
+		
+		latency_info = (
+			f"```\n"
+			f"Bot Latency:     {get_status(bot_latency)}\n"
+			f"WebSocket:       {get_status(ws_latency)}\n"
+			f"API Latency:     {get_status(api_latency)}\n"
+			f"Response Time:   {get_status(response_time)}\n"
+			f"```"
+		)
+		
+		embed = discord.Embed(
+			title="🏓 Pong!",
+			description=latency_info,
+			color=color
+		)
+		
+		await interaction.edit_original_response(content=None, embed=embed)
 
 	@app_commands.command(name="info")
 	async def info(self, interaction: discord.Interaction):
-		await interaction.response.defer(ephemeral=True)
 		try:
 			current_time = datetime.now(timezone.utc)
 			uptime = current_time - self.start_time
@@ -635,13 +628,12 @@ class InfoCog(commands.Cog):
 			github = Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/APEYE")
 			view.add_item(github)
 
-			await interaction.followup.send(embed=embed, view=view)
+			await interaction.response.send_message(embed=embed, view=view)
 		except Exception as error:
 			await handle_logs(interaction, error)
 
 	@app_commands.command(name="serverinfo")
 	async def serverinfo(self, interaction: discord.Interaction):
-		await interaction.response.defer(ephemeral=True)
 		try:
 			guild = interaction.guild
 			if not guild:
@@ -660,13 +652,12 @@ class InfoCog(commands.Cog):
 			embed.add_field(name="Server Created", value=f"{guild.created_at.strftime('%m/%d/%Y %I:%M %p')}")
 			embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-			await interaction.followup.send(embed=embed)
+			await interaction.response.send_message(embed=embed)
 		except Exception as error:
 			await handle_logs(interaction, error)
 
 	@app_commands.command(name="emojiinfo")
 	async def emojiinfo(self, interaction: discord.Interaction, emoji: str):
-		await interaction.response.defer()
 		try:
 			emoji_obj = discord.utils.get(interaction.guild.emojis, name=emoji)
 			if emoji_obj is None:
@@ -685,13 +676,12 @@ class InfoCog(commands.Cog):
 				value=f"{emoji_obj.created_at.strftime('%m/%d/%Y %H:%M')} ({(datetime.now(timezone.utc) - emoji_obj.created_at).days} days ago)"
 			)
 
-			await interaction.followup.send(embed=embed)
+			await interaction.response.send_message(embed=embed)
 		except Exception as e:
 			await handle_logs(interaction, e)
 
 	@app_commands.command(name="roleinfo")
 	async def roleinfo(self, interaction: discord.Interaction, role: discord.Role):
-		await interaction.response.defer()
 		try:
 			permissions = role.permissions
 			permissions_list = [perm for perm, value in permissions if value]
@@ -710,7 +700,7 @@ class InfoCog(commands.Cog):
 				embed.set_thumbnail(url=role.icon.url)
 
 			embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
-			await interaction.followup.send(embed=embed)
+			await interaction.response.send_message(embed=embed)
 		except Exception as error:
 			await handle_logs(interaction, error)
 
@@ -722,11 +712,10 @@ class InfoCog(commands.Cog):
 		await self.userinfo(interaction, member)
 	
 	async def userinfo(self, interaction: discord.Interaction, member: discord.Member = None):
-		await interaction.response.defer(ephemeral=True)
 		try:
 			member = member or interaction.user
 			if not member:
-				await interaction.followup.send("This command can only be used in a server.", ephemeral=True)
+				await interaction.response.send_message("This command can only be used in a server.", ephemeral=True)
 				return
 
 			embed = discord.Embed(title="User Info", color=0x808080)
@@ -739,7 +728,7 @@ class InfoCog(commands.Cog):
 				embed.add_field(name="Roles", value=", ".join([role.name for role in member.roles]))
 			embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
-			await interaction.followup.send(embed=embed)
+			await interaction.response.send_message(embed=embed)
 		except Exception as error:
 			await handle_logs(interaction, error)
 
@@ -838,6 +827,7 @@ class InfoCog(commands.Cog):
 		
 	@app_commands.command(name="filedata")
 	async def direct_filedata(self, interaction: discord.Interaction, file: discord.Attachment):
+		await interaction.response.defer()
 		await self.filedata(interaction, file)
 
 	async def filedata(self, interaction: discord.Interaction, file: discord.Attachment):

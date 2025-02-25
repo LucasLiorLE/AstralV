@@ -1,3 +1,7 @@
+# Custom commands for me and my friends.
+# These will not be bug checked. 
+# And will not be included in the change logs.
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -16,6 +20,20 @@ class QuizView(View):
         self.used = []
         self.question = question
         self.winner_found = False
+        self.message = None
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        embed = discord.Embed(
+            title="Error",
+            description=f"No one answered the question in time. The answer was {self.correct_answer}.",
+            color=discord.Color.red()
+        )
+        
+        await self.message.edit(view=self)
+        await self.message.reply(embed=embed)
 
     async def handle_click(self, interaction: discord.Interaction, button: Button):
         if self.winner_found:
@@ -44,7 +62,7 @@ class QuizView(View):
             await interaction.response.edit_message(view=self)
             await interaction.followup.send(embed=embed)
         else:
-            await interaction.response.send_message("Aiko sucks", ephemeral=True)
+            await interaction.response.send_message("Wrong lmfao.", ephemeral=True)
 
 class Quiz(commands.Cog):
     def __init__(self, bot):
@@ -67,11 +85,23 @@ class Quiz(commands.Cog):
         wrong_answers: str,
         time_limit: float = 60.0
     ):
-        wrong_answers_list = [ans.strip() for ans in wrong_answers.split(',') if ans.strip()]
-        
+        wrong_answers_list = []
+
+        for ans in wrong_answers.split(","):
+            ans = ans.strip()
+            if ans in wrong_answers_list:
+                return await interaction.response.send_message("You cannot have duplicate answers!", ephemeral=True)
+            else:
+                wrong_answers_list.append(ans)
+
         if not wrong_answers_list:
-            await interaction.response.send_message("Please provide at least one wrong answer!", ephemeral=True)
-            return
+            return await interaction.response.send_message("Please provide at least one wrong answer!", ephemeral=True)
+
+        if len(wrong_answers_list) + 1 > 10:
+            return await interaction.response.send_message("Please provide with less than 10 answers.", ephemeral=True)
+
+        if (correct_answer in wrong_answers_list):
+            return await interaction.response.send_message("You cannot have duplicate answers!", ephemeral=True)
 
         embed = discord.Embed(title="Trivia Question", color=discord.Color.green())
         embed.add_field(name="Question", value=question, inline=False)
@@ -87,7 +117,8 @@ class Quiz(commands.Cog):
             button.callback = lambda i=interaction, b=button: view.handle_click(i, b)
             view.add_item(button)
 
-        await interaction.response.send_message(embed=embed, view=view)
+        response = await interaction.response.send_message(embed=embed, view=view)
+        view.message = await interaction.original_response()
 
 class OppList(app_commands.Group):
     def __init__(self):
@@ -95,7 +126,6 @@ class OppList(app_commands.Group):
         self.file_path = "storage/customs/opp_list.json"
         self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993]
 
-    @app_commands.command(name="list", description="List all opps")
     async def list(self, interaction: discord.Interaction):
         data = open_file(self.file_path)
         if not data:
@@ -167,6 +197,40 @@ class OppList(app_commands.Group):
         embed = discord.Embed(title=f"Opp List Entry - {user}", color=discord.Color.red())
         embed.add_field(name="Reason", value=data[user]["reason"], inline=False)
         embed.add_field(name="Added by", value=data[user]["added_by"], inline=False)
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="reorder", description="Reorder someone in the opp list")
+    @app_commands.describe(user="The user to reorder", position="New position (1-based)")
+    async def reorder(self, interaction: discord.Interaction, user: str, position: int):
+        if interaction.user.id not in self.opp_editors:
+            await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
+            return
+
+        data = open_file(self.file_path)
+        if user not in data:
+            await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
+            return
+
+        items = list(data.items())
+        total_items = len(items)
+
+        if position < 1 or position > total_items:
+            await interaction.response.send_message(f"Position must be between 1 and {total_items}!", ephemeral=True)
+            return
+
+        current_pos = next(i for i, (name, _) in enumerate(items) if name == user)
+        
+        item = items.pop(current_pos)
+        
+        items.insert(position-1, item)
+        
+        new_data = dict(items)
+        save_file(self.file_path, new_data)
+
+        embed = discord.Embed(title="Opp List Updated", color=discord.Color.green())
+        opp_list = "\n".join(f"{i+1}. {name}" for i, (name, _) in enumerate(items))
+        embed.description = opp_list
+        
         await interaction.response.send_message(embed=embed)
 
 async def setup(bot):

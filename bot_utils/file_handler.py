@@ -5,9 +5,10 @@ from discord import app_commands
 from typing import Dict, Any, TypeVar, Union, List
 from typing_extensions import deprecated
 
+"""
 import mysql.connector 
 
-"""root_dir = Path(__file__).parent.parent
+root_dir = Path(__file__).parent.parent
 secrets_path = root_dir / "storage" / "secrets.env"
 
 if not secrets_path.exists():
@@ -22,7 +23,8 @@ AstralV_DB = mysql.connector.connect(
     database=os.getenv("DB_NAME")
 )
 
-cursor = AstralV_DB.cursor()"""
+cursor = AstralV_DB.cursor()
+"""
 
 T = TypeVar('T')
 JsonData = Union[Dict[str, Any], List[Any], str, int, float, bool, None]

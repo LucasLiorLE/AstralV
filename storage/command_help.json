@@ -342,7 +342,7 @@
                 "channel": "The channel to send the message to",
                 "message": "The message to send",
                 "attachment": "An optional attachment to include",
-                "message_id": "An optional message to reply to",
+                "reply": "An optional message to reply to",
                 "ephemeral": "Whether the interaction will be ephemeral or not"
             }
         },
