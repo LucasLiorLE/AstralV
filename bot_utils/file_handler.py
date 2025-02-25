@@ -1,7 +1,28 @@
-import json
+import json, os
+from dotenv import load_dotenv
+from pathlib import Path
 from discord import app_commands
 from typing import Dict, Any, TypeVar, Union, List
 from typing_extensions import deprecated
+
+import mysql.connector 
+
+"""root_dir = Path(__file__).parent.parent
+secrets_path = root_dir / "storage" / "secrets.env"
+
+if not secrets_path.exists():
+    raise FileNotFoundError(f"secrets.env not found at {secrets_path}")
+
+load_dotenv(secrets_path)
+
+AstralV_DB = mysql.connector.connect(
+    host=os.getenv("DB_HOST"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASS"),
+    database=os.getenv("DB_NAME")
+)
+
+cursor = AstralV_DB.cursor()"""
 
 T = TypeVar('T')
 JsonData = Union[Dict[str, Any], List[Any], str, int, float, bool, None]

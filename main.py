@@ -128,9 +128,8 @@ class botMain(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
-                # Delete all commands
-                for guild in bot.guilds:
-                    await bot.tree.clear_commands(guild=guild)
+                # for guild in bot.guilds:
+                #     await bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
                 await bot.tree.sync()
                 print("Commands successfully synced.")
@@ -150,6 +149,7 @@ async def load_cogs():
             except Exception as e:
                 # import traceback
                 # traceback.print_exc()
+                # del traceback
 
                 error(f"Failed to load {filename}: {e}")
 
@@ -189,9 +189,9 @@ async def check_apis():
     #         user_agent=user_agent,
     #     ) 
     #     print("Reddit API is valid.")
-    except Exception as e:
-        print(f"Reddit API error: {e}")
-        return False
+    # except Exception as e:
+    #     print(f"Reddit API error: {e}")
+    #     return False
     
     return True
 
