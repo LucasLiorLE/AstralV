@@ -35,6 +35,7 @@ class DelLog(discord.ui.Select):
         member: discord.Member,
         embed: discord.Embed,
         interaction: discord.Interaction | commands.Context,
+        page: int = 1,
         *args,
         **kwargs,
     ):
@@ -45,6 +46,8 @@ class DelLog(discord.ui.Select):
         self.member = member
         self.embed = embed
         self.interaction = interaction
+        self.page = page
+        self.items_per_page = 25
 
         server_info = open_file("storage/server_info.json")
         
@@ -53,13 +56,21 @@ class DelLog(discord.ui.Select):
         elif self.log_type == "note":
             self.logs = server_info.get("notes", {}).get(str(interaction.guild.id), {}).get(str(member.id), {})
 
+        sorted_logs = sorted(self.logs.items(), key=lambda x: int(x[0]))
+        total_logs = len(sorted_logs)
+        self.total_pages = max(1, (total_logs + self.items_per_page - 1) // self.items_per_page)
+
+        start_idx = (self.page - 1) * self.items_per_page
+        end_idx = min(start_idx + self.items_per_page, total_logs)
+        current_page_logs = dict(sorted_logs[start_idx:end_idx])
+
         self.options = [
             discord.SelectOption(
                 label=f"{self.log_type.capitalize()} Case #{case_number}",
                 description=(log["reason"] if "reason" in log else "No reason provided.")[:100],
                 value=str(case_number)
             )
-            for case_number, log in self.logs.items()
+            for case_number, log in current_page_logs.items()
         ]
 
     async def callback(self, interaction: discord.Interaction):
@@ -96,7 +107,18 @@ class DelLog(discord.ui.Select):
 
                 self.embed.clear_fields()
                 if self.logs:
-                    for index, log in sorted(self.logs.items(), key=lambda x: int(x[0])):
+                    sorted_logs = sorted(self.logs.items(), key=lambda x: int(x[0]))
+                    total_logs = len(sorted_logs)
+                    self.total_pages = max(1, (total_logs + self.items_per_page - 1) // self.items_per_page)
+
+                    if self.page > self.total_pages:
+                        self.page = self.total_pages
+
+                    start_idx = (self.page - 1) * self.items_per_page
+                    end_idx = min(start_idx + self.items_per_page, total_logs)
+                    current_page_logs = dict(sorted_logs[start_idx:end_idx])
+
+                    for index, log in current_page_logs.items():
                         time_str = f"<t:{log['time']}:R>"
                         moderator_id = log["moderator"]
                         moderator = interaction.guild.get_member(int(moderator_id)) if moderator_id.isdigit() else None
@@ -113,13 +135,22 @@ class DelLog(discord.ui.Select):
                             description=log["reason"][:100],
                             value=str(index)
                         )
-                        for index, log in sorted(self.logs.items(), key=lambda x: int(x[0]))
+                        for index, log in current_page_logs.items()
                     ]
+                    
+                    if self.total_pages > 1:
+                        self.embed.set_footer(text=f"Page {self.page}/{self.total_pages}")
                 else:
                     self.embed.description = f"No {self.log_type}s left for {self.member.display_name}."
 
+                view = discord.ui.View()
+                if self.logs:
+                    view.add_item(self)
+                    if self.total_pages > 1:
+                        view.add_item(PageButtons(self))
+
                 try:
-                    await interaction.response.edit_message(embed=self.embed, view=self.view)
+                    await interaction.response.edit_message(embed=self.embed, view=view)
                     await interaction.followup.send(
                         f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.", 
                         ephemeral=True
@@ -137,6 +168,54 @@ class DelLog(discord.ui.Select):
 
         except Exception as e:
             await handle_logs(interaction, e)
+
+class PageButtons(discord.ui.View):
+    def __init__(self, select: DelLog):
+        super().__init__()
+        self.select = select
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.gray)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.select.page > 1:
+            self.select.page -= 1
+            await self.update_page(interaction)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.gray)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.select.page < self.select.total_pages:
+            self.select.page += 1
+            await self.update_page(interaction)
+
+    async def update_page(self, interaction: discord.Interaction):
+        sorted_logs = sorted(self.select.logs.items(), key=lambda x: int(x[0]))
+        start_idx = (self.select.page - 1) * self.select.items_per_page
+        end_idx = min(start_idx + self.select.items_per_page, len(sorted_logs))
+        current_page_logs = dict(sorted_logs[start_idx:end_idx])
+
+        self.select.embed.clear_fields()
+        for index, log in current_page_logs.items():
+            time_str = f"<t:{log['time']}:R>"
+            moderator_id = log["moderator"]
+            moderator = interaction.guild.get_member(int(moderator_id)) if moderator_id.isdigit() else None
+            moderator_name = moderator.display_name if moderator else "Unknown"
+            self.select.embed.add_field(
+                name=f"Case #{index} - {self.select.log_type.capitalize()} by {moderator_name}",
+                value=f"Reason: {log['reason'][:100]}\nTime: {time_str}",
+                inline=False
+            )
+
+        self.select.embed.set_footer(text=f"Page {self.select.page}/{self.select.total_pages}")
+
+        self.select.options = [
+            discord.SelectOption(
+                label=f"{self.select.log_type.capitalize()} Case #{index}",
+                description=log["reason"][:100],
+                value=str(index)
+            )
+            for index, log in current_page_logs.items()
+        ]
+
+        await interaction.response.edit_message(embed=self.select.embed, view=self)
 
 class LogSelect(discord.ui.Select):
     def __init__(self, options, interaction, user, current_page):
@@ -796,7 +875,6 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="lock")
     async def lock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
-        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
                 return await interaction.followup.send("This command can only be used in a server.")
@@ -848,7 +926,6 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="unlock")
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
-        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
                 return await interaction.followup.send("This command can only be used in a server.")
@@ -1093,7 +1170,7 @@ class ModerationCog(commands.Cog):
             
         except Exception as e:
             await handle_logs(interaction, e)
-
+            
     @app_commands.command(name="ban")
     async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         await interaction.response.defer()
@@ -1107,6 +1184,10 @@ class ModerationCog(commands.Cog):
 
             if not user:
                 return await interaction.followup.send("You must specify either a user or a user ID to unban.")
+
+            member = interaction.guild.get_member(user.id)
+            if member and not get_role_hierarchy(interaction.user, member):
+                return await interaction.followup.send("You require a higher role hierachy than the target user!")
 
             await interaction.guild.ban(user, reason=reason)
             await dm_moderation_embed(interaction, user, "banned", reason)
@@ -1164,7 +1245,6 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="warn")
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
-        await interaction.response.defer()
         try:
             await self.handle_moderation_logs(interaction, member, "warn", reason)
         except Exception as e:
@@ -1172,7 +1252,6 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="warns")
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
-        await interaction.response.defer()
         try:
             await self.handle_moderation_logs(interaction, member, "warn")
         except Exception as e:
@@ -1180,7 +1259,6 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="note")
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
-        await interaction.response.defer()
         try:
             await self.handle_moderation_logs(interaction, member, "note", note)
         except Exception as e:
@@ -1188,7 +1266,6 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="notes")
     async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1): 
-        await interaction.response.defer()
         try:
             await self.handle_moderation_logs(interaction, member, "note")
         except Exception as e:

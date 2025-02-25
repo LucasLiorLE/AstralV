@@ -53,7 +53,6 @@ class MarketGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="market", description="Not coming soon.")
         load_commands(self.commands, "economy")
-        
 
 class EcoAdminGroup(app_commands.Group):
     def __init__(self):
@@ -225,6 +224,7 @@ class EconomyCog(commands.Cog):
         self.bot = bot
         self.command_help = open_file("storage/command_help.json")
         handle_eco_shop.start()
+        bot.tree.add_command(EcoAdminGroup())
         bot.tree.add_command(MarketGroup())
         bot.tree.add_command(ShopGroup())
         bot.tree.add_command(AuctionGroup())

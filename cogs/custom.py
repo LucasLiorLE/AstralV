@@ -126,6 +126,7 @@ class OppList(app_commands.Group):
         self.file_path = "storage/customs/opp_list.json"
         self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993]
 
+    @app_commands.command(name="list", description="List all users in the opp list")
     async def list(self, interaction: discord.Interaction):
         data = open_file(self.file_path)
         if not data:
