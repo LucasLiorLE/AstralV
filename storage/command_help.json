@@ -342,7 +342,7 @@
                 "channel": "The channel to send the message to",
                 "message": "The message to send",
                 "attachment": "An optional attachment to include",
-                "message_id": "An optional message to reply to",
+                "reply": "An optional message to reply to",
                 "ephemeral": "Whether the interaction will be ephemeral or not"
             }
         },
@@ -393,13 +393,15 @@
         "meme": {
             "description": "Fetches a funny meme!",
             "parameters": {
+                "allow_spoilers": "Allow spoilers in the meme.",
                 "ephemeral": "If the message is hidden (Useful if no perms)"
             }
         },
         "8ball": {
             "description": "Ask the magic 8-ball a question",
             "parameters": {
-                "question": "Ask it a question!"
+                "question": "Ask it a question!",
+                "ephemeral": "If the message is hidden (Useful if no perms)"
             }
         },
         "xkcd": {
@@ -780,8 +782,14 @@
         "serverinfo": {
             "description": "Shows information about the server"
         },
+        "emojiinfo": {
+            "description": "Displays information for an emoji",
+            "parameters": {
+                "emoji": "The emoji to get the info for"
+            }
+        },
         "roleinfo": {
-            "description": "Provides information for a role",
+            "description": "Displays information for a role",
             "parameters": {
                 "role": "The role to get the info for"
             }

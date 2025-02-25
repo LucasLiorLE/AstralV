@@ -11,6 +11,7 @@
 #    - Economy update, should be a lot more stable.
 #    - All moderation commands now support prefixes.
 #        - They all also should work without bugs, or at least minor bugs.
+#    - Emojiinfo command to complete the 3.
 #
 # Bug Fixes:
 #    - Fixed bug for every single command.
@@ -31,14 +32,11 @@
 #    - Also some ctx and interaction combining stuff in utils.py
 # 
 # TODO/FIX:
-#    - Other eco commands have the same timer.
-#    - Except block for 400 bad request code 50007 for commands
-#    - Make auto mute a server set function.
-#    - if isinstance(member, str): for all get_member_obj()
-#    - Make a more efficient storage system using sql and json
-#    - Finally work on economy commands.
+#    - Make auto mute a server set function. (2.5.0)
+#    - Make a more efficient storage system using sql and json (2.4.0)
+#    - Finally work on economy commands. (2.6.0)
 #
-# This was last updated: 2/21/2025 2:53 AM
+# This was last updated: 2/23/2025 12:38 AM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -72,7 +70,7 @@ from bot_utils import (
 # config
 botAdmins = [721151215010054165]
 botMods = [721151215010054165]
-botTesters = [721151215010054165]
+botTesters = [721151215010054165, 776139231583010846]
 
 # Bot status management
 class StatusManager:
@@ -127,9 +125,8 @@ class botMain(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
-                # Delete all commands
-                for guild in bot.guilds:
-                    await bot.tree.clear_commands(guild=guild)
+                # for guild in bot.guilds:
+                #     await bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
                 await bot.tree.sync()
                 print("Commands successfully synced.")
@@ -149,6 +146,7 @@ async def load_cogs():
             except Exception as e:
                 # import traceback
                 # traceback.print_exc()
+                # del traceback
 
                 error(f"Failed to load {filename}: {e}")
 
@@ -188,9 +186,9 @@ async def check_apis():
     #         user_agent=user_agent,
     #     ) 
     #     print("Reddit API is valid.")
-    except Exception as e:
-        print(f"Reddit API error: {e}")
-        return False
+    # except Exception as e:
+    #     print(f"Reddit API error: {e}")
+    #     return False
     
     return True
 
