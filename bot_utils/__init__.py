@@ -15,5 +15,5 @@ VERSION = {
 
 __version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}"
 
-__status__ = "Development"
+__status__ = "Stable"
 __author__ = "LucasLiorLE"
