@@ -378,8 +378,91 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="pay")
-    async def pay(self, interaction: discord.Interaction):
-        pass
+    async def pay(self, interaction: discord.Interaction, member: discord.Member, amount: int):
+        await interaction.response.defer()
+        try:
+            if member.id == interaction.user.id:
+                return await interaction.followup.send("You can't pay yourself!")
+
+            if amount <= 0:
+                return await interaction.followup.send("Amount must be positive!")
+
+            sender_id = str(interaction.user.id)
+            receiver_id = str(member.id)
+
+            eco = check_user_exists(sender_id)
+            eco = check_user_exists(receiver_id)
+
+            if eco[sender_id]['balance']['purse'] < amount:
+                return await interaction.followup.send("You don't have enough coins!")
+
+            eco[sender_id]['balance']['purse'] -= amount
+            eco[receiver_id]['balance']['purse'] += amount
+            save_file(eco_path, eco)
+
+            await interaction.followup.send(f"Successfully paid {amount:,} coins to {member.display_name}!")
+
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="request")
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+    async def request(self, interaction: discord.Interaction, member: discord.Member, amount: int):
+        await interaction.response.defer()
+        try:
+            if member.id == interaction.user.id:
+                return await interaction.followup.send("You cannot request from yourself!")
+
+            if amount <= 0:
+                return await interaction.followup.send("Amount must be positive!")
+
+            requester_id = str(interaction.user.id)
+            sender_id = str(member.id)
+
+            eco = check_user_exists(requester_id)
+            eco = check_user_exists(sender_id)
+
+            if eco[sender_id]['balance']['purse'] < amount:
+                return await interaction.followup.send("The user doesn't have enough coins!")
+
+            embed = discord.Embed(
+                title="Payment Request",
+                description=f"{interaction.user.display_name} has requested {amount:,} coins from you!",
+                color=discord.Color.green()
+            )
+
+            view = discord.ui.View(timeout=60)
+
+            accept_button = Button(label="Accept", style=ButtonStyle.green)
+            async def accept_callback(interaction: discord.Interaction):
+                if interaction.user.id != member.id:
+                    return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+
+                eco[sender_id]['balance']['purse'] -= amount
+                eco[requester_id]['balance']['purse'] += amount
+                save_file(eco_path, eco)
+
+                await interaction.response.send_message(f"Successfully paid {amount:,} coins to {interaction.user.display_name}!", ephemeral=True)
+                await interaction.message.delete()
+
+            accept_button.callback = accept_callback
+            view.add_item(accept_button)
+
+            decline_button = Button(label="Decline", style=ButtonStyle.red)
+            async def decline_callback(interaction: discord.Interaction):
+                if interaction.user.id != member.id:
+                    return await interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+
+                await interaction.response.send_message("Payment request declined.", ephemeral=True)
+                await interaction.message.delete()
+
+            decline_button.callback = decline_callback
+            view.add_item(decline_button)
+
+            await interaction.followup.send(embed=embed, view=view)
+
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     # Basic ways to get money
     @app_commands.command(name="beg")
@@ -392,44 +475,53 @@ class EconomyCog(commands.Cog):
             
             coin_boost = eco[user_id]['boosts']['coins']
             base_amount = random.randint(80, 150)
-            total_amount = int(base_amount * (coin_boost / 100))
-            r = random.randint(1, 4)
+            total_coins = int(base_amount * (coin_boost / 100))
+            success_roll = random.randint(1, 4)
 
-            t = {
-                "n": [
+            dialog_options = {
+                "rejection": [
                     "Go beg somewhere else kid.", 
                     "Do I look rich to you?", 
                     "nah im good.", 
                     "Begging is for losers", 
                     "imagine being so bad!",
                     "rigged rng gave you no coins lmao.",
-                    "don't beg in the alley"
+                    "don't beg in the alley",
+                    "Sorry, I'm broke too!",
+                    "Get a job instead!",
+                    "Maybe try fishing instead?",
+                    "I already gave to charity today.",
+                    "*pretends not to see you*"
                 ],
-                "y": [
-                    f"Sure hon, here have {total_amount} coins.", 
-                    f"God felt bad so he gave you {total_amount} coins...",
-                    f"a dog took pity on you and gave you {total_amount} coins.",
-                    f"Spend {total_amount} coins well...",
-                    f"{total_amount} coins appeared out of thin air!",
+                "success": [
+                    f"Sure hon, here have {total_coins} coins.", 
+                    f"God felt bad so he gave you {total_coins} coins...",
+                    f"a dog took pity on you and gave you {total_coins} coins.",
+                    f"Spend {total_coins} coins well...",
+                    f"{total_coins} coins appeared out of thin air!",
                     f"you got some coins but im evil so i won't tell you how much",
-                    f"the criminals felt so bad they gave you {total_amount} coins",
-                    f"You got paied {total_amount} coins to stop begging"
+                    f"the criminals felt so bad they gave you {total_coins} coins",
+                    f"You got paid {total_coins} coins to stop begging",
+                    f"A wealthy merchant tosses you {total_coins} coins!",
+                    f"Someone dropped {total_coins} coins in your cup!",
+                    f"The street performer shares {total_coins} coins with you!",
+                    f"A kind soul gives you {total_coins} coins!"
                 ]
             }
 
             embed = discord.Embed(title="plzs moneys im pour")
-            if r == 1:
+            if success_roll == 1:
                 embed.color = discord.Color.red()
-                embed.description = random.choice(t["n"])
+                embed.description = random.choice(dialog_options["rejection"])
                 embed.set_footer(text="begging is for losers!")
             else:
-                eco[user_id]['balance']['purse'] += total_amount
+                eco[user_id]['balance']['purse'] += total_coins
                 save_file(eco_path, eco)
                 embed.color = discord.Color.green()
-                embed.description = random.choice(t["y"])
+                embed.description = random.choice(dialog_options["success"])
                 embed.set_footer(text=f"With a coin multiplier of {coin_boost}%")
 
-                if base_amount == 143: # little reference :)
+                if base_amount == 143:
                     embed.set_footer(text="i love you")
 
             await interaction.followup.send(embed=embed)
@@ -451,23 +543,43 @@ class EconomyCog(commands.Cog):
 
             base_amount = random.randint(500, 1200)
             coin_boost = eco[user_id]['boosts']['coins']
-            total_amount = int(base_amount * (coin_boost / 100))
+            total_coins = int(base_amount * (coin_boost / 100))
+            rod_breaks = random.random() < 0.1
 
-            if random.random() < 0.1:
+            fishing_messages = {
+                "success": [
+                    f"You caught a big one! Worth {total_coins} coins!",
+                    f"The fish practically jumped into your boat! {total_coins} coins!",
+                    f"A rare fish nets you {total_coins} coins!",
+                    f"Your patience paid off - {total_coins} coins from this catch!",
+                    f"You caught a chest full of {total_coins} coins!",
+                    f"The fisherman's luck brings you {total_coins} coins!",
+                    f"What a catch! You earned {total_coins} coins!"
+                ],
+                "break": [
+                    "Your fishing rod snapped in half!",
+                    "A huge fish broke your rod!",
+                    "Your rod got tangled and broke...",
+                    "The rod wasn't strong enough!",
+                    "Time to buy a new fishing rod!"
+                ]
+            }
+
+            if rod_breaks:
                 eco[user_id]['inventory'].pop('fishing_rod')
-                d = f"Your fishing rod broke :("
-                f = f"Would have earned {total_amount} coins..."
+                description = random.choice(fishing_messages["break"])
+                footer_text = f"Would have earned {total_coins} coins..."
             else:
-                eco[user_id]['balance']['purse'] += total_amount
-                d = f"Nice catch! You got {total_amount} coins!"
-                f = f"With coin boost: {coin_boost}%"
+                eco[user_id]['balance']['purse'] += total_coins
+                description = random.choice(fishing_messages["success"])
+                footer_text = f"With coin boost: {coin_boost}%"
 
             embed = discord.Embed(
-                title="Fishie fishie :)",
-                description=d,
+                title="Gone Fishing! 🎣",
+                description=description,
                 color=discord.Color.blue()
             )
-            embed.set_footer(text=f)
+            embed.set_footer(text=footer_text)
 
             save_file(eco_path, eco)
             await interaction.followup.send(embed=embed)

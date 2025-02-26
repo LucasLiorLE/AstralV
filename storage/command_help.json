@@ -277,7 +277,18 @@
             }
         },
         "pay": {
-            "description": "Not coming soon..."
+            "description": "Pay coins to another user",
+            "parameters": {
+                "member": "The member you want to pay",
+                "amount": "The amount you want to pay"
+            }
+        },
+        "request": {
+            "description": "Request coins from another user",
+            "parameters": {
+                "member": "The member to request from",
+                "amount": "The amount of coins you want to request"
+            }
         },
         "beg": {
             "description": "Beg for money on the streets"
