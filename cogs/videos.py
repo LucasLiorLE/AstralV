@@ -22,15 +22,13 @@ class VideoGroup(app_commands.Group):
 
 	async def process_video(self, interaction: discord.Interaction, video: discord.Attachment = None, link: str = None):
 		if video is None and link is None:
-			await interaction.response.send_message("You need to provide a video file or a link to a video file.", ephemeral=True)
-			return
+			return None, None
 
 		if link is not None:
 			async with ClientSession() as session:
 				async with session.get(link) as response:
 					if response.status != 200:
-						await interaction.response.send_message("The link you provided is invalid.", ephemeral=True)
-						return
+						return None, None
 
 					video_data = await response.read()
 			
@@ -39,8 +37,7 @@ class VideoGroup(app_commands.Group):
 
 		else:
 			if not video.content_type.startswith("video/"):
-				await interaction.response.send_message("The file you provided is not a video file.", ephemeral=True)
-				return
+				return None, None
 			
 			video_data = await video.read()
 			filename = video.filename
@@ -215,9 +212,12 @@ class VideoGroup(app_commands.Group):
 		
 		try:
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 
 			video_buffer = io.BytesIO(video_data)
-			video_buffer = await self.video_speed(factor, video_buffer)
+			video_buffer = await self.video_speed(video_buffer, factor)
 
 			await interaction.followup.send(
 				f"Here is the video with the speed changed by {factor}x", 
@@ -233,6 +233,9 @@ class VideoGroup(app_commands.Group):
 
 		try:
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 
 			video_buffer = io.BytesIO(video_data)
 			video_buffer = await self.video_reverse(video_buffer)
@@ -251,6 +254,9 @@ class VideoGroup(app_commands.Group):
 
 		try:
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 
 			video_buffer = io.BytesIO(video_data)
 			video_buffer = await self.video_mute(video_buffer)
@@ -269,6 +275,9 @@ class VideoGroup(app_commands.Group):
 
 		try:
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 
 			video_buffer = io.BytesIO(video_data)
 			video_buffer = await self.video_sharpen(video_buffer, factor)
@@ -293,6 +302,10 @@ class VideoGroup(app_commands.Group):
 			]
 
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
+
 			video_buffer = io.BytesIO(video_data)
 
 			applied_effects = []
@@ -318,6 +331,9 @@ class VideoGroup(app_commands.Group):
 
 		try:
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 
 			with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
 				temp_file.write(video_data)
@@ -357,6 +373,9 @@ class VideoGroup(app_commands.Group):
 
 		try:
 			video_data, filename = await self.process_video(interaction, video, link)
+			if video_data is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 
 			with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as temp_file:
 				temp_file.write(video_data)
@@ -403,7 +422,14 @@ class VideoGroup(app_commands.Group):
 				return
 
 			video_data1, filename1 = await self.process_video(interaction, video1, link1)
+			if video_data1 is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
+
 			video_data2, _ = await self.process_video(interaction, video2, link2)
+			if video_data2 is None:
+				await interaction.followup.send("You need to provide a valid video file or link.", ephemeral=True)
+				return
 			
 			temp_file1 = None
 			temp_file2 = None

@@ -4,32 +4,6 @@
 #    - Has a lot of usefull utilities!
 #    - /help for more info! (Ok tbh rn it doesn't do crap :sob:)
 #
-# Release Notes
-#    - Make command descriptions better (Helps with help command)
-#    - Avatar commands now display the main color of their pfp!
-#    - Unban & Ban command!
-#    - Economy update, should be a lot more stable.
-#    - All moderation commands now support prefixes.
-#        - They all also should work without bugs, or at least minor bugs.
-#    - Emojiinfo command to complete the 3.
-#
-# Bug Fixes:
-#    - Fixed bug for every single command.
-#        - Might still have some minor bugs I did not find.
-#    - EXP system fixed
-#    - Warnings display past 10
-#    - Deleted on manual commnds for warns and notes work.
-#
-# Other stuff:
-#    - load_command() is now used to load command descriptions.
-#    - get_member_color() is used to get the top role of the user.
-#    - Renamed some functions to easily understand them.
-#    - get_member_cooldown() for certain commands.
-#    - get_member() to get the member based off of a str.
-#    - Some comment updates.
-#    - Got rid of auto mute for now, will come back later.
-#    - Now using handle_warn/s and handle_note/s
-#    - Also some ctx and interaction combining stuff in utils.py
 # 
 # TODO/FIX:
 #    - Make auto mute a server set function. (2.5.0)

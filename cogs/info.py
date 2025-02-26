@@ -431,7 +431,7 @@ class InfoCog(commands.Cog):
 				"casual": {"exp": 90, "time": 20, "reward": "400 coins", "reward_amount": 400, "type": "coins"},
 				"intermediate": {"exp": 120, "time": 20, "reward": "500 coins", "reward_amount": 500, "type": "coins"},
 				"molten": {"exp": 185, "time": 25, "reward": "750 coins", "reward_amount": 750, "type": "coins"},
-				"fallen": {"exp": 250, "time": 35, "reward": "1000 coins", "reward_amount": 1000, "type": "coins"},
+				"fallen": {"exp": 250, "time": 30, "reward": "1000 coins", "reward_amount": 1000, "type": "coins"},
 				"hardcore": {"exp": 400, "time": 35, "reward": "300 gems", "reward_amount": 300, "type": "gems"}
 			}
 

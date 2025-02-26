@@ -47,7 +47,7 @@ class QuizView(View):
         
         self.used.append(user_id)
 
-        if button.label == str(self.correct_answer):
+        if button.label.lower() == str(self.correct_answer).lower():
             self.winner_found = True
             for item in self.children:
                 item.disabled = True
@@ -128,16 +128,18 @@ class OppList(app_commands.Group):
 
     @app_commands.command(name="list", description="List all users in the opp list")
     async def list(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
         data = open_file(self.file_path)
         if not data:
-            await interaction.response.send_message("The opp list is empty!", ephemeral=True)
+            await interaction.followup.send("The opp list is empty!", ephemeral=True)
             return
 
         embed = discord.Embed(title="Opp List", color=discord.Color.red())
         opp_list = "\n".join(f"{i+1}. {user}" for i, user in enumerate(data.keys()))
         embed.description = opp_list
         
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="add", description="Add someone to the opp list")
     @app_commands.describe(user="The user to add", reason="Reason for adding")
