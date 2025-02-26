@@ -25,5 +25,70 @@
             "description": "Required for digging! Has a 10% chance to break."
         },
         "type": "tool"
+    },
+    "deer": {
+        "price": 5000,
+        "type": "animal",
+        "description": "A majestic deer hunted from the forest"
+    },
+    "rabbit": {
+        "price": 2000,
+        "type": "animal",
+        "description": "A cute little rabbit"
+    },
+    "boar": {
+        "price": 7500,
+        "type": "animal",
+        "description": "A wild boar"
+    },
+    "fox": {
+        "price": 6000,
+        "type": "animal",
+        "description": "A cunning fox"
+    },
+    "wolf": {
+        "price": 10000,
+        "type": "animal",
+        "description": "A fierce wolf"
+    },
+    "bear": {
+        "price": 15000,
+        "type": "animal",
+        "description": "A dangerous bear"
+    },
+    "cod": {
+        "price": 2000,
+        "type": "fish",
+        "description": "A common fish found in cool waters",
+        "market": {
+            "hourlyThreshold": 1000,
+            "maxPriceMultiplier": 3.0,
+            "priceIncrementPerThousand": 0.005
+        }
+    },
+    "salmon": {
+        "price": 4000,
+        "type": "fish",
+        "description": "A popular fish known for its pink meat"
+    },
+    "tuna": {
+        "price": 6000,
+        "type": "fish",
+        "description": "A large fish prized by fishermen"
+    },
+    "swordfish": {
+        "price": 8000,
+        "type": "fish",
+        "description": "A dangerous fish with a pointed nose"
+    },
+    "shark": {
+        "price": 12000,
+        "type": "fish",
+        "description": "A fearsome predator of the seas"
+    },
+    "whale": {
+        "price": 20000,
+        "type": "fish",
+        "description": "The largest catch possible!"
     }
 }

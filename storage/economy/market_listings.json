@@ -1,0 +1,10 @@
+{
+    "market": {
+        "last_id": 0,
+        "listings": {}
+    },
+    "auctions": {
+        "last_id": 0,
+        "listings": {}
+    }
+}

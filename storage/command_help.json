@@ -290,6 +290,18 @@
                 "amount": "The amount of coins you want to request"
             }
         },
+        "trade": {
+            "description": "Trade items, coins, or both with another user",
+            "parameters": {
+                "member": "The member you want to trade",
+                "item": "The item you want to trade",
+                "item_amount": "The amount of items you want to trade",
+                "coins": "The amount of coins you want to trade",
+                "requested_item": "The item you want to recieve",
+                "requested_amount": "The amount of items you want to recieve",
+                "requested_coins": "The amount of coins you want to recieve"
+            }
+        },
         "beg": {
             "description": "Beg for money on the streets"
         },
@@ -362,7 +374,8 @@
             "parameters": {
                 "member": "The member to DM",
                 "message": "The message to send to them",
-                "attachment": "An optional attachment to include"
+                "attachment": "An optional attachment to include",
+                "ephemeral": "Whether the interaction will be ephemeral or not"
             }
         },
         "fact": {
