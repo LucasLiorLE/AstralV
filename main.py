@@ -3,12 +3,15 @@
 #    - Feel free to "steal" or take portions of my code.
 #    - Has a lot of usefull utilities!
 #    - /help for more info! (Ok tbh rn it doesn't do crap :sob:)
-#
+# 
+# Release notes:
+#    - Tried to fix "AttributeError: 'NoneType' object has no attribute 'sequence'" error
+#    - Economy update
 # 
 # TODO/FIX:
-#    - Make auto mute a server set function. (2.5.0)
-#    - Make a more efficient storage system using sql and json (2.4.0)
-#    - Finally work on economy commands. (2.6.0)
+#    - Make auto mute a server set function. (2.4.0)
+#    - Make a more efficient storage system using sql and json (2.6.0)
+#    - Finally work on economy commands. (2.4.0)
 #
 # This was last updated: 2/23/2025 12:38 AM
 
@@ -237,6 +240,7 @@ async def on_message(message):
         save_file("storage/server_info.json", server_info)
 
 # Main execution thing
+
 async def main():
     print(f"Script loaded. Version: v{__version__}")
 
@@ -250,20 +254,24 @@ async def main():
     #     return
 
     print("The bot is starting, please give it a minute.")
-    try:
-        await bot.start(token)
-    except discord.errors.LoginFailure:
-        warn("Incorrect bot token. Please check secrets.env")
-    except KeyboardInterrupt:
-        print("Shutting down gracefully...")
-    except Exception as e:
-        import traceback
-
-        print(traceback.format_exc())
-        error(e)
-    finally:
-        print("Bot is shutting down.")
-        await bot.close()
+    while True:
+        try:
+            await bot.start(token)
+        except discord.errors.LoginFailure:
+            warn("Incorrect bot token. Please check secrets.env")
+            break 
+        except KeyboardInterrupt:
+            print("Shutting down gracefully...")
+            break
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc())
+            error(f"Unexpected error: {e}")
+            print("Reconnecting in 10 seconds...")
+            await asyncio.sleep(10)
+        finally:
+            print("Bot is shutting down.")
+            await bot.close()
 
 if __name__ == "__main__": # Was used to check if main was imported before bot_utils.
     try:

@@ -39,6 +39,29 @@ market_data = open_file(market_path)
 listings_path = "storage/economy/market_listings.json"
 listings_data = open_file(listings_path)
 
+
+@staticmethod
+def custom_cooldown(seconds: int):
+    """Custom cooldown decorator for commands"""
+    def decorator(func):
+        from functools import wraps
+        
+        @wraps(func)
+        async def wrapper(self, interaction: discord.Interaction, *args, **kwargs):
+            is_on_cd, remaining = check_command_cooldown(interaction.user.id, func.__name__, seconds)
+            if is_on_cd:
+                retry_time = int((discord.utils.utcnow() + timedelta(seconds=remaining)).timestamp())
+                return await interaction.response.send_message(
+                    f"Command on cooldown. Try again <t:{retry_time}:R>",
+                    ephemeral=True
+                )
+            
+            await func(self, interaction, *args, **kwargs)
+            update_command_cooldown(interaction.user.id, func.__name__)
+            
+        return wrapper
+    return decorator
+
 class MarketView(discord.ui.View):
     def __init__(self, items_dict, filters=None):
         super().__init__(timeout=60)
@@ -103,7 +126,10 @@ class MarketView(discord.ui.View):
                 inline=False
             )
         
-        await interaction.response.edit_message(embed=embed, view=self)
+        if interaction.response.is_done():
+            await interaction.edit_original_response(embed=embed, view=self)
+        else:
+            await interaction.response.edit_message(embed=embed, view=self)
 
 def update_market_price(item_name: str, is_buy: bool) -> int:
     """Update market price based on hourly sales volume"""
@@ -298,7 +324,18 @@ class MarketGroup(app_commands.Group):
                 return await interaction.followup.send("No listings found!")
 
             view = MarketView(filtered_listings)
-            await view.update_message(interaction)
+            start_idx = view.page * view.items_per_page
+            current_items = view.items[start_idx:start_idx + view.items_per_page]
+            
+            embed = discord.Embed(title="Market Listings", color=discord.Color.blue())
+            for item in current_items:
+                embed.add_field(
+                    name=f"#{item['id']} - {display_item_name(item['item'])}",
+                    value=f"Price: {item['price_per_unit']:,} coins each\nQuantity: {item['quantity']}\nSeller: {item['seller_name']}",
+                    inline=False
+                )
+            
+            await interaction.followup.send(embed=embed, view=view)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -791,71 +828,71 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-        @app_commands.command(name="request")
-        @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
-        async def request(self, interaction: discord.Interaction, member: discord.Member, amount: int):
-            await interaction.response.defer()
-            try:
-                if member.id == interaction.user.id:
-                    return await interaction.followup.send("You cannot request from yourself!")
+    @app_commands.command(name="request")
+    @custom_cooldown(30)
+    async def request(self, interaction: discord.Interaction, member: discord.Member, amount: int):
+        await interaction.response.defer()
+        try:
+            if member.id == interaction.user.id:
+                return await interaction.followup.send("You cannot request from yourself!")
 
-                if amount <= 0:
-                    return await interaction.followup.send("Amount must be positive!")
+            if amount <= 0:
+                return await interaction.followup.send("Amount must be positive!")
 
-                requester_id = str(interaction.user.id)
-                sender_id = str(member.id)
+            requester_id = str(interaction.user.id)
+            sender_id = str(member.id)
 
-                eco = check_user_exists(requester_id)
-                eco = check_user_exists(sender_id)
+            eco = check_user_exists(requester_id)
+            eco = check_user_exists(sender_id)
 
-                if eco[sender_id]['balance']['purse'] < amount:
-                    return await interaction.followup.send("The user doesn't have enough coins!")
+            if eco[sender_id]['balance']['purse'] < amount:
+                return await interaction.followup.send("The user doesn't have enough coins!")
 
-                embed = discord.Embed(
-                    title="Payment Request",
-                    description=f"{interaction.user.display_name} has requested {amount:,} coins from you!",
-                    color=discord.Color.blue()
-                )
+            embed = discord.Embed(
+                title="Payment Request",
+                description=f"{interaction.user.display_name} has requested {amount:,} coins from you!",
+                color=discord.Color.blue()
+            )
 
-                view = discord.ui.View(timeout=60)
+            view = discord.ui.View(timeout=60)
 
-                accept_button = Button(label="Accept", style=ButtonStyle.green)
-                async def accept_callback(button_interaction: discord.Interaction):
-                    if button_interaction.user.id != member.id:
-                        return await button_interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+            accept_button = Button(label="Accept", style=ButtonStyle.green)
+            async def accept_callback(button_interaction: discord.Interaction):
+                if button_interaction.user.id != member.id:
+                    return await button_interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
 
-                    eco[sender_id]['balance']['purse'] -= amount
-                    eco[requester_id]['balance']['purse'] += amount
-                    save_file(eco_path, eco)
+                eco[sender_id]['balance']['purse'] -= amount
+                eco[requester_id]['balance']['purse'] += amount
+                save_file(eco_path, eco)
 
-                    embed.color = discord.Color.green()
-                    embed.description = f"✅ {button_interaction.user.display_name} sent {amount:,} coins to {interaction.user.display_name}!"
-                    await button_interaction.message.edit(embed=embed, view=None)
-                    await button_interaction.response.send_message(f"You sent {amount:,} coins to {interaction.user.display_name}!", ephemeral=True)
+                embed.color = discord.Color.green()
+                embed.description = f"✅ {button_interaction.user.display_name} sent {amount:,} coins to {interaction.user.display_name}!"
+                await button_interaction.message.edit(embed=embed, view=None)
+                await button_interaction.response.send_message(f"You sent {amount:,} coins to {interaction.user.display_name}!", ephemeral=True)
 
-                accept_button.callback = accept_callback
-                view.add_item(accept_button)
+            accept_button.callback = accept_callback
+            view.add_item(accept_button)
 
-                decline_button = Button(label="Decline", style=ButtonStyle.red)
-                async def decline_callback(button_interaction: discord.Interaction):
-                    if button_interaction.user.id != member.id:
-                        return await button_interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
+            decline_button = Button(label="Decline", style=ButtonStyle.red)
+            async def decline_callback(button_interaction: discord.Interaction):
+                if button_interaction.user.id != member.id:
+                    return await button_interaction.response.send_message("You are not authorized to perform this action.", ephemeral=True)
 
-                    embed.color = discord.Color.red()
-                    embed.description = f"❌ {button_interaction.user.display_name} declined the payment request."
-                    await button_interaction.message.edit(embed=embed, view=None)
-                    await button_interaction.response.send_message("Payment request declined.", ephemeral=True)
+                embed.color = discord.Color.red()
+                embed.description = f"❌ {button_interaction.user.display_name} declined the payment request."
+                await button_interaction.message.edit(embed=embed, view=None)
+                await button_interaction.response.send_message("Payment request declined.", ephemeral=True)
 
-                decline_button.callback = decline_callback
-                view.add_item(decline_button)
+            decline_button.callback = decline_callback
+            view.add_item(decline_button)
 
-                await interaction.followup.send(f"{member.mention}", embed=embed, view=view)
+            await interaction.followup.send(f"{member.mention}", embed=embed, view=view)
 
-            except Exception as e:
-                await handle_logs(interaction, e)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     @app_commands.command(name="trade")
-    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+    @custom_cooldown(30)
     async def trade(self, interaction: discord.Interaction, 
                    member: discord.Member,
                    item: str = None, item_amount: int = 1, 
@@ -990,6 +1027,247 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+
+    @app_commands.command(name="search")
+    @custom_cooldown(30)
+    async def search(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            eco = check_user_exists(user_id)
+
+            base_amount = random.randint(80, 150)
+            coin_boost = eco[user_id]['boosts']['coins']
+            total_amount = int(base_amount * (coin_boost / 100))
+
+            t = {
+                "success": [
+                    f"You found {total_amount} coins in an old coat!", 
+                    f"You searched the couch cushions and found {total_amount} coins!",
+                    f"Someone dropped {total_amount} coins on the street!",
+                    f"You found {total_amount} coins in a vending machine!",
+                    f"There was {total_amount} coins under your pillow!",
+                    f"You dug through trash and found {total_amount} coins!",
+                    f"A kind stranger gave you {total_amount} coins!"
+                ],
+                "fail": [
+                    "You searched but found nothing...",
+                    "Better luck next time!",
+                    "Nothing here but dust.",
+                    "Maybe try searching somewhere else?",
+                    "All you found was pocket lint.",
+                    "The search was unsuccessful.",
+                    "You wasted time searching for nothing."
+                ]
+            }
+
+            embed = discord.Embed(title="Searching...")
+            success = random.random() < 0.75
+            if success:
+                eco[user_id]['balance']['purse'] += total_amount
+                save_file(eco_path, eco)
+                embed.color = discord.Color.green()
+                embed.description = random.choice(t["success"])
+                embed.set_footer(text=f"With coin boost: {coin_boost}%")
+            else:
+                embed.color = discord.Color.red()
+                embed.description = random.choice(t["fail"])
+                embed.set_footer(text="Keep searching!")
+
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="crime")
+    @custom_cooldown(30)
+    async def crime(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            eco = check_user_exists(user_id)
+
+            base_amount = random.randint(80, 150)
+            coin_boost = eco[user_id]['boosts']['coins']
+            total_amount = int(base_amount * (coin_boost / 100))
+
+            t = {
+                "success": [
+                    f"You successfully pickpocketed {total_amount} coins!", 
+                    f"You hacked an ATM and got {total_amount} coins!",
+                    f"You robbed a store and got away with {total_amount} coins!",
+                    f"Your heist was successful! You got {total_amount} coins!",
+                    f"You scammed someone and got {total_amount} coins!",
+                    f"Your crime spree earned you {total_amount} coins!",
+                    f"The perfect crime netted you {total_amount} coins!"
+                ],
+                "fail": [
+                    "You got caught and had to run away!",
+                    "The police were nearby!",
+                    "Your target was too difficult to rob.",
+                    "Someone saw you and you had to abort!",
+                    "The security was too tight!",
+                    "Your plan failed miserably!",
+                    "Crime doesn't pay today!"
+                ]
+            }
+
+            embed = discord.Embed(title="Time for Crime!")
+            success = random.random() < 0.6
+            if success:
+                eco[user_id]['balance']['purse'] += total_amount
+                save_file(eco_path, eco)
+                embed.color = discord.Color.green()
+                embed.description = random.choice(t["success"])
+                embed.set_footer(text=f"With coin boost: {coin_boost}%")
+            else:
+                embed.color = discord.Color.red()
+                embed.description = random.choice(t["fail"])
+                embed.set_footer(text="Better luck next crime!")
+
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="daily")
+    async def daily(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            
+            check_user_stat(['cooldowns'], user_id)
+            check_user_stat(['cooldowns', 'daily'], user_id, str)
+            check_user_stat(['streaks'], user_id)
+            check_user_stat(['streaks', 'daily'], user_id, int)
+            
+            eco = open_file(eco_path)
+            
+            now = datetime.now(timezone.utc)
+            cooldown = eco[user_id]['cooldowns']['daily']
+            last_daily = datetime.fromisoformat(cooldown if cooldown else '2000-01-01T00:00:00+00:00')
+
+            days_passed = (now - last_daily).days
+
+            if days_passed < 1:
+                time_left = last_daily + timedelta(days=1) - now
+                hours, remainder = divmod(int(time_left.total_seconds()), 3600)
+                minutes, seconds = divmod(remainder, 60)
+                return await interaction.followup.send(f"You can claim your daily reward in {hours}h {minutes}m {seconds}s")
+
+            streak = eco[user_id]['streaks']['daily']
+            
+            if days_passed > 3:
+                streak = 0
+            elif days_passed > 1:
+                streak = max(0, streak - (days_passed - 1))
+
+            base_amount = 10000
+            streak_multiplier = 1 + (streak * 0.05)
+            total_amount = int(base_amount * streak_multiplier * (eco[user_id]['boosts']['coins'] / 100))
+
+            eco[user_id]['balance']['purse'] += total_amount
+            eco[user_id]['streaks']['daily'] = streak + 1 
+            eco[user_id]['cooldowns']['daily'] = now.isoformat()
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="Daily Reward!",
+                description=(
+                    f"You received {total_amount:,} coins!\n"
+                    f"Streak: {streak + 1} days (+{(streak_multiplier - 1) * 100:.1f}% bonus)\n"
+                    f"Next streak bonus: +{((streak + 1) * 0.05) * 100:.1f}%"
+                ),
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="weekly")
+    async def weekly(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            
+            check_user_stat(['cooldowns'], user_id)
+            check_user_stat(['cooldowns', 'weekly'], user_id, str)
+            check_user_stat(['streaks'], user_id)
+            check_user_stat(['streaks', 'weekly'], user_id, int)
+            
+            eco = open_file(eco_path)
+            
+            now = datetime.now(timezone.utc)
+            cooldown = eco[user_id]['cooldowns']['weekly']
+            last_weekly = datetime.fromisoformat(cooldown if cooldown else '2000-01-01T00:00:00+00:00')
+
+            if (now - last_weekly).days < 7:
+                time_left = last_weekly + timedelta(days=7) - now
+                days = time_left.days
+                hours = time_left.seconds // 3600
+                return await interaction.followup.send(f"You can claim your weekly reward in {days}d {hours}h")
+
+            coin_boost = eco[user_id]['boosts']['coins']
+            streak = eco[user_id]['streaks']['weekly']
+            base_amount = 100000
+            streak_bonus = min(streak * 500, 900000)
+            total_amount = int((base_amount + streak_bonus) * (coin_boost / 100))
+
+            eco[user_id]['balance']['purse'] += total_amount
+            eco[user_id]['streaks']['weekly'] += 1
+            eco[user_id]['cooldowns']['weekly'] = now.isoformat()
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="Weekly Reward!",
+                description=f"You received {total_amount} coins!\nStreak: {streak + 1} weeks (+{streak_bonus} bonus)",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="monthly")
+    async def monthly(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            
+            check_user_stat(['cooldowns'], user_id)
+            check_user_stat(['cooldowns', 'monthly'], user_id, str)
+            check_user_stat(['streaks'], user_id)
+            check_user_stat(['streaks', 'monthly'], user_id, int)
+            
+            eco = open_file(eco_path)
+            
+            now = datetime.now(timezone.utc)
+            cooldown = eco[user_id]['cooldowns']['monthly']
+            last_monthly = datetime.fromisoformat(cooldown if cooldown else '2000-01-01T00:00:00+00:00')
+
+            if (now - last_monthly).days < 30:
+                time_left = last_monthly + timedelta(days=30) - now
+                days = time_left.days
+                hours = time_left.seconds // 3600
+                return await interaction.followup.send(f"You can claim your monthly reward in {days}d {hours}h")
+
+            coin_boost = eco[user_id]['boosts']['coins']
+            streak = eco[user_id]['streaks']['monthly']
+            base_amount = 5000000
+            streak_bonus = min(streak * 5000, 20000000) 
+            total_amount = int((base_amount + streak_bonus) * (coin_boost / 100))
+
+            eco[user_id]['balance']['purse'] += total_amount
+            eco[user_id]['streaks']['monthly'] += 1
+            eco[user_id]['cooldowns']['monthly'] = now.isoformat()
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="Monthly Reward!",
+                description=f"You received {total_amount} coins!\nStreak: {streak + 1} months (+{streak_bonus} bonus)",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     @app_commands.command(name="coinflip")
     @app_commands.choices(
         guess=[
@@ -1076,28 +1354,6 @@ class EconomyCog(commands.Cog):
             await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
-
-    @staticmethod
-    def custom_cooldown(seconds: int):
-        """Custom cooldown decorator for commands"""
-        def decorator(func):
-            from functools import wraps
-            
-            @wraps(func)
-            async def wrapper(self, interaction: discord.Interaction, *args, **kwargs):
-                is_on_cd, remaining = check_command_cooldown(interaction.user.id, func.__name__, seconds)
-                if is_on_cd:
-                    retry_time = int((discord.utils.utcnow() + timedelta(seconds=remaining)).timestamp())
-                    return await interaction.response.send_message(
-                        f"Command on cooldown. Try again <t:{retry_time}:R>",
-                        ephemeral=True
-                    )
-                
-                await func(self, interaction, *args, **kwargs)
-                update_command_cooldown(interaction.user.id, func.__name__)
-                
-            return wrapper
-        return decorator
 
     @app_commands.command(name="hunt")
     @custom_cooldown(30)
@@ -1214,7 +1470,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="slots")
-    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+    @custom_cooldown(30)
     async def slots(self, interaction: discord.Interaction, amount: str):
         await interaction.response.defer()
         try:

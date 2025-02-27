@@ -298,9 +298,6 @@ class PurgeCommandGroup(app_commands.Group):
     async def apurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:    
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -322,9 +319,6 @@ class PurgeCommandGroup(app_commands.Group):
     async def upurge(self, interaction: discord.Interaction, member: discord.Member, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -347,9 +341,6 @@ class PurgeCommandGroup(app_commands.Group):
     async def epurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -371,9 +362,6 @@ class PurgeCommandGroup(app_commands.Group):
     async def attpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -395,9 +383,6 @@ class PurgeCommandGroup(app_commands.Group):
     async def tpurge(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided."):
         await interaction.response.defer(ephemeral=True)
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -434,9 +419,6 @@ class SetCommandGroup(app_commands.Group):
     async def setlogs(self, interaction: discord.Interaction, option: app_commands.Choice[str], channel: discord.TextChannel):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
 
@@ -465,9 +447,6 @@ class SetCommandGroup(app_commands.Group):
     async def setroles(self, interaction: discord.Interaction, option: str, role: discord.Role):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             server_info = open_file("storage/server_info.json")
             guild_id = str(interaction.guild_id)
 
@@ -845,9 +824,6 @@ class ModerationCog(commands.Cog):
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.response.send_message("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
             if not has_mod:
                 return await interaction.response.send_message(embed=embed)
@@ -888,9 +864,6 @@ class ModerationCog(commands.Cog):
     async def lock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -940,9 +913,6 @@ class ModerationCog(commands.Cog):
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -1040,18 +1010,15 @@ class ModerationCog(commands.Cog):
     async def nick(self, interaction: discord.Interaction, member: discord.Member, new_nick: str):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.response.send_message("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "manage_nicknames", "moderator")
             if not has_mod:
-                return await interaction.response.send_message(embed=embed)
+                return await interaction.followup.send(embed=embed)
             
             old_nick = member.display_name
             await member.edit(nick=new_nick)
 
             arguments = f"Changed {member.name}'s nickname from {old_nick} to {new_nick} ."
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=discord.Embed(
                     title="Nickname Changed", 
                     description=arguments, 
@@ -1074,9 +1041,6 @@ class ModerationCog(commands.Cog):
     async def mute(self, interaction: discord.Interaction, member: discord.Member, duration: str, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "moderate_members", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -1130,9 +1094,6 @@ class ModerationCog(commands.Cog):
     async def unmute(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "moderate_members", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -1160,9 +1121,6 @@ class ModerationCog(commands.Cog):
     async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str = "No Reason Provided."):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "kick_members", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -1190,9 +1148,6 @@ class ModerationCog(commands.Cog):
     async def ban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "ban_members", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -1228,9 +1183,6 @@ class ModerationCog(commands.Cog):
     async def unban(self, interaction: discord.Interaction, user: discord.User, reason: str = "No reason provided"):
         await interaction.response.defer()
         try:
-            if not check_in_server(interaction):
-                return await interaction.followup.send("This command can only be used in a server.")
-
             has_mod, embed = check_moderation_info(interaction, "ban_members", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
@@ -1262,7 +1214,6 @@ class ModerationCog(commands.Cog):
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
         await interaction.response.defer()
         try:
-            await interaction.response.defer()
             await self.handle_moderation_logs(interaction, member, "warn", reason)
         except Exception as e:
             await handle_logs(interaction, e)
@@ -1279,7 +1230,6 @@ class ModerationCog(commands.Cog):
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
         await interaction.response.defer()
         try:
-            await interaction.response.defer()
             await self.handle_moderation_logs(interaction, member, "note", note)
         except Exception as e:
             await handle_logs(interaction, e)

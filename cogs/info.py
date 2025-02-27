@@ -427,7 +427,7 @@ class InfoCog(commands.Cog):
 				return await interaction.followup.send("Invalid level or EXP values!", ephemeral=True)
 
 			mode_config = {
-				"easy": {"exp": 50, "time": 20, "reward": "250 coins", "reward_amount": 250, "type": "coins"},
+				"easy": {"exp": 50, "time": 15, "reward": "200 coins", "reward_amount": 200, "type": "coins"},
 				"casual": {"exp": 90, "time": 20, "reward": "400 coins", "reward_amount": 400, "type": "coins"},
 				"intermediate": {"exp": 120, "time": 20, "reward": "500 coins", "reward_amount": 500, "type": "coins"},
 				"molten": {"exp": 185, "time": 25, "reward": "750 coins", "reward_amount": 750, "type": "coins"},

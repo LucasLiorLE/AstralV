@@ -132,46 +132,70 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
 
     return server_info
 
-def check_moderation_info(
-        ctx_or_interaction: Union[discord.Interaction, commands.Context],
-        permission_name: str,
-        role: str
-    ) -> Tuple[bool, Optional[discord.Embed]]:
-    """
-    Verifies if a user has a certain role or permission.
+def check_moderation_info(ctx_or_interaction, permission_name: str, minimum_role: str) -> tuple[bool, discord.Embed]:
+    try:
+        if isinstance(ctx_or_interaction, discord.Interaction):
+            user = ctx_or_interaction.user
+            guild = ctx_or_interaction.guild
+        else:
+            user = ctx_or_interaction.author
+            guild = ctx_or_interaction.guild
 
-    Parameters:
-        ctx_or_interaction: The interaction or context object
-        permission_name (str): The Discord permission name to check (e.g. 'ban_members')
-        role (str): The custom role to check for (e.g. 'moderator', 'manager')
+        if not guild:
+            return False, discord.Embed(
+                title="Error",
+                description="This command can only be used in a server.",
+                color=discord.Color.red()
+            )
 
-    Returns:
-        Tuple[bool, Optional[discord.Embed]]: (Has permission, Error embed if no permission)
-    """
-    if not is_valid_bot_instance(ctx_or_interaction):
+        if user.id == guild.owner_id:
+            return True, None
+
+        member = guild.get_member(user.id)
+        if not member:
+            return False, discord.Embed(
+                title="Error",
+                description="Could not verify your server membership.",
+                color=discord.Color.red()
+            )
+
+        if getattr(member.guild_permissions, permission_name, False):
+            return True, None
+
+        server_info = open_file("storage/server_info.json")
+        guild_prefs = server_info.get("preferences", {}).get(str(guild.id), {})
+        required_role_id = guild_prefs.get(minimum_role)
+
+        if not required_role_id:
+            return False, discord.Embed(
+                title="Error",
+                description=f"No {minimum_role} role has been set for this server.",
+                color=discord.Color.red()
+            )
+
+        required_role = guild.get_role(required_role_id)
+        if not required_role:
+            return False, discord.Embed(
+                title="Error",
+                description=f"The configured {minimum_role} role could not be found.",
+                color=discord.Color.red()
+            )
+
+        if required_role in member.roles:
+            return True, None
+
         return False, discord.Embed(
-            title="Error",
-            description="❌ This bot cannot be used as a user account.",
+            title="Missing Permissions",
+            description=f"You need the `{required_role.name}` role or `{permission_name}` permission to use this command.",
             color=discord.Color.red()
         )
 
-    if isinstance(ctx_or_interaction, discord.Interaction):
-        guild_id = str(ctx_or_interaction.guild_id)
-        user = ctx_or_interaction.user
-    else:
-        guild_id = str(ctx_or_interaction.guild.id)
-        user = ctx_or_interaction.author
-
-    server_info = check_mod_server_info(guild_id)
-
-    mod_role_id: Optional[int] = server_info["preferences"][guild_id].get(role)
-    has_permission: bool = getattr(user.guild_permissions, permission_name, False)
-    has_role: bool = mod_role_id and discord.utils.get(user.roles, id=int(mod_role_id))
-
-    if not (has_permission or has_role):
-        return False, no_permission_embed(permission_name, role)
-
-    return True, None
+    except Exception as e:
+        return False, discord.Embed(
+            title="Error",
+            description=f"An error occurred while checking permissions: {str(e)}",
+            color=discord.Color.red()
+        )
 
 def no_permission_embed(
         permission: str = None,
