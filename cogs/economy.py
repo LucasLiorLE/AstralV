@@ -14,7 +14,9 @@ from bot_utils import (
     open_file,
     save_file,
     load_commands,
-    handle_logs
+    handle_logs,
+    check_command_cooldown,
+    update_command_cooldown
 )
 
 from main import botAdmins
@@ -247,7 +249,7 @@ class MarketGroup(app_commands.Group):
                 amount_from_listing = min(remaining, listing["quantity"])
                 total_cost += amount_from_listing * listing["price_per_unit"]
                 remaining -= amount_from_listing
-                used_listings.append((listing, amount_from_listing))
+                used_listings.append((listing, amount_used))
 
             if eco[user_id]["balance"]["purse"] < total_cost:
                 return await interaction.followup.send(f"You need {total_cost:,} coins!")
@@ -1075,8 +1077,30 @@ class EconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @staticmethod
+    def custom_cooldown(seconds: int):
+        """Custom cooldown decorator for commands"""
+        def decorator(func):
+            from functools import wraps
+            
+            @wraps(func)
+            async def wrapper(self, interaction: discord.Interaction, *args, **kwargs):
+                is_on_cd, remaining = check_command_cooldown(interaction.user.id, func.__name__, seconds)
+                if is_on_cd:
+                    retry_time = int((discord.utils.utcnow() + timedelta(seconds=remaining)).timestamp())
+                    return await interaction.response.send_message(
+                        f"Command on cooldown. Try again <t:{retry_time}:R>",
+                        ephemeral=True
+                    )
+                
+                await func(self, interaction, *args, **kwargs)
+                update_command_cooldown(interaction.user.id, func.__name__)
+                
+            return wrapper
+        return decorator
+
     @app_commands.command(name="hunt")
-    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+    @custom_cooldown(30)
     async def hunt(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -1133,7 +1157,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="fish")
-    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id)) 
+    @custom_cooldown(30)
     async def fish(self, interaction: discord.Interaction):
         await interaction.response.defer()
         try:
@@ -1188,6 +1212,69 @@ class EconomyCog(commands.Cog):
             await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
+
+    @app_commands.command(name="slots")
+    @app_commands.checks.cooldown(1, 30.0, key=lambda i: (i.guild_id, i.user.id))
+    async def slots(self, interaction: discord.Interaction, amount: str):
+        await interaction.response.defer()
+        try:
+            user_id = str(interaction.user.id)
+            eco = check_user_exists(user_id)
+
+            try:
+                if amount.lower() == "all":
+                    bet = eco[user_id]["balance"]["purse"]
+                else:
+                    bet = convert_number(amount)
+                    if bet < 1:
+                        return await interaction.followup.send("Please enter a value greater than 0.")
+            except ValueError:
+                return await interaction.followup.send("Invalid amount format. Use formats like 10k, 50m, etc.")
+
+            if eco[user_id]["balance"]["purse"] < bet:
+                return await interaction.followup.send("You don't have enough coins!")
+
+            symbols = ['🍒', '🍊', '🍋', '🍇', '💎', '7️⃣']
+            weights = [30, 25, 20, 15, 7, 3]
+            
+            result = random.choices(symbols, weights=weights, k=3)
+            
+            multiplier = 0
+            if result.count(result[0]) == 3:
+                if result[0] == '7️⃣':
+                    multiplier = 10
+                elif result[0] == '💎':
+                    multiplier = 7
+                else:
+                    multiplier = 5
+            elif result.count(result[0]) == 2 or result.count(result[1]) == 2:
+                multiplier = 2
+
+            winnings = int(bet * multiplier)
+            eco[user_id]["balance"]["purse"] += (winnings - bet)
+            save_file(eco_path, eco)
+
+            embed = discord.Embed(
+                title="🎰 Slots Machine",
+                description=f"[ {' | '.join(result)} ]\n\n"
+                           f"Bet: {bet:,} coins\n"
+                           f"{'Won' if multiplier > 0 else 'Lost'}: {abs(winnings - bet):,} coins\n"
+                           f"Multiplier: x{multiplier}",
+                color=discord.Color.green() if multiplier > 0 else discord.Color.red()
+            )
+            
+            await interaction.followup.send(embed=embed)
+
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @commands.command(name="slots")
+    async def manual_slots(self, ctx, amount: str):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.slots.callback(self, interaction, amount)
+        except Exception as e:
+            error(e)
 
     @commands.command(name="balance", aliases=["bal"])
     async def manual_balance(self, ctx, member: discord.Member = None):
@@ -1350,6 +1437,113 @@ class EconomyCog(commands.Cog):
             shop_cmd = self.bot.tree.get_command("shop")
             await shop_cmd.get_command("buy").callback(shop_cmd, interaction, closest_item, quantity)
             
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="pay")
+    async def manual_pay(self, ctx, member: discord.Member, amount: int):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.pay.callback(self, interaction, member, amount)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="request")
+    async def manual_request(self, ctx, member: discord.Member, amount: int):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.request.callback(self, interaction, member, amount)
+        except Exception as e:
+            error(e)
+
+    @commands.command(name="trade")
+    async def manual_trade(self, ctx, member: discord.Member, 
+                         item: str = None, item_amount: int = 1,
+                         coins: int = 0,
+                         requested_item: str = None, requested_amount: int = 1,
+                         requested_coins: int = 0):
+        try:
+            interaction = await create_interaction(ctx)
+            await self.trade.callback(self, interaction, member, item, item_amount, 
+                                    coins, requested_item, requested_amount, requested_coins)
+        except Exception as e:
+            error(e)
+
+    @commands.group(name="market", invoke_without_command=True)
+    async def manual_market(self, ctx):
+        try:
+            interaction = await create_interaction(ctx)
+            market_cmd = self.bot.tree.get_command("market")
+            await market_cmd.get_command("view").callback(market_cmd, interaction)
+        except Exception as e:
+            error(e)
+
+    @manual_market.command(name="view")
+    async def manual_market_view(self, ctx, item: str = None):
+        try:
+            interaction = await create_interaction(ctx)
+            market_cmd = self.bot.tree.get_command("market")
+            await market_cmd.get_command("view").callback(market_cmd, interaction, item)
+        except Exception as e:
+            error(e)
+
+    @manual_market.command(name="list")
+    async def manual_market_list(self, ctx, item: str, quantity: int, price_per_unit: int):
+        try:
+            interaction = await create_interaction(ctx)
+            market_cmd = self.bot.tree.get_command("market")
+            await market_cmd.get_command("list").callback(market_cmd, interaction, item, quantity, price_per_unit)
+        except Exception as e:
+            error(e)
+
+    @manual_market.command(name="buy")
+    async def manual_market_buy(self, ctx, item: str, quantity: int):
+        try:
+            interaction = await create_interaction(ctx)
+            market_cmd = self.bot.tree.get_command("market")
+            await market_cmd.get_command("buy").callback(market_cmd, interaction, item, quantity)
+        except Exception as e:
+            error(e)
+
+    @manual_market.command(name="cancel")
+    async def manual_market_cancel(self, ctx, listing_id: int):
+        try:
+            interaction = await create_interaction(ctx)
+            market_cmd = self.bot.tree.get_command("market")
+            await market_cmd.get_command("cancel").callback(market_cmd, interaction, listing_id)
+        except Exception as e:
+            error(e)
+
+    @commands.group(name="ecoadmin", invoke_without_command=True)
+    async def manual_ecoadmin(self, ctx):
+        if ctx.author.id not in botAdmins:
+            return await ctx.send("You do not have permission to use this command.")
+        await ctx.send("Available subcommands: give, set, item")
+
+    @manual_ecoadmin.command(name="give")
+    async def manual_ecoadmin_give(self, ctx, member: discord.Member, amount: int):
+        try:
+            interaction = await create_interaction(ctx)
+            ecoadmin_cmd = self.bot.tree.get_command("ecoadmin")
+            await ecoadmin_cmd.get_command("give").callback(ecoadmin_cmd, interaction, member, amount)
+        except Exception as e:
+            error(e)
+
+    @manual_ecoadmin.command(name="set")
+    async def manual_ecoadmin_set(self, ctx, member: discord.Member, amount: int):
+        try:
+            interaction = await create_interaction(ctx)
+            ecoadmin_cmd = self.bot.tree.get_command("ecoadmin")
+            await ecoadmin_cmd.get_command("set").callback(ecoadmin_cmd, interaction, member, amount)
+        except Exception as e:
+            error(e)
+
+    @manual_ecoadmin.command(name="item")
+    async def manual_ecoadmin_item(self, ctx, member: discord.Member, item_name: str, quantity: int):
+        try:
+            interaction = await create_interaction(ctx)
+            ecoadmin_cmd = self.bot.tree.get_command("ecoadmin")
+            await ecoadmin_cmd.get_command("item").callback(ecoadmin_cmd, interaction, member, item_name, quantity)
         except Exception as e:
             error(e)
 

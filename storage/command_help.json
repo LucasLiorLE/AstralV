@@ -413,6 +413,12 @@
         "auction": {
             "description": "Not currently available - Future auction house system",
             "status": "Coming soon!"
+        },
+        "slots": {
+            "description": "Play the slots machine for a chance to win coins",
+            "parameters": {
+                "amount": "Amount of coins to bet (use 'all' to bet all your coins)"
+            }
         }
     },
     "fun": {

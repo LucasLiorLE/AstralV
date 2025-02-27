@@ -819,6 +819,7 @@ class ModerationCog(commands.Cog):
     @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=False)
     @app_commands.command(name="clean")
     async def clean(self, interaction: discord.Interaction, amount: int = 10, reason: str = "No reason provided"):
+        await interaction.response.defer(ephemeral=True)
         try:
             has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
@@ -842,6 +843,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="role")
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
+        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
                 return await interaction.response.send_message("This command can only be used in a server.")
@@ -884,6 +886,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="lock")
     async def lock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
+        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
                 return await interaction.followup.send("This command can only be used in a server.")
@@ -935,6 +938,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="unlock")
     async def unlock(self, interaction: discord.Interaction, channel: discord.TextChannel = None, role: discord.Role = None, reason: str = "No reason provided"):
+        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
                 return await interaction.followup.send("This command can only be used in a server.")
@@ -986,6 +990,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="slowmode")
     async def slowmode(self, interaction: discord.Interaction, channel: discord.TextChannel = None, delay: int = None):
+        await interaction.response.defer()
         try:
             channel = channel or interaction.channel
 
@@ -1033,6 +1038,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="nick")
     async def nick(self, interaction: discord.Interaction, member: discord.Member, new_nick: str):
+        await interaction.response.defer()
         try:
             if not check_in_server(interaction):
                 return await interaction.response.send_message("This command can only be used in a server.")
@@ -1254,6 +1260,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="warn")
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+        await interaction.response.defer()
         try:
             await interaction.response.defer()
             await self.handle_moderation_logs(interaction, member, "warn", reason)
@@ -1262,6 +1269,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="warns")
     async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
+        await interaction.response.defer()
         try:
             await self.handle_moderation_logs(interaction, member, "warn")
         except Exception as e:
@@ -1269,6 +1277,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="note")
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
+        await interaction.response.defer()
         try:
             await interaction.response.defer()
             await self.handle_moderation_logs(interaction, member, "note", note)
@@ -1277,6 +1286,7 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="notes")
     async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1): 
+        await interaction.response.defer()
         try:
             await self.handle_moderation_logs(interaction, member, "note")
         except Exception as e:

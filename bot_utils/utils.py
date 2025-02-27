@@ -9,7 +9,7 @@ import re, io, time
 import asyncio
 
 from datetime import timedelta
-from typing import Optional, TypeVar, Generic, Union, Dict, Any
+from typing import Optional, TypeVar, Generic, Union, Dict, Any, Tuple
 from aiohttp import ClientSession
 from PIL import Image
 
@@ -297,6 +297,49 @@ def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = 
         save_file("storage/member_info.json", member_info)
         
         return current_time - command_data["cooldown"]
+
+def check_command_cooldown(user_id: str, command_name: str, cooldown_seconds: int) -> Tuple[bool, int]:
+    """
+    Check if a command is on cooldown
+    Returns (is_on_cooldown, remaining_time)
+    """
+    member_info = open_file("storage/member_info.json")
+    current_time = int(time.time())
+    
+    if str(user_id) not in member_info:
+        member_info[str(user_id)] = {"commands": {}}
+    
+    user_data = member_info[str(user_id)]
+    if "commands" not in user_data:
+        user_data["commands"] = {}
+        
+    cmd_data = user_data["commands"].get(command_name, {"uses": 0, "cooldown": 0})
+    
+    if current_time - cmd_data["cooldown"] < cooldown_seconds:
+        remaining = cooldown_seconds - (current_time - cmd_data["cooldown"])
+        return True, remaining
+        
+    return False, 0
+
+def update_command_cooldown(user_id: str, command_name: str):
+    """Update the command cooldown timestamp"""
+    member_info = open_file("storage/member_info.json")
+    current_time = int(time.time())
+    
+    if str(user_id) not in member_info:
+        member_info[str(user_id)] = {"commands": {}}
+    
+    user_data = member_info[str(user_id)]
+    if "commands" not in user_data:
+        user_data["commands"] = {}
+        
+    if command_name not in user_data["commands"]:
+        user_data["commands"][command_name] = {"uses": 0, "cooldown": 0}
+        
+    user_data["commands"][command_name]["uses"] += 1
+    user_data["commands"][command_name]["cooldown"] = current_time
+    
+    save_file("storage/member_info.json", member_info)
     
 async def get_command_help_embed(command_name: str) -> discord.Embed:
     command_help = open_file("storage/command_help.json")
