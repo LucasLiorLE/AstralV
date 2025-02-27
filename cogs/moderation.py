@@ -649,6 +649,15 @@ class ModerationCog(commands.Cog):
                 embed.add_field(name="Action", value="Note", inline=False)
                 embed.add_field(name="Reason", value=content, inline=False)
                 await ctx["send"](embed=embed)
+                # Add modlog for notes too
+                await store_modlog(
+                    modlog_type=action_type,
+                    moderator=ctx["user"],
+                    user=member,
+                    reason=content,
+                    server_id=ctx["guild_id"],
+                    bot=self.bot
+                )
 
         else:
             member_logs = server_info.get(storage_key, {}).get(str(guild_id), {}).get(str(member.id), {})
@@ -1246,6 +1255,7 @@ class ModerationCog(commands.Cog):
     @app_commands.command(name="warn")
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
         try:
+            await interaction.response.defer()
             await self.handle_moderation_logs(interaction, member, "warn", reason)
         except Exception as e:
             await handle_logs(interaction, e)
@@ -1260,6 +1270,7 @@ class ModerationCog(commands.Cog):
     @app_commands.command(name="note")
     async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
         try:
+            await interaction.response.defer()
             await self.handle_moderation_logs(interaction, member, "note", note)
         except Exception as e:
             await handle_logs(interaction, e)

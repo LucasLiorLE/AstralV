@@ -356,6 +356,63 @@
                     }
                 }
             }
+        },
+        "ecoadmin": {
+            "give": {
+                "description": "Give coins to a user (Admin only)",
+                "parameters": {
+                    "member": "The member to give coins to",
+                    "amount": "Amount of coins to give"
+                }
+            },
+            "set": {
+                "description": "Set a user's coins to a specific amount (Admin only)",
+                "parameters": {
+                    "member": "The member to set coins for",
+                    "amount": "Amount to set their coins to"
+                }
+            },
+            "item": {
+                "description": "Give items to a user (Admin only)", 
+                "parameters": {
+                    "member": "The member to give items to",
+                    "item_name": "Name of the item to give",
+                    "quantity": "Amount of items to give"
+                }
+            }
+        },
+        "market": {
+            "list": {
+                "description": "List an item on the market for sale",
+                "parameters": {
+                    "item": "The item you want to sell",
+                    "quantity": "How many of the item to sell",
+                    "price_per_unit": "Price per item in coins"
+                }
+            },
+            "buy": {
+                "description": "Buy an item from the market",
+                "parameters": {
+                    "item": "The item you want to buy",
+                    "quantity": "How many of the item to buy" 
+                }
+            },
+            "view": {
+                "description": "View current market listings",
+                "parameters": {
+                    "item": "Optional item name to filter listings"
+                }
+            },
+            "cancel": {
+                "description": "Cancel one of your market listings",
+                "parameters": {
+                    "listing_id": "The ID of the listing to cancel"
+                }
+            }
+        },
+        "auction": {
+            "description": "Not currently available - Future auction house system",
+            "status": "Coming soon!"
         }
     },
     "fun": {

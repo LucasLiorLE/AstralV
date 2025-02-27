@@ -26,9 +26,7 @@ from discord.ui import Button, Modal, TextInput
 
 import random
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Tuple
-
-# Hourly shop system
+from typing import List, Tuple
 
 items = open_file("storage/economy/items.json")
 SHOP = []
@@ -171,10 +169,11 @@ async def handle_eco_shop():
                 "type": data.get("type", "No type")
             })
     
-# Currency system
 class MarketGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="market", description="Market commands")
+        
+    def setup_commands(self):
         load_commands(self, "economy")
 
     @app_commands.command(name="list")
@@ -334,6 +333,8 @@ class MarketGroup(app_commands.Group):
 class EcoAdminGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="ecoadmin", description="Economy admin commands.")
+        
+    def setup_commands(self):
         load_commands(self, "economy")
 
     @app_commands.command(name="give")
@@ -390,9 +391,12 @@ class EcoAdminGroup(app_commands.Group):
             await interaction.followup.send(f"Successfully added {quantity}x {item_name} to {member.display_name}'s inventory!")
         except Exception as e:
             await handle_logs(interaction, e)
+
 class ShopGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="shop", description="Shop commands.")
+        
+    def setup_commands(self):
         load_commands(self, "economy")
 
     @app_commands.command(name="view")
@@ -570,6 +574,9 @@ class ShopGroup(app_commands.Group):
 class AuctionGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="auction", description="Not coming soon.")
+        
+    def setup_commands(self):
+        load_commands(self, "economy")
 
 def normalize_item_name(item_name):
     """Normalize item name to underscore format used in storage"""
@@ -599,10 +606,22 @@ class EconomyCog(commands.Cog):
         self.bot = bot
         self.command_help = open_file("storage/command_help.json")
         handle_eco_shop.start()
-        bot.tree.add_command(EcoAdminGroup())
-        bot.tree.add_command(MarketGroup())
-        bot.tree.add_command(ShopGroup())
-        bot.tree.add_command(AuctionGroup())
+
+        ecoadmin_group = EcoAdminGroup()
+        ecoadmin_group.setup_commands()
+        bot.tree.add_command(ecoadmin_group)
+
+        market_group = MarketGroup()
+        market_group.setup_commands()
+        bot.tree.add_command(market_group)
+
+        shop_group = ShopGroup()  
+        shop_group.setup_commands()
+        bot.tree.add_command(shop_group)
+        
+        auction_group = AuctionGroup()
+        auction_group.setup_commands()
+        bot.tree.add_command(auction_group)
         
         load_commands(self.__cog_app_commands__, "economy")
 
