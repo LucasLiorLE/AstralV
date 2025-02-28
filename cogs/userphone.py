@@ -225,6 +225,9 @@ class UserphoneCog(commands.Cog):
         if (message.author.bot):
             return
 
+        if not message.content:  # Skip empty messages
+            return
+
         channel_id = str(message.channel.id)
         
         for room in self.userphone_group.rooms.values():

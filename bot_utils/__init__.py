@@ -10,10 +10,13 @@ from .utils import *
 VERSION = {
     'major': 2,
     'minor': 4,
-    'patch': 0
+    'patch': 0,
+    'commit': 1
 }
 
-__version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}"
+__version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}.{VERSION['commit']}"
 
+__license__ = "GNU General Public License v3.0"
+__copyright__ = "Copyright 2025, LucasLiorLE"
 __status__ = "Development"
 __author__ = "LucasLiorLE"

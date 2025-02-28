@@ -429,7 +429,3 @@ def get_context_object(ctx_or_interaction: Union[commands.Context, discord.Inter
 		"guild_id": ctx_or_interaction.guild.id,
 		"send": ctx_or_interaction.followup.send if is_interaction else ctx_or_interaction.send
 	}
-
-def check_in_server(interaction: discord.Interaction) -> bool:
-    """Checks if the interaction is in a server."""
-    return interaction.guild is not None

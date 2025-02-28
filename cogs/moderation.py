@@ -5,7 +5,6 @@ from bot_utils import (
     dm_moderation_embed,
 
     check_user,
-    check_in_server,
     get_context_object,
     get_role_hierarchy,
     parse_duration,

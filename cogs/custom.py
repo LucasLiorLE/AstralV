@@ -124,7 +124,14 @@ class OppList(app_commands.Group):
     def __init__(self):
         super().__init__(name="opp")
         self.file_path = "storage/customs/opp_list.json"
-        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993]
+        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474993]
+
+    def find_user(self, search_user: str, data: dict) -> str:
+        """Find user with case-insensitive search"""
+        for user in data:
+            if user.lower() == search_user.lower():
+                return user
+        return None
 
     @app_commands.command(name="list", description="List all users in the opp list")
     async def list(self, interaction: discord.Interaction):
@@ -149,11 +156,21 @@ class OppList(app_commands.Group):
             return
 
         data = open_file(self.file_path)
-        if user in data:
-            await interaction.response.send_message(f"{user} is already in the opp list!", ephemeral=True)
+        existing_user = self.find_user(user, data)
+        if existing_user:
+            await interaction.response.send_message(f"{existing_user} is already in the opp list!", ephemeral=True)
             return
 
-        data[user] = {"reason": reason, "added_by": str(interaction.user)}
+        data[user] = {
+            "versions": [
+                {
+                    "reason": reason,
+                    "edited_by": str(interaction.user),
+                    "version": 1
+                }
+            ],
+            "current_version": 1
+        }
         save_file(self.file_path, data)
         await interaction.response.send_message(f"Added {user} to the opp list.")
 
@@ -165,13 +182,14 @@ class OppList(app_commands.Group):
             return
 
         data = open_file(self.file_path)
-        if user not in data:
+        existing_user = self.find_user(user, data)
+        if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
             return
 
-        del data[user]
+        del data[existing_user]
         save_file(self.file_path, data)
-        await interaction.response.send_message(f"Removed {user} from the opp list.")
+        await interaction.response.send_message(f"Removed {existing_user} from the opp list.")
 
     @app_commands.command(name="edit", description="Edit someone's reason in the opp list")
     @app_commands.describe(user="The user to edit", reason="New reason")
@@ -181,25 +199,53 @@ class OppList(app_commands.Group):
             return
 
         data = open_file(self.file_path)
-        if user not in data:
+        existing_user = self.find_user(user, data)
+        if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
             return
 
-        data[user]["reason"] = reason
+        user_data = data[existing_user]
+        new_version = user_data["current_version"] + 1
+        user_data["versions"].append({
+            "reason": reason,
+            "edited_by": str(interaction.user),
+            "version": new_version
+        })
+        user_data["current_version"] = new_version
         save_file(self.file_path, data)
-        await interaction.response.send_message(f"Updated reason for {user}.")
+        await interaction.response.send_message(f"Updated reason for {existing_user}.")
 
     @app_commands.command(name="view", description="View someone's opp list entry")
-    @app_commands.describe(user="The user to view")
-    async def view(self, interaction: discord.Interaction, user: str):
+    @app_commands.describe(
+        user="The user to view",
+        version="Version number to view (optional, defaults to latest)"
+    )
+    async def view(self, interaction: discord.Interaction, user: str, version: int = None):
         data = open_file(self.file_path)
-        if user not in data:
+        existing_user = self.find_user(user, data)
+        if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
             return
 
-        embed = discord.Embed(title=f"Opp List Entry - {user}", color=discord.Color.red())
-        embed.add_field(name="Reason", value=data[user]["reason"], inline=False)
-        embed.add_field(name="Added by", value=data[user]["added_by"], inline=False)
+        user_data = data[existing_user]
+        if version is None:
+            version = user_data["current_version"]
+        
+        version_data = None
+        for v in user_data["versions"]:
+            if v["version"] == version:
+                version_data = v
+                break
+
+        if not version_data:
+            await interaction.response.send_message(f"Version {version} not found for {existing_user}!", ephemeral=True)
+            return
+
+        embed = discord.Embed(title=f"Opp List Entry - {existing_user}", color=discord.Color.red())
+        embed.add_field(name="Version", value=str(version), inline=False)
+        embed.add_field(name="Reason", value=version_data["reason"], inline=False)
+        editor_field = "Added by" if version == 1 else "Edited by"
+        embed.add_field(name=editor_field, value=version_data["edited_by"], inline=False)
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="reorder", description="Reorder someone in the opp list")
@@ -210,7 +256,8 @@ class OppList(app_commands.Group):
             return
 
         data = open_file(self.file_path)
-        if user not in data:
+        existing_user = self.find_user(user, data)
+        if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
             return
 
@@ -221,7 +268,7 @@ class OppList(app_commands.Group):
             await interaction.response.send_message(f"Position must be between 1 and {total_items}!", ephemeral=True)
             return
 
-        current_pos = next(i for i, (name, _) in enumerate(items) if name == user)
+        current_pos = next(i for i, (name, _) in enumerate(items) if name == existing_user)
         
         item = items.pop(current_pos)
         
