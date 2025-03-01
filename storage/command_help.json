@@ -987,11 +987,26 @@
     },
     "roblox": {
         "cgloves": {
-            "description": "Check all the user's gloves in slap battles",
-            "parameters": {
-                "username": "The user to check gloves for (leave empty to check your own)",
-                "member": "Discord member to check (optional)",
-                "ephemeral": "If the message is hidden (Useful if no perms)"
+            "description": "Slap Battles glove-related commands",
+            "subcommands": {
+                "check": {
+                    "description": "Check a user's gloves and badges",
+                    "parameters": {
+                        "username": "Roblox username to check (optional if connected)",
+                        "member": "Discord member to check (optional)",
+                        "ephemeral": "Whether to show the response only to you (default: true)"
+                    }
+                },
+                "compare": {
+                    "description": "Compare gloves between two users",
+                    "parameters": {
+                        "username1": "First Roblox username to compare (optional if connected)",
+                        "member1": "First Discord member to compare (optional)",
+                        "username2": "Second Roblox username to compare",
+                        "member2": "Second Discord member to compare",
+                        "ephemeral": "Whether to show the response only to you (default: true)"
+                    }
+                }
             }
         },
         "connect": {

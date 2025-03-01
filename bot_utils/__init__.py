@@ -11,7 +11,7 @@ VERSION = {
     'major': 2,
     'minor': 4,
     'patch': 0,
-    'commit': 1
+    'commit': 2
 }
 
 __version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}.{VERSION['commit']}"
