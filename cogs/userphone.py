@@ -8,7 +8,7 @@ from bot_utils import (
 import discord
 from discord.ext import commands
 from discord import app_commands
-from typing import Dict, Set
+from typing import Dict, Set, List
 import random
 
 class Room:
@@ -64,7 +64,22 @@ class UserphoneGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    async def get_public_rooms(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        public_rooms = []
+        for room_id, room in self.rooms.items():
+            if not room.password:
+                member_count = len(room.members)
+                servers = ", ".join(room.guild_names.values())
+                public_rooms.append(
+                    app_commands.Choice(
+                        name=f"Room {room_id} ({member_count} members) - {servers}",
+                        value=room_id
+                    )
+                )
+        return public_rooms[:25]
+
     @app_commands.command(name="join")
+    @app_commands.autocomplete(room_id=get_public_rooms)
     async def join(self, interaction: discord.Interaction, room_id: str = None, password: str = None, anonymous: bool = False):
         try:
             await interaction.response.defer(ephemeral=False)

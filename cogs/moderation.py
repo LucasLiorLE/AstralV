@@ -401,7 +401,22 @@ class PurgeCommandGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     def setup_commands(self):
-        load_commands(self, "moderation")
+        command_help = open_file("storage/command_help.json")
+        purge_data = command_help.get("moderation", {}).get("purge", {})
+        
+        if "description" in purge_data:
+            self.description = purge_data["description"]
+            
+        if "subcommands" in purge_data:
+            for cmd in self.commands:
+                if cmd.name in purge_data["subcommands"]:
+                    cmd_data = purge_data["subcommands"][cmd.name]
+                    cmd.description = cmd_data.get("description", cmd.description)
+                    
+                    if "parameters" in cmd_data:
+                        for param_name, param_desc in cmd_data["parameters"].items():
+                            if param_name in cmd._params:
+                                cmd._params[param_name].description = param_desc
 
 class SetCommandGroup(app_commands.Group):
     def __init__(self):
@@ -627,7 +642,7 @@ class ModerationCog(commands.Cog):
                 embed.add_field(name="Action", value="Note", inline=False)
                 embed.add_field(name="Reason", value=content, inline=False)
                 await ctx["send"](embed=embed)
-                # Add modlog for notes too
+
                 await store_modlog(
                     modlog_type=action_type,
                     moderator=ctx["user"],

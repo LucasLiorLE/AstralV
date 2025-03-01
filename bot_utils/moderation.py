@@ -16,10 +16,18 @@ def is_valid_bot_instance(interaction_or_context: Union[discord.Interaction, com
     Checks if the bot is running as a proper bot application and not a user account.
     
     Parameters:
-        interaction_or_context: The interaction or context to check
+        interaction_or_context (Union[discord.Interaction, commands.Context]): The interaction or context to check.
         
     Returns:
-        bool: True if running as bot application, False if user account
+        bool: True if running as bot application, False if user account.
+
+    Example:
+        ```
+        if is_valid_bot_instance(interaction):
+            await interaction.response.send_message("Bot is running properly")
+        else:
+            await interaction.response.send_message("Cannot run as user account")
+        ```
     """
     if isinstance(interaction_or_context, discord.Interaction):
         return interaction_or_context.client.user.bot
@@ -41,6 +49,26 @@ async def dm_moderation_embed(
         action (str): Type of moderation action (e.g. ban, kick, mute, etc.)
         reason (str): Reason for the moderation action
         duration (str, optional): Duration of temporary actions like mutes/bans
+
+    Example:
+        ```
+        # Send ban notification
+        await dm_moderation_embed(
+            interaction=ctx,
+            user=member,
+            action="banned",
+            reason="Violating server rules",
+            duration="7 days"
+        )
+
+        # Send kick notification without duration
+        await dm_moderation_embed(
+            interaction=interaction,
+            user=member,
+            action="kicked",
+            reason="Spamming in channels"
+        )
+        ```
     """
     if not is_valid_bot_instance(interaction):
         embed = discord.Embed(
@@ -106,13 +134,20 @@ async def dm_moderation_embed(
         
 def check_mod_server_info(id: int) -> Dict[str, Any]:
     """
-    Checks whether basic moderation data is in server_info.json
+    Checks and initializes basic moderation data structures in server_info.json.
     
-    Parameteres:
-        id: The guild ID of the server
+    Parameters:
+        id (int): The guild ID of the server.
         
     Returns:
-        JsonData: The server info updated.
+        Dict[str, Any]: The updated server info dictionary containing initialized moderation data structures.
+
+    Example:
+        ```
+        server_info = check_mod_server_info(guild.id)
+        if "modlogs" in server_info:
+            print("Moderation logs are initialized")
+        ```
     """
     server_info = open_file("storage/server_info.json")
 
@@ -133,6 +168,27 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
     return server_info
 
 def check_moderation_info(ctx_or_interaction, permission_name: str, minimum_role: str) -> tuple[bool, discord.Embed]:
+    """
+    Checks if a user has the required permissions or roles to use moderation commands.
+
+    Parameters:
+        ctx_or_interaction (Union[discord.Interaction, commands.Context]): The context or interaction to check.
+        permission_name (str): The name of the permission to check for.
+        minimum_role (str): The minimum role required if permission check fails.
+
+    Returns:
+        tuple[bool, discord.Embed]: A tuple containing:
+            - bool: Whether the user has permission
+            - discord.Embed: Error embed if permission denied, None if granted
+
+    Example:
+        ```
+        has_permission, error_embed = check_moderation_info(ctx, "ban_members", "moderator")
+        if not has_permission:
+            await ctx.send(embed=error_embed)
+            return
+        ```
+    """
     try:
         if isinstance(ctx_or_interaction, discord.Interaction):
             user = ctx_or_interaction.user
@@ -202,14 +258,25 @@ def no_permission_embed(
         role: str = None
     ) -> discord.Embed:
     """
-    An embed that says they do not have the required role/permission to use a command.
+    Creates an embed that indicates lack of required role/permission to use a command.
 
     Parameters:
-        permission (str): The permission they are lacking.
-        role (str): The role they are lacking.
+        permission (str, optional): The permission name that is required.
+        role (str, optional): The role name that is required.
 
     Returns:
-        discord.Embed: The embed saying they do not have permission.
+        discord.Embed: An embed explaining the missing permissions/roles.
+
+    Example:
+        ```
+        # Create embed for missing ban permission
+        embed = no_permission_embed(permission="ban_members")
+        await ctx.send(embed=embed)
+
+        # Create embed for missing moderator role
+        embed = no_permission_embed(role="Moderator")
+        await ctx.send(embed=embed)
+        ```
     """
     embed = discord.Embed(
         title="Missing Permissions",
@@ -219,7 +286,7 @@ def no_permission_embed(
 
     embed.set_footer(text=(
                 f"You need the "
-                f"{f"{permission.replace("_", " ").title()} permission" if permission else None} "
+                f"{f"{permission.replace('_', ' ').title()} permission" if permission else None} "
                 f"{"or" if permission and role else None} "
                 f"{f"{role} role" if role else None} to use this command."
             )
@@ -255,6 +322,40 @@ async def store_modlog(
         discord.Forbidden: If bot lacks permissions to send to modlog channel
         discord.HTTPException: If sending the modlog message fails
         ValueError: If channel ID format is invalid
+
+    Example:
+        ```
+        # Store a ban log
+        await store_modlog(
+            modlog_type="ban",
+            server_id=guild.id,
+            moderator=ctx.author,
+            user=member,
+            reason="Multiple rule violations",
+            bot=bot
+        )
+
+        # Store a channel lockdown log
+        await store_modlog(
+            modlog_type="lockdown",
+            server_id=guild.id,
+            moderator=interaction.user,
+            channel=text_channel,
+            reason="Raid prevention",
+            bot=bot
+        )
+
+        # Store a role modification log
+        await store_modlog(
+            modlog_type="role_update",
+            server_id=guild.id,
+            moderator=ctx.author,
+            role=role,
+            reason="Updated permissions",
+            arguments="Added manage messages permission",
+            bot=bot
+        )
+        ```
     """
     if bot and not bot.user.bot:
         raise ValueError("This bot cannot be used as a user account.")
@@ -366,6 +467,29 @@ async def send_modlog_embed(
             - embed: discord.Embed containing the log entries
             - total_logs: Total number of logs for the user
             - total_pages: Total number of pages available
+
+    Example:
+        ```
+        # Display first page of user's modlogs
+        embed, total_logs, total_pages = await send_modlog_embed(
+            interaction=interaction,
+            user=member,
+            page=1
+        )
+        if embed:
+            await interaction.followup.send(embed=embed)
+            if total_pages > 1:
+                print(f"User has {total_logs} logs across {total_pages} pages")
+
+        # Display specific page of modlogs
+        embed, _, _ = await send_modlog_embed(
+            interaction=interaction,
+            user=member,
+            page=3  # Show third page
+        )
+        if embed:
+            await interaction.followup.send(embed=embed)
+        ```
     """
     if not is_valid_bot_instance(interaction):
         await interaction.followup.send(

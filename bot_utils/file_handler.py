@@ -104,50 +104,40 @@ def load_commands(commands: Union[List[app_commands.Command], app_commands.Group
     command_help = open_file("storage/command_help.json").get(group, {})
     
     if isinstance(commands, app_commands.Group):
-        command_list = [commands]
+        group_data = command_help.get(commands.name, {})
+        
+        if group_data:
+            if "description" in group_data:
+                commands.description = group_data["description"]
+            
+            for cmd in commands.commands:
+                if cmd.name in group_data:
+                    cmd_data = group_data[cmd.name]
+                    cmd.description = cmd_data.get("description", cmd.description)
+                    
+                    if "parameters" in cmd_data:
+                        for param_name, param_desc in cmd_data["parameters"].items():
+                            if param_name in cmd._params:
+                                cmd._params[param_name].description = param_desc
+        
+        else:
+            for cmd in commands.commands:
+                if cmd.name in command_help:
+                    cmd_data = command_help[cmd.name]
+                    cmd.description = cmd_data.get("description", cmd.description)
+                    
+                    if "parameters" in cmd_data:
+                        for param_name, param_desc in cmd_data["parameters"].items():
+                            if param_name in cmd._params:
+                                cmd._params[param_name].description = param_desc
     else:
         command_list = commands.commands if hasattr(commands, 'commands') else commands
-    
-    for command in command_list:
-        if command.name in command_help:
-            cmd_data = command_help[command.name]
-            command.description = cmd_data.get("description", command.description)
-            
-            if "parameters" in cmd_data:
-                param_count = 0
-                for param_name, param_desc in cmd_data["parameters"].items():
-                    if param_name in command._params:
-                        command._params[param_name].description = param_desc
-                        param_count += 1
-            
-            if "subcommands" in cmd_data:
-                subcmd_data = cmd_data["subcommands"]
-                if isinstance(command, app_commands.Group):
-                    for subcmd in command.walk_commands():
-                        if subcmd.name in subcmd_data:
-                            subcmd_info = subcmd_data[subcmd.name]
-                            subcmd.description = subcmd_info.get("description", subcmd.description)
-                            
-                            if "parameters" in subcmd_info:
-                                sub_param_count = 0
-                                for param_name, param_desc in subcmd_info["parameters"].items():
-                                    if param_name in subcmd._params:
-                                        subcmd._params[param_name].description = param_desc
-                                        sub_param_count += 1
-                        else:
-                            pass
-
-                elif hasattr(command, "children"):
-                    for subcmd_name, subcmd_info in subcmd_data.items():
-                        if subcmd_name in command.children:
-                            subcmd = command.children[subcmd_name]
-                            subcmd.description = subcmd_info.get("description", subcmd.description)
-                            
-                            if "parameters" in subcmd_info:
-                                sub_param_count = 0
-                                for param_name, param_desc in subcmd_info["parameters"].items():
-                                    if param_name in subcmd._params:
-                                        subcmd._params[param_name].description = param_desc
-                                        sub_param_count += 1
-        else:
-            print(f"[ERROR]: No help data found for command: {command.name}")
+        for command in command_list:
+            if command.name in command_help:
+                cmd_data = command_help[command.name]
+                command.description = cmd_data.get("description", command.description)
+                
+                if "parameters" in cmd_data:
+                    for param_name, param_desc in cmd_data["parameters"].items():
+                        if param_name in command._params:
+                            command._params[param_name].description = param_desc

@@ -4,12 +4,13 @@ from .file_handler import (
 )
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 import re, io, time
 import asyncio
 
 from datetime import timedelta
-from typing import Optional, TypeVar, Generic, Union, Dict, Any, Tuple
+from typing import Optional, TypeVar, Generic, Union, Dict, Any, Tuple, List
 from aiohttp import ClientSession
 from PIL import Image
 
@@ -28,8 +29,9 @@ def parse_duration(duration_str: str) -> Optional[timedelta]:
         Optional[timedelta]: A `timedelta` object representing the total duration if the format is valid, otherwise `None`.
 
     Example:
-        - Input: "1d2h30m15s"
-        - Output: timedelta(days=1, hours=2, minutes=30, seconds=15)
+        ```
+        parse_duration("1d2h30m15s") # Output: timedelta(days=1, hours=2, minutes=30, seconds=15)
+        ```
     """
     duration_regex = re.compile(r"(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?")
     match = duration_regex.match(duration_str)
@@ -61,6 +63,24 @@ def check_user(interaction: discord.Interaction, original_user: discord.User) ->
 
     Returns:
         bool: True if the interaction user matches the original user, otherwise False.
+
+    Examples:
+        ```
+        @app_commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            view = discord.ui.View()
+
+            view.add_item(discord.ui.Button(label="Test", style=discord.ButtonStyle.primary))
+
+            @view.item(label="Test", style=discord.ButtonStyle.primary)
+            async def test_button(interaction: discord.Interaction):
+                if check_user(interaction, original_user):
+                    await interaction.response.send_message("You are allowed to interact with this command.")
+                else:
+                    await interaction.response.send_message("You are not allowed to interact with this command.")
+
+            await interaction.response.send_message("You are allowed to interact with this command.", view=view)
+        ```
     """
     return interaction.user.id == original_user.id
 
@@ -76,9 +96,11 @@ def convert_number(number: str) -> int:
         int: The full numeric value.
 
     Example:
-        - 50m -> 50000000
-        - 1b -> 1000000000
-        - 10k -> 10000
+        ```
+        convert_number("50m") # Output: 50000000
+        convert_number("1b") # Output: 1000000000
+        convert_number("10k") # Output: 10000
+        ```
     """
     suffixes = {'k': 1_000, 'm': 1_000_000, 'b': 1_000_000_000, 't': 1_000_000_000_000}
     if not number:
@@ -124,6 +146,13 @@ async def create_interaction(ctx):
 
     Returns:
         PseudoInteraction: An object that simulates a Discord interaction.
+
+    Example:
+        ```
+        @commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            interaction = await create_interaction(interaction)
+        ```
     """
     async with ctx.typing():
         class Response:
@@ -211,6 +240,14 @@ def get_member_color(interaction: discord.Interaction, color: str = None) -> dis
     Returns:
         discord.Color: The color of the member's highest role.
                       Returns 0xDA8EE7 if the member is not found or the color is None.
+
+    Examples:
+        ```
+        @app_commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            color = get_member_color(interaction)
+            await interaction.response.send_message(f"The color of the member's highest role is {color}.")
+        ```
     """
     if interaction.guild:
         member = interaction.guild.get_member(interaction.user.id)
@@ -219,7 +256,9 @@ def get_member_color(interaction: discord.Interaction, color: str = None) -> dis
     return 0xDA8EE7 if color is None else color
 
 async def _process_image(image: Image.Image) -> int:
-    """Helper function to process image and get dominant color."""
+    """
+    Helper function to process image and get dominant color.
+    """
     image = image.resize((50, 50))
     if image.mode != 'RGB':
         image = image.convert('RGB')
@@ -243,6 +282,14 @@ async def get_dominant_color(url: str = None, buffer: io.BytesIO = None, timeout
     Returns:
         discord.Color: The dominant color in the image as a Discord color object.
                       Returns 0x808080 (gray) if processing fails or times out.
+
+    Example:
+        ```
+        @app_commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            color = get_dominant_color(url="https://example.com/image.png")
+            await interaction.response.send_message(f"The dominant color in the image is {color}.")
+        ```
     """
     try:
         async def process():
@@ -275,6 +322,14 @@ def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = 
         int: The number of seconds elapsed since the last command usage/message sent.
 
              Returns 0 if the command has never been used.
+
+    Example:
+        ```
+        @app_commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            cooldown = get_member_cooldown(interaction.user, "test")
+            await interaction.response.send_message(f"The cooldown for the command is {cooldown} seconds.")
+        ```
     """
 
     current_time = int(time.time())
@@ -300,8 +355,22 @@ def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = 
 
 def check_command_cooldown(user_id: str, command_name: str, cooldown_seconds: int) -> Tuple[bool, int]:
     """
-    Check if a command is on cooldown
-    Returns (is_on_cooldown, remaining_time)
+    Checks if a command is on cooldown.
+
+    Args:
+        user_id (str): The ID of the user to check the cooldown for.
+        command_name (str): The name of the command to check the cooldown for.
+        cooldown_seconds (int): The cooldown time in seconds.   
+
+    Returns:
+        Tuple[bool, int]: A tuple containing a boolean indicating if the command is on cooldown and the remaining time in seconds.
+
+    Example:
+        ```
+        @app_commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            is_on_cooldown, remaining_time = check_command_cooldown(interaction.user.id, "test", 10)
+        ```
     """
     member_info = open_file("storage/member_info.json")
     current_time = int(time.time())
@@ -429,3 +498,14 @@ def get_context_object(ctx_or_interaction: Union[commands.Context, discord.Inter
 		"guild_id": ctx_or_interaction.guild.id,
 		"send": ctx_or_interaction.followup.send if is_interaction else ctx_or_interaction.send
 	}
+
+async def autocomplete_choices(
+        choices: list,
+        interaction: discord.Interaction,
+        current: str,
+) -> List[app_commands.Choice[str]]:
+    choices = [choice for choice in choices if current.lower() in choice.lower()]
+    return [
+        app_commands.Choice(name=choice, value=choice)
+        for choice in choices[:25]
+    ]

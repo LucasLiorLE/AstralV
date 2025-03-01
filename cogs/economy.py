@@ -29,6 +29,7 @@ from discord.ui import Button, Modal, TextInput
 import random
 from datetime import datetime, timezone, timedelta
 from typing import List, Tuple
+from difflib import get_close_matches
 
 items = open_file("storage/economy/items.json")
 SHOP = []
@@ -39,10 +40,73 @@ market_data = open_file(market_path)
 listings_path = "storage/economy/market_listings.json"
 listings_data = open_file(listings_path)
 
+async def get_item_suggestions(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    """
+    Provides autocomplete suggestions for item names based on user input.
+    
+    Args:
+        interaction (discord.Interaction): The interaction instance from the command
+        current (str): The current text input from the user
+        
+    Returns:
+        List[app_commands.Choice[str]]: Up to 25 matching items, each showing:
+            - Item's display name
+            - Item type (tool, fish, animal, etc.)
+            - Item price in coins
+            
+    Example:
+        If user types "fish", might return choices like:
+        - "Fishing Rod (tool) - 50,000 coins"
+        - "Fish (animal) - 2,000 coins"
+    """
+    try:
+        items_data = open_file("storage/economy/items.json")
+        choices = []
+        
+        for item_name, item_data in items_data.items():
+            if current.lower() in item_name.lower():
+                item_type = item_data.get("type", "Unknown")
+                price = item_data.get("price", 0)
+                choices.append(
+                    app_commands.Choice(
+                        name=f"{display_item_name(item_name)} ({item_type}) - {price:,} coins",
+                        value=item_name
+                    )
+                )
+        
+        return choices[:25]
+    except Exception as e:
+        print(f"Error in get_item_suggestions: {e}")
+        return []
 
 @staticmethod
 def custom_cooldown(seconds: int):
-    """Custom cooldown decorator for commands"""
+    """
+    Creates a custom cooldown decorator for Discord application commands.
+    
+    This decorator manages command cooldowns per user, providing feedback when
+    a command is on cooldown and automatically updating cooldown timers.
+    
+    Args:
+        seconds (int): The cooldown duration in seconds
+        
+    Returns:
+        callable: A decorator that can be applied to command methods
+        
+    Example Usage:
+        ```
+        @app_commands.command()
+        @custom_cooldown(30)
+        async def my_command(self, interaction):
+            # Command will have a 30-second cooldown per user
+            pass
+        ```
+            
+    Notes:
+        - Cooldowns are tracked per user and per command
+        - Users will see a message with remaining time when on cooldown
+        - Cooldown timer starts after successful command execution
+    """
     def decorator(func):
         from functools import wraps
         
@@ -205,6 +269,7 @@ class MarketGroup(app_commands.Group):
         load_commands(self, "economy")
 
     @app_commands.command(name="list")
+    @app_commands.autocomplete(item=get_item_suggestions)
     async def list_item(self, interaction: discord.Interaction, item: str, quantity: int, price_per_unit: int):
         await interaction.response.defer()
         try:
@@ -213,10 +278,20 @@ class MarketGroup(app_commands.Group):
             
             item_name = normalize_item_name(item)
             if item_name not in eco[user_id].get('inventory', {}):
-                return await interaction.followup.send("You don't have this item!")
+                embed = discord.Embed(
+                    title="❌ Listing Failed",
+                    description="You don't have this item!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
             
             if eco[user_id]['inventory'][item_name] < quantity:
-                return await interaction.followup.send("You don't have enough of this item!")
+                embed = discord.Embed(
+                    title="❌ Listing Failed",
+                    description="You don't have enough of this item!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
 
             listings = listings_data["market"]["listings"]
             listing_id = listings_data["market"]["last_id"] + 1
@@ -240,11 +315,32 @@ class MarketGroup(app_commands.Group):
             save_file(eco_path, eco)
             save_file(listings_path, listings_data)
             
-            await interaction.followup.send(f"Listed {quantity}x {display_item_name(item_name)} for {price_per_unit:,} coins each!")
+            embed = discord.Embed(
+                title="✅ Item Listed Successfully",
+                description=f"Your item has been listed on the market!",
+                color=discord.Color.green()
+            )
+            embed.add_field(
+                name="Item Details",
+                value=f"**Item:** {display_item_name(item_name)}\n"
+                      f"**Quantity:** {quantity}x\n"
+                      f"**Price:** {price_per_unit:,} coins each\n"
+                      f"**Total Value:** {(quantity * price_per_unit):,} coins",
+                inline=False
+            )
+            embed.add_field(
+                name="Listing ID",
+                value=f"#{listing_id}",
+                inline=False
+            )
+            embed.set_footer(text="Use /market cancel to remove this listing")
+            
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
     @app_commands.command(name="buy")
+    @app_commands.autocomplete(item=get_item_suggestions)
     async def buy_item(self, interaction: discord.Interaction, item: str, quantity: int):
         await interaction.response.defer()
         try:
@@ -258,11 +354,21 @@ class MarketGroup(app_commands.Group):
             ], key=lambda x: x["price_per_unit"])
 
             if not available_listings:
-                return await interaction.followup.send("No listings found for this item!")
+                embed = discord.Embed(
+                    title="❌ Purchase Failed",
+                    description="No listings found for this item!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
 
             total_available = sum(l["quantity"] for l in available_listings)
             if total_available < quantity:
-                return await interaction.followup.send(f"Only {total_available} available!")
+                embed = discord.Embed(
+                    title="❌ Purchase Failed",
+                    description=f"Only {total_available}x available!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
 
             remaining = quantity
             total_cost = 0
@@ -275,16 +381,22 @@ class MarketGroup(app_commands.Group):
                 amount_from_listing = min(remaining, listing["quantity"])
                 total_cost += amount_from_listing * listing["price_per_unit"]
                 remaining -= amount_from_listing
-                used_listings.append((listing, amount_used))
+                used_listings.append((listing, amount_from_listing))
 
             if eco[user_id]["balance"]["purse"] < total_cost:
-                return await interaction.followup.send(f"You need {total_cost:,} coins!")
+                embed = discord.Embed(
+                    title="❌ Purchase Failed",
+                    description=f"You need {total_cost:,} coins!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
 
             eco[user_id]["balance"]["purse"] -= total_cost
             if item_name not in eco[user_id].get("inventory", {}):
                 eco[user_id]["inventory"][item_name] = 0
             eco[user_id]["inventory"][item_name] += quantity
 
+            purchase_details = []
             for listing, amount_used in used_listings:
                 seller_id = listing["seller_id"]
                 if seller_id not in eco:
@@ -293,6 +405,10 @@ class MarketGroup(app_commands.Group):
                 payment = amount_used * listing["price_per_unit"]
                 eco[seller_id]["balance"]["purse"] += payment
                 
+                purchase_details.append(
+                    f"• {amount_used}x from {listing['seller_name']} @ {listing['price_per_unit']:,} each"
+                )
+                
                 listing["quantity"] -= amount_used
                 if listing["quantity"] <= 0:
                     del listings_data["market"]["listings"][str(listing["id"])]
@@ -300,13 +416,32 @@ class MarketGroup(app_commands.Group):
             save_file(eco_path, eco)
             save_file(listings_path, listings_data)
             
-            await interaction.followup.send(
-                f"Bought {quantity}x {display_item_name(item_name)} for {total_cost:,} coins!"
+            embed = discord.Embed(
+                title="✅ Purchase Successful",
+                description=f"You have successfully purchased items from the market!",
+                color=discord.Color.green()
             )
+            embed.add_field(
+                name="Item Details",
+                value=f"**Item:** {display_item_name(item_name)}\n"
+                      f"**Total Quantity:** {quantity}x\n"
+                      f"**Total Cost:** {total_cost:,} coins",
+                inline=False
+            )
+            if len(purchase_details) > 1:
+                embed.add_field(
+                    name="Purchase Breakdown",
+                    value="\n".join(purchase_details),
+                    inline=False
+                )
+            embed.set_footer(text="Items have been added to your inventory")
+            
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
     @app_commands.command(name="view")
+    @app_commands.autocomplete(item=get_item_suggestions)
     async def view_listings(self, interaction: discord.Interaction, item: str = None):
         await interaction.response.defer()
         try:
@@ -347,11 +482,21 @@ class MarketGroup(app_commands.Group):
             listing_str = str(listing_id)
             
             if listing_str not in listings_data["market"]["listings"]:
-                return await interaction.followup.send("Listing not found!")
+                embed = discord.Embed(
+                    title="❌ Cancellation Failed",
+                    description="Listing not found!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
                 
             listing = listings_data["market"]["listings"][listing_str]
             if listing["seller_id"] != user_id:
-                return await interaction.followup.send("This is not your listing!")
+                embed = discord.Embed(
+                    title="❌ Cancellation Failed",
+                    description="This is not your listing!",
+                    color=discord.Color.red()
+                )
+                return await interaction.followup.send(embed=embed)
 
             eco = check_user_exists(user_id)
             item_name = listing["item"]
@@ -365,7 +510,20 @@ class MarketGroup(app_commands.Group):
             save_file(eco_path, eco)
             save_file(listings_path, listings_data)
             
-            await interaction.followup.send("Listing cancelled!")
+            embed = discord.Embed(
+                title="✅ Listing Cancelled",
+                description="Your market listing has been cancelled and items returned to your inventory.",
+                color=discord.Color.green()
+            )
+            embed.add_field(
+                name="Returned Items",
+                value=f"**Item:** {display_item_name(item_name)}\n"
+                      f"**Quantity:** {listing['quantity']}x\n"
+                      f"**Listed Price:** {listing['price_per_unit']:,} coins each",
+                inline=False
+            )
+            
+            await interaction.followup.send(embed=embed)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -411,6 +569,7 @@ class EcoAdminGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="item")
+    @app_commands.autocomplete(item_name=get_item_suggestions)
     async def item(self, interaction: discord.Interaction, member: discord.Member, item_name: str, quantity: int):
         await interaction.response.defer()
         try:
@@ -468,6 +627,7 @@ class ShopGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="buy")
+    @app_commands.autocomplete(item_name=get_item_suggestions)
     async def buy(self, interaction: discord.Interaction, item_name: str, quantity: int = 1):
         await interaction.response.defer()
         try:
@@ -515,6 +675,7 @@ class ShopGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="sell")
+    @app_commands.autocomplete(item=get_item_suggestions)
     async def sell(self, interaction: discord.Interaction, item: str, amount: int = 1):
         await interaction.response.defer()
         try:
@@ -617,16 +778,60 @@ class AuctionGroup(app_commands.Group):
     def setup_commands(self):
         load_commands(self, "economy")
 
-def normalize_item_name(item_name):
-    """Normalize item name to underscore format used in storage"""
-    return item_name.lower().replace(" ", "_")
+def normalize_item_name(item_name: str) -> str:
+    """
+    Normalizes an item name to match the format used in the items database.
+    
+    Args:
+        item_name (str): The raw item name input from the user
+        
+    Returns:
+        str: The normalized item name that matches the database format
+        
+    Example:
+        >>> normalize_item_name("Fishing Rod")
+        "fishing_rod"
+        >>> normalize_item_name("GOLDEN SWORD")
+        "golden_sword"
+    """
+    return "_".join(item_name.lower().split())
 
-def display_item_name(item_name):
-    """Convert stored item name format to display format"""
-    return item_name.replace("_", " ").title()
+def display_item_name(item_name: str) -> str:
+    """
+    Formats an item name for display in messages and embeds.
+    
+    Args:
+        item_name (str): The internal item name from the database
+        
+    Returns:
+        str: The formatted item name for display
+        
+    Example:
+        >>> display_item_name("fishing_rod")
+        "Fishing Rod"
+        >>> display_item_name("golden_sword")
+        "Golden Sword"
+    """
+    return " ".join(word.capitalize() for word in item_name.split("_"))
 
 def find_closest_item(search_term: str, shop_items: list) -> str:
-    """Find closest matching item name from search term"""
+    """
+    Finds the closest matching item name from a list of shop items.
+    
+    Uses string similarity to find the best match for a user's search term
+    among available shop items. This helps handle typos and partial matches.
+    
+    Args:
+        search_term (str): The user's search input
+        shop_items (list): List of dictionaries containing item information
+        
+    Returns:
+        str | None: The name of the closest matching item, or None if no match found
+        
+    Example:
+        >>> find_closest_item("fishrod", [{"item": "fishing_rod"}, {"item": "sword"}])
+        "fishing_rod"
+    """
     normalized_search = "".join(search_term.lower().split())
     normalized_items = [(item["item"], "".join(item["item"].lower().split())) for item in shop_items]
     
@@ -646,22 +851,21 @@ class EconomyCog(commands.Cog):
         self.command_help = open_file("storage/command_help.json")
         handle_eco_shop.start()
 
-        ecoadmin_group = EcoAdminGroup()
-        ecoadmin_group.setup_commands()
-        bot.tree.add_command(ecoadmin_group)
-
-        market_group = MarketGroup()
-        market_group.setup_commands()
-        bot.tree.add_command(market_group)
-
-        shop_group = ShopGroup()  
-        shop_group.setup_commands()
-        bot.tree.add_command(shop_group)
+        self.market_group = MarketGroup()
+        self.shop_group = ShopGroup()
+        self.auction_group = AuctionGroup()
+        self.ecoadmin_group = EcoAdminGroup()
         
-        auction_group = AuctionGroup()
-        auction_group.setup_commands()
-        bot.tree.add_command(auction_group)
-        
+        self.market_group.setup_commands()
+        self.shop_group.setup_commands()
+        self.auction_group.setup_commands()
+        self.ecoadmin_group.setup_commands()
+
+        self.bot.tree.add_command(self.market_group)
+        self.bot.tree.add_command(self.shop_group)
+        self.bot.tree.add_command(self.auction_group)
+        self.bot.tree.add_command(self.ecoadmin_group)
+
         load_commands(self.__cog_app_commands__, "economy")
 
     def cog_unload(self):
@@ -892,6 +1096,7 @@ class EconomyCog(commands.Cog):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="trade")
+    @app_commands.autocomplete(item=get_item_suggestions, requested_item=get_item_suggestions)
     @custom_cooldown(30)
     async def trade(self, interaction: discord.Interaction, 
                    member: discord.Member,

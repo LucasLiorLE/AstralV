@@ -74,7 +74,22 @@ class AvatarGroup(app_commands.Group):
 			await handle_logs(interaction, error)
 
 	def setup_commands(self):
-		load_commands(self, "info")
+		command_help = open_file("storage/command_help.json")
+		avatar_data = command_help.get("info", {}).get("avatar", {})
+		
+		if "description" in avatar_data:
+			self.description = avatar_data["description"]
+			
+		if "subcommands" in avatar_data:
+			for cmd in self.commands:
+				if cmd.name in avatar_data["subcommands"]:
+					cmd_data = avatar_data["subcommands"][cmd.name]
+					cmd.description = cmd_data.get("description", cmd.description)
+					
+					if "parameters" in cmd_data:
+						for param_name, param_desc in cmd_data["parameters"].items():
+							if param_name in cmd._params:
+								cmd._params[param_name].description = param_desc
 
 class InfoCog(commands.Cog):
 	def __init__(self, bot):

@@ -142,7 +142,7 @@ async def test_hy_key() -> bool:
                 error(f"Request failed with status code: {response.status}")
                 return False
 
-async def check_apis():
+async def check_apis() -> bool:
     if not await test_hy_key():
         return False
     if not await cr_fetchPlayerData(None):

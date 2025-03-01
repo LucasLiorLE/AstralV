@@ -18,11 +18,29 @@ from discord import app_commands, ButtonStyle
 
 import random, asyncio, aiohttp
 from datetime import datetime
+from typing import List
 
 class RobloxGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="roblox", description="Roblox account-related commands")
         load_commands(self.commands, "roblox")
+
+    async def get_connected_accounts(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        member_info = open_file("storage/member_info.json")
+        choices = []
+        
+        for user_id, info in member_info.items():
+            if "roblox_username" in info:
+                username = info["roblox_username"]
+                if current.lower() in username.lower():
+                    try:
+                        discord_user = await interaction.client.fetch_user(int(user_id))
+                        display = f"{username} ({discord_user.name})"
+                        choices.append(app_commands.Choice(name=display, value=username))
+                    except:
+                        choices.append(app_commands.Choice(name=username, value=username))
+        
+        return choices[:25]
 
     @app_commands.command(name="connect")
     async def rbxconnect(self, interaction: discord.Interaction, username: str):
@@ -65,6 +83,7 @@ class RobloxGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="description")
+    @app_commands.autocomplete(username=get_connected_accounts)
     async def rbxdescription(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -90,6 +109,7 @@ class RobloxGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="info")
+    @app_commands.autocomplete(username=get_connected_accounts)
     async def rbxinfo(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None):
         await interaction.response.defer()
         try:
@@ -161,6 +181,7 @@ class RobloxGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="avatar")
+    @app_commands.autocomplete(username=get_connected_accounts)
     async def rbxavatar(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, items: bool = False):
         await interaction.response.defer()
         try:
@@ -226,100 +247,8 @@ class RobloxGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-class GloveView(View):
-    def __init__(
-        self,
-        badge_embed,
-        glove_embed,
-        full_glove_data,
-        obtained_gloves,
-        roblox_id,
-        owned_gamepasses,
-        not_owned_gamepasses,
-    ):
-        super().__init__(timeout=None)
-        self.badge_embed = badge_embed
-        self.glove_embed = glove_embed
-        self.full_glove_data = full_glove_data
-        self.obtained_gloves = obtained_gloves
-        self.roblox_id = roblox_id
-        self.owned_gamepasses = owned_gamepasses
-        self.not_owned_gamepasses = not_owned_gamepasses
-        self.current_page = "glove_data"
-        self.update_buttons()
-
-    def update_buttons(self):
-        self.glove_data_button.disabled = self.current_page == "glove_data"
-        self.full_glove_data_button.disabled = self.current_page == "full_glove_data"
-        self.additional_badges_button.disabled = self.current_page == "additional_badges"
-        self.gamepass_data_button.disabled = self.current_page == "gamepass_data"
-
-    @button(label="Glove Data", style=ButtonStyle.secondary)
-    async def glove_data_button(self, interaction: discord.Interaction, button: Button):
-        if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
-        
-        self.current_page = "glove_data"
-        self.update_buttons()
-        await interaction.response.edit_message(embeds=[self.glove_embed], view=self)
-
-    @button(label="Full Glove Data", style=ButtonStyle.secondary)
-    async def full_glove_data_button(self, interaction: discord.Interaction, button: Button):
-        if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
-
-        self.current_page = "full_glove_data"
-        self.update_buttons()
-
-        full_glove_description = "\n".join(
-            [
-                f"{glove} - <t:{int(datetime.strptime(obtain_date[:19], '%Y-%m-%dT%H:%M:%S').timestamp())}:F>"
-                for glove, obtain_date in self.obtained_gloves.items()
-            ]
-        )
-
-        full_glove_embed = discord.Embed(
-            title=f"Full Glove Data for {interaction.user.name}",
-            description=full_glove_description
-            if full_glove_description
-            else "No gloves obtained.",
-            color=0xDA8EE7,
-        )
-
-        await interaction.response.edit_message(embeds=[full_glove_embed], view=self)
-
-    @button(label="Additional Badges", style=ButtonStyle.secondary)
-    async def additional_badges_button(self, interaction: discord.Interaction, button: Button):
-        if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
-        self.current_page = "additional_badges"
-        self.update_buttons()
-        await interaction.response.edit_message(embeds=[self.badge_embed], view=self)
-
-    @button(label="Gamepass Data", style=ButtonStyle.secondary)
-    async def gamepass_data_button(self, interaction: discord.Interaction, button: Button):
-        if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
-        self.current_page = "gamepass_data"
-        self.update_buttons()
-
-        gamepass_embed = discord.Embed(title=f"Gamepass Data for {interaction.user.name}", color=0xDA8EE7)
-        gamepass_embed.add_field(name="Owned", value=", ".join(self.owned_gamepasses) if self.owned_gamepasses else "None", inline=False)
-        gamepass_embed.add_field(name="Not Owned", value=", ".join(self.not_owned_gamepasses) if self.not_owned_gamepasses else "None", inline=False)
-
-        await interaction.response.edit_message(embed=gamepass_embed, view=self)
-
-class RobloxCog(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.bot.tree.add_command(RobloxGroup())
-        load_commands(self.__cog_app_commands__, "roblox")
-
     @app_commands.command(name="cgloves")
+    @app_commands.autocomplete(username=get_connected_accounts)
     async def cgloves(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
@@ -504,6 +433,99 @@ class RobloxCog(commands.Cog):
 
         except Exception as error:
             await handle_logs(interaction, error)
+
+class GloveView(View):
+    def __init__(
+        self,
+        badge_embed,
+        glove_embed,
+        full_glove_data,
+        obtained_gloves,
+        roblox_id,
+        owned_gamepasses,
+        not_owned_gamepasses,
+    ):
+        super().__init__(timeout=None)
+        self.badge_embed = badge_embed
+        self.glove_embed = glove_embed
+        self.full_glove_data = full_glove_data
+        self.obtained_gloves = obtained_gloves
+        self.roblox_id = roblox_id
+        self.owned_gamepasses = owned_gamepasses
+        self.not_owned_gamepasses = not_owned_gamepasses
+        self.current_page = "glove_data"
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.glove_data_button.disabled = self.current_page == "glove_data"
+        self.full_glove_data_button.disabled = self.current_page == "full_glove_data"
+        self.additional_badges_button.disabled = self.current_page == "additional_badges"
+        self.gamepass_data_button.disabled = self.current_page == "gamepass_data"
+
+    @button(label="Glove Data", style=ButtonStyle.secondary)
+    async def glove_data_button(self, interaction: discord.Interaction, button: Button):
+        if not check_user(interaction, interaction.message.interaction.user):
+            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+            return
+        
+        self.current_page = "glove_data"
+        self.update_buttons()
+        await interaction.response.edit_message(embeds=[self.glove_embed], view=self)
+
+    @button(label="Full Glove Data", style=ButtonStyle.secondary)
+    async def full_glove_data_button(self, interaction: discord.Interaction, button: Button):
+        if not check_user(interaction, interaction.message.interaction.user):
+            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+            return
+
+        self.current_page = "full_glove_data"
+        self.update_buttons()
+
+        full_glove_description = "\n".join(
+            [
+                f"{glove} - <t:{int(datetime.strptime(obtain_date[:19], '%Y-%m-%dT%H:%M:%S').timestamp())}:F>"
+                for glove, obtain_date in self.obtained_gloves.items()
+            ]
+        )
+
+        full_glove_embed = discord.Embed(
+            title=f"Full Glove Data for {interaction.user.name}",
+            description=full_glove_description
+            if full_glove_description
+            else "No gloves obtained.",
+            color=0xDA8EE7,
+        )
+
+        await interaction.response.edit_message(embeds=[full_glove_embed], view=self)
+
+    @button(label="Additional Badges", style=ButtonStyle.secondary)
+    async def additional_badges_button(self, interaction: discord.Interaction, button: Button):
+        if not check_user(interaction, interaction.message.interaction.user):
+            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+            return
+        self.current_page = "additional_badges"
+        self.update_buttons()
+        await interaction.response.edit_message(embeds=[self.badge_embed], view=self)
+
+    @button(label="Gamepass Data", style=ButtonStyle.secondary)
+    async def gamepass_data_button(self, interaction: discord.Interaction, button: Button):
+        if not check_user(interaction, interaction.message.interaction.user):
+            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+            return
+        self.current_page = "gamepass_data"
+        self.update_buttons()
+
+        gamepass_embed = discord.Embed(title=f"Gamepass Data for {interaction.user.name}", color=0xDA8EE7)
+        gamepass_embed.add_field(name="Owned", value=", ".join(self.owned_gamepasses) if self.owned_gamepasses else "None", inline=False)
+        gamepass_embed.add_field(name="Not Owned", value=", ".join(self.not_owned_gamepasses) if self.not_owned_gamepasses else "None", inline=False)
+
+        await interaction.response.edit_message(embed=gamepass_embed, view=self)
+
+class RobloxCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.bot.tree.add_command(RobloxGroup())
+        load_commands(self.__cog_app_commands__, "roblox")
 
 async def setup(bot):
     await bot.add_cog(RobloxCog(bot))
