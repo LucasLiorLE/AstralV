@@ -633,14 +633,14 @@ class InfoCog(commands.Cog):
 			embed.add_field(name="Server Count", value=len(self.bot.guilds))
 			embed.add_field(name="Library", value="Discord.py")
 			embed.add_field(name="Uptime", value=uptime_str)
-			embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 310+ hours")
+			embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 310+ hours\nOver 10k lines of code.")
 			embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
 			view = View()
 
 			website = Button(label="Visit Website", url="https://lucasliorle.github.io")
 			view.add_item(website)
-			github = Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/APEYE")
+			github = Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/AstralV")
 			view.add_item(github)
 
 			await interaction.response.send_message(embed=embed, view=view)
@@ -690,6 +690,8 @@ class InfoCog(commands.Cog):
 				name="Emoji Created",
 				value=f"{emoji_obj.created_at.strftime('%m/%d/%Y %H:%M')} ({(datetime.now(timezone.utc) - emoji_obj.created_at).days} days ago)"
 			)
+
+			embed.set_thumbnail(emoji_obj.url)
 
 			await interaction.response.send_message(embed=embed)
 		except Exception as e:

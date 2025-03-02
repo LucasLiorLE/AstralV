@@ -1,94 +1,230 @@
 {
-    "fishing_rod": {
-        "price": 50000,
-        "appearInShop": {
-            "buyPrice": 50000,
-            "amount": -1,
-            "description": "Required for fishing! Has a 10% chance to break."
-        },
-        "type": "tool"
-    },
     "rifle": {
-        "price": 50000,
-        "appearInShop": {
-            "buyPrice": 50000,
-            "amount": -1,
-            "description": "Required for hunting! Has a 10% chance to break."
+        "price": {
+            "currency": "coins",
+            "amount": 50000
         },
-        "type": "tool"
+        "type": "tool",
+        "description": "Required for hunting! Has a 10% chance to break.",
+        "appearInShop": {
+            "amount": -1,
+            "weight": 10
+        }
     },
     "shovel": {
-        "price": 50000,
-        "appearInShop": {
-            "buyPrice": 50000,
-            "amount": -1,
-            "description": "Required for digging! Has a 10% chance to break."
+        "price": {
+            "currency": "coins",
+            "amount": 50000
         },
-        "type": "tool"
+        "type": "tool",
+        "description": "Required for digging! Has a 10% chance to break.",
+        "appearInShop": {
+            "amount": -1,
+            "weight": 10
+        }
     },
-    "deer": {
-        "price": 5000,
-        "type": "animal",
-        "description": "A majestic deer hunted from the forest"
+
+    "bank_note": {
+        "price": {
+            "currency": "coins",
+            "amount": 1000000
+        },
+        "type": "consumable",
+        "description": "Use a bank note to expand your bank storage!",
+        "appearInShop": {
+            "amount": 5000,
+            "weight": 10
+        }
     },
+
     "rabbit": {
-        "price": 2000,
+        "price": {
+            "currency": "coins",
+            "amount": 1000
+        },
         "type": "animal",
         "description": "A cute little rabbit"
     },
-    "boar": {
-        "price": 7500,
+    "deer": {
+        "price": {
+            "currency": "coins",
+            "amount": 4000
+        },
         "type": "animal",
-        "description": "A wild boar"
+        "description": "A majestic deer hunted from the forest"
     },
     "fox": {
-        "price": 6000,
+        "price": 5000,
         "type": "animal",
         "description": "A cunning fox"
     },
+    "boar": {
+        "price": {
+            "currency": "coins",
+            "amount": 8000
+        },
+        "type": "animal",
+        "description": "A wild boar"
+    },
     "wolf": {
-        "price": 10000,
+        "price": {
+            "currency": "coins",
+            "amount": 12000
+        },
         "type": "animal",
         "description": "A fierce wolf"
     },
     "bear": {
-        "price": 15000,
+        "price": {
+            "currency": "coins",
+            "amount": 20000
+        },
         "type": "animal",
         "description": "A dangerous bear"
     },
-    "cod": {
-        "price": 2000,
-        "type": "fish",
-        "description": "A common fish found in cool waters",
-        "market": {
-            "hourlyThreshold": 1000,
-            "maxPriceMultiplier": 3.0,
-            "priceIncrementPerThousand": 0.005
+    "dragon": {
+        "price": {
+            "currency": "coins",
+            "amount": 50000
+        },
+        "type": "animal",
+        "description": "A mythical dragon"
+    },
+
+    "wooden_fishing_rod": {
+        "price": {
+            "currency": "coins",
+            "amount": 2500
+        },
+        "type": "tool",
+        "description": "String taped to a stick.",
+        "craft": {
+            "string": 5,
+            "stick": 1
+        },
+        "fishing_level": 0,
+        "rod_level": 1,
+        "appearInShop": {
+            "amount": -1,
+            "weight": 10
         }
     },
-    "salmon": {
-        "price": 4000,
+    "fishing_rod": {
+        "price": {
+            "currency": "fish_tokens",
+            "amount": 50
+        },
+        "type": "tool",
+        "description": "An actual fishing rod",
+        "fishing_level": 5,
+        "rod_level": 2
+    },
+    "reinforced_fishing_rod": {
+        "price": {
+            "currency": "fish_tokens",
+            "amount": 800
+        },
+        "type": "tool",
+        "description": "A reinforced fishing rod for bigger catches!",
+        "fishing_level": 15,
+        "rod_level": 3
+    },
+
+    "cod": {
+        "price": {
+            "currency": "coins",
+            "amount": 50
+        },
         "type": "fish",
-        "description": "A popular fish known for its pink meat"
+        "description": "A common fish found in cool waters",
+        "fishing_level": 0,
+        "rod_level": 1
+    },
+    "salmon": {
+        "price": {
+            "currency": "coins",
+            "amount": 75
+        },
+        "type": "fish",
+        "description": "A popular fish known for its pink meat",
+        "fishing_level": 1,
+        "rod_level": 1
     },
     "tuna": {
-        "price": 6000,
+        "price": {
+            "currency": "coins",
+            "amount": 100
+        },
         "type": "fish",
-        "description": "A large fish prized by fishermen"
+        "description": "A large fish prized by fishermen",
+        "fishing_level": 5,
+        "rod_level": 1
     },
     "swordfish": {
-        "price": 8000,
+        "price": {
+            "currency": "coins",
+            "amount": 500
+        },
         "type": "fish",
-        "description": "A dangerous fish with a pointed nose"
+        "description": "A dangerous fish with a pointed nose",
+        "fishing_level": 10,
+        "rod_level": 2
+    },
+    "squid": {
+        "price": {
+            "currency": "coins", 
+            "amount": 2000
+        },
+        "type": "fish",
+        "description": "Known for the very valuable black ink",
+        "fishing_level": 20,
+        "rod_level": 2
     },
     "shark": {
-        "price": 12000,
+        "price": {
+            "currency": "coins",
+            "amount": 2500
+        },
         "type": "fish",
-        "description": "A fearsome predator of the seas"
+        "description": "A fearsome predator of the seas",
+        "fishing_level": 30,
+        "rod_level": 3
     },
     "whale": {
-        "price": 20000,
+        "price": {
+            "currency": "coins",
+            "amount": 10000
+        },
         "type": "fish",
-        "description": "The largest catch possible!"
+        "description": "A giant whale",
+        "fishing_level": 50,
+        "rod_level": 3
+    },
+
+    "string": {
+        "price": {
+            "currency": "coins",
+            "amount": 50
+        },
+        "type": "material",
+        "description": "A piece of string"
+    },
+    "stick": {
+        "price": {
+            "currency": "coins",
+            "amount": 50
+        },
+        "type": "material",
+        "description": "A branch from a tree"
+    },
+    "sponge": {
+        "price": {
+            "currency": "coins",
+            "amount": 800
+        },
+        "type": "material",
+        "description": "It soaks up water",
+        "fishing_level": 10,
+        "rod_level": 2
     }
 }

@@ -1,11 +1,23 @@
-from typing import Dict, List, Union, Optional, Any, Tuple, Literal, TypedDict, TypeAlias
 import time
-from .file_handler import (
-    open_file,
-    save_file
+import discord
+from discord import app_commands
+from typing import (
+    TypedDict,
+    Optional,
+    Dict,
+    Any,
+    List,
+    TypeAlias,
+    Literal,
+    Tuple
 )
 
-# Type definitions for nested structures
+from bot_utils import (
+    open_json,
+    save_json,
+    check_user
+)
+
 class LevelsData(TypedDict):
     EXP: int
     retire: int
@@ -72,6 +84,32 @@ EconomyData: TypeAlias = Dict[PlayerId, PlayerData]
 
 eco_path: str = "storage/economy/economy.json"
 
+def display_item_name(item_name: str) -> str:
+    """Convert item name to display format."""
+    return item_name.replace('_', ' ').title() 
+
+def get_item_name(item_name: str) -> str:
+    """Convert display format to item name."""
+    return item_name.lower().replace(' ', '_')
+
+async def get_item_suggestions(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+    """Get autocomplete suggestions for items."""
+    items_data = open_json("storage/economy/items.json")
+    choices = []
+    
+    for item_name, item_data in items_data.items():
+        if current.lower() in item_name.lower():
+            item_type = item_data.get("type", "Unknown")
+            price = item_data.get("price", 1000)
+            choices.append(
+                app_commands.Choice(
+                    name=f"{display_item_name(item_name)} ({item_type}) - {price:,} coins",
+                    value=item_name
+                )
+            )
+    
+    return choices[:25]
+
 def create_account(id: PlayerId) -> None:
     """
     Creates a new economy account for a user with default starting values.
@@ -79,15 +117,12 @@ def create_account(id: PlayerId) -> None:
     Parameters:
         id (PlayerId): The unique identifier for the user.
 
-    Returns:
-        None: The account data is saved to the economy file.
-
     Example:
         ```
         create_account("123456789")  # Creates new account for user with ID 123456789
         ```
     """
-    players: EconomyData = open_file(eco_path)
+    players: EconomyData = open_json(eco_path)
 
     try:
         lastPlayerData = next(reversed(players.values()))
@@ -98,55 +133,22 @@ def create_account(id: PlayerId) -> None:
     players[id] = {
         "playerID": playerID,
         "joinTimestamp": int(time.time()),
-        "levels": {
-            "EXP": 0,
-            "retire": 0,
-            "prestige": 0,
-            "rebirth": 0,
-            "evolve": 0,
-            # More coming later ig
-        },
         "balance": {
             "bank": 5000,
             "purse": 0,
-            "maxBank": 25000
+            "maxBank": 25000,
         },
-        "inventory": {},
-
-        # Advanced later stuff
-        "pets": {},
-        "gear": {
-            "helmet": None,
-            "chestplate": None,
-            "leggings": None,
-            "boots": None,
-            "rune": None,
-            "ring": None,
-            "weapon": None,
+        "levels": {
+            "EXP": 0,
         },
         "boosts": {
             "coins": 100,
             "exp": 100,
-        },
-        "points": {
-            "health": 0,
-            "damage": 0,
-            "speed": 0,
-            "extra": 0
-        },
-        "cooldowns": {
-            "daily": "2000-01-01T00:00:00+00:00",
-            "weekly": "2000-01-01T00:00:00+00:00",
-            "monthly": "2000-01-01T00:00:00+00:00"
-        },
-        "streaks": {
-            "daily": 0,
-            "weekly": 0,
-            "monthly": 0
         }
     }
 
-    save_file(eco_path, players)
+
+    save_json(eco_path, players)
 
 def check_user_stat(
     root: List[str], 
@@ -160,7 +162,7 @@ def check_user_stat(
         root (List[str]): A list representing the path to the nested dictionary keys (e.g., ['balance', 'purse']). 
         user (int): The user ID to check data for.
         value_type (Optional[Union[type, None]]): The type of value to set if the key does not exist. 
-                                                 None for a dictionary (default), int for 0, str for an empty string.
+                                                 None for a dictionary (default), or any for a value.
 
     Returns: 
         bool: Whether or not the data existed or was initialized during this call.
@@ -168,16 +170,16 @@ def check_user_stat(
     Example:
         ```
         # Check if user has a 'coins' stat in their inventory
-        exists = check_user_stat(['inventory', 'coins'], 123456789, int)
+        exists = check_user_stat(['inventory', 'coins'], 123456789, 0)
         ```
     '''
-    players: EconomyData = open_file(eco_path)
+    players: EconomyData = open_json(eco_path)
     user_str: PlayerId = str(user)
     
     if user_str not in players:
         create_account(user_str)
     
-    players = open_file(eco_path)
+    players = open_json(eco_path)
     
     current = players[user_str]
     for key in root[:-1]:
@@ -187,22 +189,18 @@ def check_user_stat(
     if (final_key not in current):
         if value_type is None:
             current[final_key] = {}
-        elif value_type == int:
-            current[final_key] = 0
-        elif value_type == str:
-            current[final_key] = ""
-        save_file(eco_path, players)
-        return False
+        else:
+            current[final_key] = value_type
+        save_json(eco_path, players)
 
-    return True
-
+    return current[final_key]
 
 ''' 
 
 Maybe I'll use this, not sure yet
 
 def get_player_data(id, data):
-    players = open_file(eco_path)
+    players = open_json(eco_path)
     if id not in players:
         create_account(id)
     
@@ -239,7 +237,7 @@ async def process_transaction(
             print(f"Transaction failed: {message}")
         ```
     """
-    eco: EconomyData = open_file(eco_path)
+    eco: EconomyData = open_json(eco_path)
 
     if user_id not in eco:
         create_account(user_id)
@@ -267,7 +265,7 @@ async def process_transaction(
     else:
         return False, "Invalid transaction type."
 
-    save_file(eco_path, eco)
+    save_json(eco_path, eco)
     
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
 
@@ -293,10 +291,10 @@ def gambling_stats(user_id: PlayerId, game: str) -> GamblingStats:
         print(f"User has won {stats['wins']} times and lost {stats['losses']} times")
         ```
     """
-    eco: EconomyData = open_file(eco_path)
+    eco: EconomyData = open_json(eco_path)
     if user_id not in eco:
         create_account(user_id)
-    eco = open_file(eco_path)
+    eco = open_json(eco_path)
 
     user_info = eco[user_id]
 
@@ -309,7 +307,7 @@ def gambling_stats(user_id: PlayerId, game: str) -> GamblingStats:
             "coinsLost": 0
         }
 
-        save_file(eco_path, eco)
+        save_json(eco_path, eco)
     return user_info[game]
 
 def update_stats(
@@ -336,9 +334,9 @@ def update_stats(
         update_stats("123456789", "blackjack", "win", 100)
         ```
     """
-    eco: EconomyData = open_file(eco_path)
+    eco: EconomyData = open_json(eco_path)
     stats = gambling_stats(user_id, game)
-    eco = open_file(eco_path)
+    eco = open_json(eco_path)
 
     if result == "win":
         stats["wins"] += 1
@@ -350,7 +348,7 @@ def update_stats(
         stats["draws"] += 1
 
     eco[user_id][game] = stats
-    save_file(eco_path, eco)
+    save_json(eco_path, eco)
 
 class Gambling:
     """
@@ -366,26 +364,3 @@ class Gambling:
     """
     def __init__(self, id: PlayerId) -> None:
         self.id: PlayerId = id
-
-def check_user_exists(id: PlayerId) -> EconomyData:
-    """
-    Checks if a user exists in the economy system and creates an account if they don't.
-
-    Parameters:
-        id (PlayerId): The ID of the user to check.
-
-    Returns:
-        EconomyData: The complete economy data dictionary.
-
-    Example:
-        ```
-        economy_data = check_user_exists("123456789")
-        if "123456789" in economy_data:
-            print("User exists in the economy system")
-        ```
-    """
-    players: EconomyData = open_file(eco_path)
-    if id not in players:
-        create_account(id)
-
-    return open_file(eco_path)

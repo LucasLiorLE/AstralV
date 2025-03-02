@@ -7,13 +7,18 @@
 # Release notes:
 #    - Tried to fix "AttributeError: 'NoneType' object has no attribute 'sequence'" error
 #    - Economy update
+#        - Actual ways to make money
+#        - Organized into a folder
+#        - Market and auction commands!
+#    - Moderation update
+#        - Fixed some more bugs
+#        - Also organized into a folder
 # 
 # TODO/FIX:
 #    - Make auto mute a server set function. (2.4.0)
 #    - Make a more efficient storage system using sql and json (2.6.0)
-#    - Finally work on economy commands. (2.4.0)
 #
-# This was last updated: 2/23/2025 12:38 AM
+# This was last updated: 3/1/2025 1:17 PM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -115,17 +120,21 @@ class botMain(commands.Bot):
 
 # Util functions
 async def load_cogs():
+    # Loading individual cog files
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
             try:
                 await bot.load_extension(f"cogs.{filename[:-3]}")
                 print(f"Loaded {filename}")
             except Exception as e:
-                # import traceback
-                # traceback.print_exc()
-                # del traceback
-
                 error(f"Failed to load {filename}: {e}")
+        # Loading package cogs (directories with __init__.py)
+        elif os.path.isdir(os.path.join("./cogs", filename)) and os.path.exists(os.path.join("./cogs", filename, "__init__.py")):
+            try:
+                await bot.load_extension(f"cogs.{filename}")
+                print(f"Loaded package {filename}")
+            except Exception as e:
+                error(f"Failed to load package {filename}: {e}")
 
 async def test_hy_key() -> bool:
     async with ClientSession() as session:

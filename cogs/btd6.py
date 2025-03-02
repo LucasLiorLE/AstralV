@@ -1,6 +1,6 @@
 from bot_utils import (
-    open_file,
-    save_file,
+    open_json,
+    save_json,
     load_commands,
     handle_logs,
 )
@@ -35,14 +35,14 @@ class BloonsTD6CommandGroup(app_commands.Group):
                 await interaction.followup.send(embed=embed)
 
             if oak_key:
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
                 discord_user_id = str(interaction.user.id)
 
                 if (discord_user_id not in member_info):
                     member_info[discord_user_id] = {}
 
                 member_info[discord_user_id]["btd6oakkey"] = oak_key
-                save_file("storage/member_info.json", member_info)
+                save_json("storage/member_info.json", member_info)
                 
                 await interaction.followup.send("Success! Your BTD6 (Maybe someone else's) was successfully linked.")
         except Exception as e:
@@ -50,7 +50,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
 
         
     @app_commands.command(name="racedata")
-    @app_commands.describe(race_id="ID or name of the race you want to view the data for.")
     async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
@@ -101,11 +100,10 @@ class BloonsTD6CommandGroup(app_commands.Group):
             await interaction.followup.send(f"An error occurred: {str(e)}", ephemeral=True)
 
     @app_commands.command(name="racelb")
-    @app_commands.describe(race_id="ID of the race you want to view the leaderboard for.")
     async def btd6racelb(self, interaction: discord.Interaction, race_id: str):
         await interaction.response.defer()
         try:
-            emoji_data = open_file("storage/emoji_data.json")
+            emoji_data = open_json("storage/bot_data.json")["emoji_data"]
 
             async with ClientSession() as session:
                 async with session.get(f"https://data.ninjakiwi.com/btd6/races/{race_id}/leaderboard") as response:
@@ -136,7 +134,7 @@ class BloonsTD6CommandGroup(app_commands.Group):
 
                             await interaction.followup.send(embed=embed)
                         else:
-                            await interaction.followup.send("Unexpected response structure.")
+                            await interaction.followup.send("Unexpected response structure. Did you type the wrong race ID?")
                     else:
                         await interaction.followup.send("Failed to fetch data. Please try again later.")
 
@@ -184,12 +182,11 @@ class BloonsTD6CommandGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="profile")
-    @app_commands.describe(oak_key="https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API")
     async def btd6profile(self, interaction: discord.Interaction, oak_key: str = None):
         await interaction.response.defer()
         try:
             if not oak_key:
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
                 discord_user_id = str(interaction.user.id)
                 if (discord_user_id not in member_info or "btd6oakkey" not in member_info[discord_user_id]):
                     await interaction.followup.send("You do not have a linked BTD6 account.")

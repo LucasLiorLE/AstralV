@@ -1468,12 +1468,12 @@ class ModerationCog(commands.Cog):
             handle_logs(ctx, e)
 
     @commands.Cog.listener()
-    async def on_command_handle_logs(self, ctx, handle_logs):
+    async def on_command_error(self, ctx, error):
         try:
-            if isinstance(handle_logs, discord.ext.commands.handle_logss.CommandNotFound):
+            if isinstance(error, discord.ext.commands.errors.CommandNotFound):
                 return
             
-            if isinstance(handle_logs, commands.MissingRequiredArgument):
+            if isinstance(error, commands.MissingRequiredArgument):
                 command_name = ctx.command.name
                 if ctx.command.parent:
                     command_name = f"{ctx.command.parent.name} {command_name}"
@@ -1484,9 +1484,9 @@ class ModerationCog(commands.Cog):
                 
                 if help_data:
                     embed = discord.Embed(
-                        title=f"Missing Required Argument: {handle_logs.param.name}",
+                        title=f"Command Usage: {command_name}",
                         description=help_data.get("description", "No description available."),
-                        color=discord.Color.red()
+                        color=discord.Color.yellow()
                     )
                     
                     if "parameters" in help_data:
@@ -1498,13 +1498,18 @@ class ModerationCog(commands.Cog):
                         subcmd_text = "\n".join([f"**{cmd}**: {data.get('description', 'No description')}" 
                                                for cmd, data in help_data["subcommands"].items()])
                         embed.add_field(name="Subcommands", value=subcmd_text, inline=False)
+                    
+                    if "usage" in help_data:
+                        embed.add_field(name="Usage", value=help_data["usage"], inline=False)
                         
-                    return await ctx.send(embed=embed, delete_after=30)
+                    return await ctx.send(embed=embed)
+                else:
+                    return await ctx.send(f"Missing required argument: {error.param.name}")
             
             interaction = await create_interaction(ctx)
-            await handle_logs(interaction, handle_logs)
+            await handle_logs(interaction, error)
         except Exception as e:
-            await ctx.send(f"An handle_logs occurred: {str(e)}", delete_after=5)
+            await ctx.send(f"An error occurred: {str(e)}", delete_after=5)
 
 async def setup(bot):
     await bot.add_cog(ModerationCog(bot))

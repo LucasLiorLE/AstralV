@@ -6,9 +6,9 @@ from datetime import datetime, timezone
 
 from discord.ext import commands
 
-from .file_handler import (
-    save_file,
-    open_file
+from bot_utils import (
+    save_json,
+    open_json
 )
 
 def is_valid_bot_instance(interaction_or_context: Union[discord.Interaction, commands.Context]) -> bool:
@@ -149,7 +149,7 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
             print("Moderation logs are initialized")
         ```
     """
-    server_info = open_file("storage/server_info.json")
+    server_info = open_json("storage/server_info.json")
 
     server_info.setdefault("preferences", {})
     server_info.setdefault("modlogs", {})
@@ -163,7 +163,7 @@ def check_mod_server_info(id: int) -> Dict[str, Any]:
     server_info["warnings"].setdefault(id, {})
     server_info["notes"].setdefault(id, {})
 
-    save_file("storage/server_info.json", server_info)
+    save_json("storage/server_info.json", server_info)
 
     return server_info
 
@@ -218,7 +218,7 @@ def check_moderation_info(ctx_or_interaction, permission_name: str, minimum_role
         if getattr(member.guild_permissions, permission_name, False):
             return True, None
 
-        server_info = open_file("storage/server_info.json")
+        server_info = open_json("storage/server_info.json")
         guild_prefs = server_info.get("preferences", {}).get(str(guild.id), {})
         required_role_id = guild_prefs.get(minimum_role)
 
@@ -360,7 +360,7 @@ async def store_modlog(
     if bot and not bot.user.bot:
         raise ValueError("This bot cannot be used as a user account.")
 
-    server_info = open_file("storage/server_info.json")
+    server_info = open_json("storage/server_info.json")
     for key in ["preferences", "modlogs", "modstats", "warnings"]:
         server_info.setdefault(key, {})
         if key in ["modlogs", "modstats", "warnings"]:
@@ -447,7 +447,7 @@ async def store_modlog(
         except discord.HTTPException as e:
             raise discord.HTTPException(f"Failed to send modlog message: {e}")
 
-    save_file("storage/server_info.json", server_info)
+    save_json("storage/server_info.json", server_info)
 
 async def send_modlog_embed(
         interaction: discord.Interaction, 
@@ -502,7 +502,7 @@ async def send_modlog_embed(
         )
         return None, 0, 0
 
-    server_info = open_file("storage/server_info.json")
+    server_info = open_json("storage/server_info.json")
     server_id = str(interaction.guild.id)
     user_id = str(user.id)
 

@@ -258,166 +258,143 @@
         }
     },
     "economy": {
-        "balance": {
-            "description": "Check a user's purse and bank balance!",
-            "parameters": {
-                "member": "The user whose balance you want to check"
-            }
-        },
-        "withdraw": {
-            "description": "Withdraw money from the bank",
-            "parameters": {
-                "amount": "Amount to withdraw"
-            }
-        },
-        "deposit": {
-            "description": "Deposit money to the bank",
-            "parameters": {
-                "amount": "Amount to deposit"
-            }
-        },
-        "pay": {
-            "description": "Pay coins to another user",
-            "parameters": {
-                "member": "The member you want to pay",
-                "amount": "The amount you want to pay"
-            }
-        },
-        "request": {
-            "description": "Request coins from another user",
-            "parameters": {
-                "member": "The member to request from",
-                "amount": "The amount of coins you want to request"
-            }
-        },
-        "trade": {
-            "description": "Trade items, coins, or both with another user",
-            "parameters": {
-                "member": "The member you want to trade",
-                "item": "The item you want to trade",
-                "item_amount": "The amount of items you want to trade",
-                "coins": "The amount of coins you want to trade",
-                "requested_item": "The item you want to recieve",
-                "requested_amount": "The amount of items you want to recieve",
-                "requested_coins": "The amount of coins you want to recieve"
-            }
-        },
-        "beg": {
-            "description": "Beg for money on the streets"
-        },
-        "fish": {
-            "description": "Fish for some coins! Requires a fishing rod"
-        },
-        "hunt": {
-            "description": "Hunt for some coins! Requires a rifle"
-        },
-        "dig": {
-            "description": "Dig for some coins! Requires a shovel"
-        },
-        "search": {
-            "description": "Search for some coins!"
-        },
-        "crime": {
-            "description": "Commit a crime for coins!"
-        },
-        "daily": {
-            "description": "Claim your daily reward!"
-        },
-        "weekly": {
-            "description": "Claim your weekly reward!"
-        },
-        "monthly": {
-            "description": "Claim your monthly reward!"
-        },
-        "coinflip": {
-            "description": "50% chance to double or lose everything",
-            "parameters": {
-                "guess": "Heads or tails?",
-                "amount": "Optional amount if you want to bet!"
-            }
-        },
-        "inventory": {
-            "description": "Check your inventory!",
-            "parameters": {
-                "member": "The user whose inventory you want to check"
-            }
-        },
-        "shop": {
-            "description": "Shop commands",
-            "subcommands": {
-                "view": {
-                    "description": "View the shop"
-                },
-                "buy": {
-                    "description": "Buy an item from the shop",
-                    "parameters": {
-                        "item_name": "Name of the item to buy",
-                        "quantity": "Amount to buy (default: 1)"
+        "description": "Economy system commands for earning and managing coins",
+        "subcommands": {
+            "balance": {
+                "description": "Check your or another user's wallet and bank balance",
+                "parameters": {
+                    "member": "The user whose balance you want to check (optional)"
+                }
+            },
+            "pay": {
+                "description": "Pay coins to another user from your wallet",
+                "parameters": {
+                    "member": "The user you want to pay",
+                    "amount": "Amount of coins to pay"
+                }
+            },
+            "request": {
+                "description": "Request coins from another user",
+                "parameters": {
+                    "member": "The user to request coins from",
+                    "amount": "Amount of coins to request"
+                }
+            },
+            "search": {
+                "description": "Search for coins in random locations",
+                "parameters": {}
+            },
+            "crime": {
+                "description": "Attempt to earn coins through crime (risky)",
+                "parameters": {}
+            },
+            "hunt": {
+                "description": "Hunt for coins using a rifle",
+                "parameters": {}
+            },
+            "fish": {
+                "description": "Fish for coins using a fishing rod",
+                "parameters": {}
+            },
+            "daily": {
+                "description": "Claim your daily reward with streak bonuses",
+                "parameters": {}
+            },
+            "weekly": {
+                "description": "Claim your weekly reward with streak bonuses",
+                "parameters": {}
+            },
+            "monthly": {
+                "description": "Claim your monthly reward with streak bonuses",
+                "parameters": {}
+            },
+            "coinflip": {
+                "description": "Bet coins on a coin flip for a chance to double your money",
+                "parameters": {
+                    "guess": "Your guess (Heads/Tails)",
+                    "amount": "Amount to bet (number, percentage, or 'all')"
+                }
+            },
+            "slots": {
+                "description": "Play the slots machine with various winning combinations",
+                "parameters": {
+                    "amount": "Amount to bet (number, percentage, or 'all')"
+                }
+            },
+            "shop": {
+                "description": "Shop system for buying and viewing items",
+                "subcommands": {
+                    "view": {
+                        "description": "View all items currently available in the shop (refreshes hourly)",
+                        "parameters": {}
+                    },
+                    "buy": {
+                        "description": "Purchase an item from the shop",
+                        "parameters": {
+                            "item_name": "Name of the item to buy",
+                            "quantity": "How many to buy (default: 1)"
+                        }
                     }
                 }
-            }
-        },
-        "ecoadmin": {
-            "give": {
-                "description": "Give coins to a user (Admin only)",
-                "parameters": {
-                    "member": "The member to give coins to",
-                    "amount": "Amount of coins to give"
+            },
+            "market": {
+                "description": "Player-to-player trading system",
+                "subcommands": {
+                    "list": {
+                        "description": "List an item for sale on the market",
+                        "parameters": {
+                            "item": "Item to sell",
+                            "quantity": "How many to sell",
+                            "price_per_unit": "Price per item"
+                        }
+                    },
+                    "buy": {
+                        "description": "Buy items from other players on the market",
+                        "parameters": {
+                            "item": "Item to buy",
+                            "quantity": "How many to buy"
+                        }
+                    },
+                    "view": {
+                        "description": "View current market listings with optional item filter",
+                        "parameters": {
+                            "item": "Optional item name to filter listings"
+                        }
+                    },
+                    "cancel": {
+                        "description": "Cancel one of your market listings",
+                        "parameters": {
+                            "listing_id": "ID of the listing to cancel"
+                        }
+                    }
                 }
             },
-            "set": {
-                "description": "Set a user's coins to a specific amount (Admin only)",
-                "parameters": {
-                    "member": "The member to set coins for",
-                    "amount": "Amount to set their coins to"
+            "ecoadmin": {
+                "description": "Admin commands for managing the economy",
+                "subcommands": {
+                    "give": {
+                        "description": "Give coins to a user",
+                        "parameters": {
+                            "member": "User to give coins to",
+                            "amount": "Amount of coins to give"
+                        }
+                    },
+                    "set": {
+                        "description": "Set a user's coin balance",
+                        "parameters": {
+                            "member": "User to set balance for",
+                            "amount": "New balance amount"
+                        }
+                    },
+                    "item": {
+                        "description": "Give items to a user",
+                        "parameters": {
+                            "member": "User to give items to",
+                            "item_name": "Name of the item",
+                            "quantity": "Amount of items to give"
+                        }
+                    }
                 }
-            },
-            "item": {
-                "description": "Give items to a user (Admin only)", 
-                "parameters": {
-                    "member": "The member to give items to",
-                    "item_name": "Name of the item to give",
-                    "quantity": "Amount of items to give"
-                }
-            }
-        },
-        "market": {
-            "list": {
-                "description": "List an item on the market for sale",
-                "parameters": {
-                    "item": "The item you want to sell",
-                    "quantity": "How many of the item to sell",
-                    "price_per_unit": "Price per item in coins"
-                }
-            },
-            "buy": {
-                "description": "Buy an item from the market",
-                "parameters": {
-                    "item": "The item you want to buy",
-                    "quantity": "How many of the item to buy" 
-                }
-            },
-            "view": {
-                "description": "View current market listings",
-                "parameters": {
-                    "item": "Optional item name to filter listings"
-                }
-            },
-            "cancel": {
-                "description": "Cancel one of your market listings",
-                "parameters": {
-                    "listing_id": "The ID of the listing to cancel"
-                }
-            }
-        },
-        "auction": {
-            "description": "Not currently available - Future auction house system",
-            "status": "Coming soon!"
-        },
-        "slots": {
-            "description": "Play the slots machine for a chance to win coins",
-            "parameters": {
-                "amount": "Amount of coins to bet (use 'all' to bet all your coins)"
             }
         }
     },

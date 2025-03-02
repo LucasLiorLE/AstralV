@@ -509,3 +509,28 @@ async def autocomplete_choices(
         app_commands.Choice(name=choice, value=choice)
         for choice in choices[:25]
     ]
+
+def custom_cooldown(seconds: int):
+    """Creates a custom cooldown decorator for Discord application commands."""
+    def decorator(func):
+        cooldowns = {}
+        
+        async def wrapper(self, interaction, *args, **kwargs):
+            user_id = interaction.user.id
+            current_time = interaction.created_at.timestamp()
+            
+            if user_id in cooldowns:
+                time_elapsed = current_time - cooldowns[user_id]
+                if time_elapsed < seconds:
+                    remaining = int(seconds - time_elapsed)
+                    await interaction.response.send_message(
+                        f"You need to wait {remaining} seconds before using this command again!",
+                        ephemeral=True
+                    )
+                    return
+                    
+            cooldowns[user_id] = current_time
+            return await func(self, interaction, *args, **kwargs)
+            
+        return wrapper
+    return decorator

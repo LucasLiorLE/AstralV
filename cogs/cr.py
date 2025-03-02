@@ -2,8 +2,8 @@ from bot_utils import (
     cr_fetchClanData,
     cr_fetchPlayerData,
 
-    open_file,
-    save_file,
+    open_json,
+    save_json,
     load_commands,
     handle_logs,
 )
@@ -34,7 +34,7 @@ class ProfileView(View):
         self.emoji_data = self.load_emoji_data()
 
     def load_emoji_data(self):
-        return open_file("storage/emoji_data.json")
+        return open_json("storage/bot_data.json")["emoji_data"]
 
     def update_buttons(self):
         self.main_button.disabled = self.current_page == "main"
@@ -210,14 +210,14 @@ class ClashRoyaleCommandGroup(app_commands.Group):
                 player_deck_names = [card.get("name", "Unknown") for card in current_deck]
 
                 if sorted(player_deck_names) == sorted(random_deck):
-                    member_info = open_file("storage/member_info.json")
+                    member_info = open_json("storage/member_info.json")
                     discord_user_id = str(interaction.user.id)
 
                     if discord_user_id not in member_info:
                         member_info[discord_user_id] = {}
 
                     member_info[discord_user_id]["cr_id"] = tag
-                    save_file("storage/member_info.json", member_info)
+                    save_json("storage/member_info.json", member_info)
 
                     await interaction.followup.send("Deck matched! Your Clash Royale ID has been successfully linked.")
                     return
@@ -232,7 +232,7 @@ class ClashRoyaleCommandGroup(app_commands.Group):
     async def crprofile(self, interaction: discord.Interaction, tag: str = None, user: discord.User = None):
         await interaction.response.defer()
         try:
-            member_info = open_file("storage/member_info.json")
+            member_info = open_json("storage/member_info.json")
 
             if tag is None:
                 user_id = str(user.id) or str(interaction.user.id)

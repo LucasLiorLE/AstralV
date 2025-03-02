@@ -5,8 +5,8 @@ from bot_utils import (
     check_user,
     get_member_color,
 
-    open_file,
-    save_file,
+    open_json,
+    save_json,
     load_commands,
     handle_logs,
 )
@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import List
 
 async def get_connected_accounts(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-    member_info = open_file("storage/member_info.json")
+    member_info = open_json("storage/member_info.json")
     choices = []
     
     for user_id, info in member_info.items():
@@ -52,7 +52,8 @@ class CGlovesGroup(app_commands.Group):
         self.setup_commands()
 
     def setup_commands(self):
-        command_help = open_file("storage/command_help.json")
+        # Gonna use this for some stuff until a rework for load_commands
+        command_help = open_json("storage/command_help.json")
         cgloves_data = command_help.get("roblox", {}).get("cgloves", {})
         
         if "description" in cgloves_data:
@@ -81,7 +82,7 @@ class CGlovesGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -89,7 +90,7 @@ class CGlovesGroup(app_commands.Group):
 
                 roblox_id = member_info[discord_user_id]["roblox_id"]
 
-            gloves = open_file("storage/gloves.json")
+            gloves = open_json("storage/bot_data.json")["cgloves"]
             all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
 
             def split_into_chunks(lst, chunk_size):
@@ -129,7 +130,6 @@ class CGlovesGroup(app_commands.Group):
                 glove_percentage = (owned_gloves / total_gloves) * 100
                 glove_percentage_str = f"{glove_percentage:.1f}"
 
-                color = get_member_color(interaction)
                 glove_embed = discord.Embed(
                     title=f"SB Gloves Data for {username if username else interaction.user.name} ({roblox_id}):",
                     description=f"Badge gloves:\n{owned_gloves}/{total_gloves} badge gloves owned ({glove_percentage_str}%)",
@@ -269,7 +269,7 @@ class CGlovesGroup(app_commands.Group):
                 display_name1 = username1
             else:
                 discord_user_id1 = str(member1.id) if member1 is not None else str(interaction.user.id)
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
                 if discord_user_id1 not in member_info or "roblox_id" not in member_info[discord_user_id1]:
                     await interaction.followup.send("The first account is not linked.")
                     return
@@ -293,7 +293,7 @@ class CGlovesGroup(app_commands.Group):
                 roblox_id2 = member_info[discord_user_id2]["roblox_id"]
                 display_name2 = member_info[discord_user_id2]["roblox_username"]
 
-            gloves = open_file("storage/gloves.json")
+            gloves = open_json("storage/bot_data.json")["cgloves"]
             all_badge_ids = [badge_id for badge_ids in gloves.values() for badge_id in badge_ids]
 
             def split_into_chunks(lst, chunk_size):
@@ -325,7 +325,6 @@ class CGlovesGroup(app_commands.Group):
             owned1 = await get_user_data(roblox_id1)
             owned2 = await get_user_data(roblox_id2)
 
-            color = get_member_color(interaction)
             compare_embed = discord.Embed(
                 title=f"Glove Comparison",
                 description=f"Comparing gloves between {display_name1} and {display_name2}",
@@ -412,7 +411,7 @@ class RobloxGroup(app_commands.Group):
             bio = await rbx_fetchUserBio(roblox_user_id)
 
             if color_sequence in bio:
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
                 discord_user_id = str(interaction.user.id)
 
                 if discord_user_id not in member_info:
@@ -420,7 +419,7 @@ class RobloxGroup(app_commands.Group):
 
                 member_info[discord_user_id]["roblox_username"] = username
                 member_info[discord_user_id]["roblox_id"] = roblox_user_id
-                save_file("storage/member_info.json", member_info)
+                save_json("storage/member_info.json", member_info)
 
                 await interaction.followup.send(f"Success! Your Roblox account is now linked.")
 
@@ -441,7 +440,7 @@ class RobloxGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -467,7 +466,7 @@ class RobloxGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -505,7 +504,7 @@ class RobloxGroup(app_commands.Group):
                 is_premium = await check_premium(roblox_user_id)
                 friends_count = await fetch_count(roblox_user_id, "friends")
                 followers_count = await fetch_count(roblox_user_id, "followers")
-                following_count = await fetch_count(roblox_id, "followings")
+                following_count = await fetch_count(roblox_user_id, "followings")
                 presence_data = await fetch_user_presence(roblox_user_id)
                 user_info = await fetch_user_info(roblox_user_id)
 
@@ -539,7 +538,7 @@ class RobloxGroup(app_commands.Group):
                     return
             else:
                 discord_user_id = str(member.id) if member is not None else str(interaction.user.id)
-                member_info = open_file("storage/member_info.json")
+                member_info = open_json("storage/member_info.json")
 
                 if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
                     await interaction.followup.send("The specified account (or yours) is not linked.")
@@ -594,6 +593,7 @@ class RobloxGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
+
 class GloveView(View):
     def __init__(
         self,
@@ -625,8 +625,7 @@ class GloveView(View):
     @button(label="Glove Data", style=ButtonStyle.secondary)
     async def glove_data_button(self, interaction: discord.Interaction, button: Button):
         if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
+            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
         
         self.current_page = "glove_data"
         self.update_buttons()
@@ -635,8 +634,7 @@ class GloveView(View):
     @button(label="Full Glove Data", style=ButtonStyle.secondary)
     async def full_glove_data_button(self, interaction: discord.Interaction, button: Button):
         if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
+            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
 
         self.current_page = "full_glove_data"
         self.update_buttons()
@@ -661,8 +659,8 @@ class GloveView(View):
     @button(label="Additional Badges", style=ButtonStyle.secondary)
     async def additional_badges_button(self, interaction: discord.Interaction, button: Button):
         if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
+            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+            
         self.current_page = "additional_badges"
         self.update_buttons()
         await interaction.response.edit_message(embeds=[self.badge_embed], view=self)
@@ -670,8 +668,8 @@ class GloveView(View):
     @button(label="Gamepass Data", style=ButtonStyle.secondary)
     async def gamepass_data_button(self, interaction: discord.Interaction, button: Button):
         if not check_user(interaction, interaction.message.interaction.user):
-            await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
-            return
+            return await interaction.response.send_message("You cannot interact with this button.", ephemeral=True)
+            
         self.current_page = "gamepass_data"
         self.update_buttons()
 
