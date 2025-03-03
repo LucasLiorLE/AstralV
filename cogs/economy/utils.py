@@ -9,7 +9,8 @@ from typing import (
     List,
     TypeAlias,
     Literal,
-    Tuple
+    Tuple,
+    Union
 )
 
 from bot_utils import (
@@ -23,12 +24,12 @@ class LevelsData(TypedDict):
     retire: int
     prestige: int
     rebirth: int
-    evolve: int
 
 class BalanceData(TypedDict):
     bank: int
     purse: int
     maxBank: int
+    fish_tokens: int
 
 class GearData(TypedDict):
     helmet: Optional[str]
@@ -71,13 +72,6 @@ class PlayerData(TypedDict):
     points: PointsData
     cooldowns: CooldownsData
     streaks: StreaksData
-
-class GamblingStats(TypedDict):
-    wins: int
-    losses: int
-    draws: int
-    coinsWon: int
-    coinsLost: int
 
 PlayerId: TypeAlias = str
 EconomyData: TypeAlias = Dict[PlayerId, PlayerData]
@@ -132,19 +126,7 @@ def create_account(id: PlayerId) -> None:
 
     players[id] = {
         "playerID": playerID,
-        "joinTimestamp": int(time.time()),
-        "balance": {
-            "bank": 5000,
-            "purse": 0,
-            "maxBank": 25000,
-        },
-        "levels": {
-            "EXP": 0,
-        },
-        "boosts": {
-            "coins": 100,
-            "exp": 100,
-        }
+        "joinTimestamp": int(time.time())
     }
 
 
@@ -195,21 +177,6 @@ def check_user_stat(
 
     return current[final_key]
 
-''' 
-
-Maybe I'll use this, not sure yet
-
-def get_player_data(id, data):
-    players = open_json(eco_path)
-    if id not in players:
-        create_account(id)
-    
-    player_data = players[id]
-    if data == "balance":
-        return player_data["balance"]["bank"], player_data["balance"]["purse"], player_data["balance"]["maxBank"]
-'''
-# Base currency system setup
-
 async def process_transaction(
     user_id: PlayerId,
     transaction_type: Literal["deposit", "withdraw"],
@@ -237,10 +204,10 @@ async def process_transaction(
             print(f"Transaction failed: {message}")
         ```
     """
+    check_user_stat(["balance", "purse"], user_id, 0)
+    check_user_stat(["balance", "bank"], user_id, 0)
+    check_user_stat(["balance", "maxBank"], user_id, 25000)
     eco: EconomyData = open_json(eco_path)
-
-    if user_id not in eco:
-        create_account(user_id)
 
     player_data = eco[str(user_id)]
     purse_balance = int(player_data["balance"]["purse"])
@@ -269,98 +236,49 @@ async def process_transaction(
     
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
 
-def gambling_stats(user_id: PlayerId, game: str) -> GamblingStats:
+def command_cooldown(cooldown_seconds: int, command_name: str, user_id: str) -> Union[Tuple[bool, int], bool]:
     """
-    Retrieves or initializes gambling statistics for a user in a specific game.
-
-    Parameters:
-        user_id (PlayerId): The ID of the user to get stats for.
-        game (str): The name of the game to get stats for.
-
+    Check if a command is on cooldown for a user.
+    
+    Args:
+        cooldown_seconds (int): The cooldown duration in seconds
+        command_name (str): The name of the command
+        user_id (str): The user's ID
+        
     Returns:
-        GamblingStats: A dictionary containing the user's gambling statistics including:
-            - wins (int): Number of wins
-            - losses (int): Number of losses
-            - draws (int): Number of draws
-            - coinsWon (int): Total amount of coins won
-            - coinsLost (int): Total amount of coins lost
+        Union[Tuple[bool, int], bool]: Either (False, timestamp) if on cooldown, or True if ready
 
     Example:
         ```
-        stats = gambling_stats("123456789", "blackjack")
-        print(f"User has won {stats['wins']} times and lost {stats['losses']} times")
+        @app_commands.command(name="test")
+        async def test(interaction: discord.Interaction):
+            user_id = str(interaction.user.id)
+            cooldown_result = command_cooldown(60, "test", user_id)
+            if isinstance(cooldown_result, tuple):
+                done, cooldown = cooldown_result
+                if not done:
+                    return await self.send_cooldown(interaction, cooldown)
+            else:
+                return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
         ```
     """
-    eco: EconomyData = open_json(eco_path)
+    eco = open_json(eco_path)
     if user_id not in eco:
         create_account(user_id)
-    eco = open_json(eco_path)
-
-    user_info = eco[user_id]
-
-    if game not in user_info:
-        user_info[game] = {
-            "wins": 0,
-            "losses": 0,
-            "draws": 0,
-            "coinsWon": 0,
-            "coinsLost": 0
-        }
-
-        save_json(eco_path, eco)
-    return user_info[game]
-
-def update_stats(
-    user_id: PlayerId, 
-    game: str, 
-    result: Literal["win", "loss", "draw"],
-    amount: int = 0
-) -> None:
-    """
-    Updates the gambling statistics for a user after a game.
-
-    Parameters:
-        user_id (PlayerId): The ID of the user to update stats for.
-        game (str): The name of the game being played.
-        result (Literal["win", "loss", "draw"]): The result of the game.
-        amount (int, optional): The amount of coins won or lost. Defaults to 0.
-
-    Returns:
-        None: The updated stats are saved to the economy file.
-
-    Example:
-        ```
-        # Update stats for a user who won 100 coins in blackjack
-        update_stats("123456789", "blackjack", "win", 100)
-        ```
-    """
-    eco: EconomyData = open_json(eco_path)
-    stats = gambling_stats(user_id, game)
-    eco = open_json(eco_path)
-
-    if result == "win":
-        stats["wins"] += 1
-        stats["coinsWon"] += amount
-    elif result == "loss":
-        stats["losses"] += 1
-        stats["coinsLost"] += amount
-    elif result == "draw":
-        stats["draws"] += 1
-
-    eco[user_id][game] = stats
+        eco = open_json(eco_path)
+    
+    if "cooldowns" not in eco[user_id]:
+        eco[user_id]["cooldowns"] = {}
+    
+    if command_name not in eco[user_id]["cooldowns"]:
+        eco[user_id]["cooldowns"][command_name] = 0
+    
+    current_time = int(time.time())
+    last_used = eco[user_id]["cooldowns"][command_name]
+    
+    if current_time < last_used + cooldown_seconds:
+        return False, last_used + cooldown_seconds
+    
+    eco[user_id]["cooldowns"][command_name] = current_time
     save_json(eco_path, eco)
-
-class Gambling:
-    """
-    A class to handle gambling-related operations for a specific user.
-
-    Attributes:
-        id (PlayerId): The ID of the user this instance is handling gambling for.
-
-    Example:
-        ```
-        gambling = Gambling("123456789")
-        ```
-    """
-    def __init__(self, id: PlayerId) -> None:
-        self.id: PlayerId = id
+    return True, 0

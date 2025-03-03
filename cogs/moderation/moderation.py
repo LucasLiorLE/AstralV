@@ -1,9 +1,4 @@
 from bot_utils import (
-    send_modlog_embed,
-    store_modlog,
-    check_moderation_info,
-    dm_moderation_embed,
-
     check_user,
     get_context_object,
     get_role_hierarchy,
@@ -18,6 +13,13 @@ from bot_utils import (
     save_file,
     load_commands,
     handle_logs,
+)
+
+from .utils import (
+    send_modlog_embed,
+    store_modlog,
+    check_moderation_info,
+    dm_moderation_embed
 )
 
 import discord 

@@ -14,7 +14,7 @@ class StreaksCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def update_streak(streak: str, user_id: str):
+    def update_streak(self, streak: str, user_id: str):
         check_user_stat(["streaks"], user_id)
         current_streak = check_user_stat(["streaks", streak, "streak"], user_id, 0)
         last_claimed = check_user_stat(["streaks", streak, "last_claimed"], user_id, "2000-01-01 00:00:00.000000+00:00")
@@ -102,3 +102,6 @@ class StreaksCog(commands.Cog):
         )
 
         await interaction.response.send_message(embed=embed)
+
+async def setup(bot):
+    await bot.add_cog(StreaksCog(bot))    

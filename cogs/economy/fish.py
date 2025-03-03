@@ -11,7 +11,7 @@ from .utils import (
     check_user_stat
 )
 
-class FishingCommandGroup(commands.Group):
+class FishingCommands(app_commands.Group):
     def __init__(self):
         super().__init__(name="fish", description="Economy fishing commands")
         self.eco_path = "storage/economy/economy.json"
@@ -22,16 +22,16 @@ class FishingCommandGroup(commands.Group):
             super().__init__(timeout=None)
             self.page = page
 
-        @discord.ui.button(lable="Catch")
-        async def catch_fish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        @discord.ui.button(label="Catch")
+        async def catch_button(self, interaction: discord.Interaction, button: discord.ui.Button):
             ...
 
-        @discord.ui.button(lable="Upgrade")
-        async def catch_fish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        @discord.ui.button(label="Upgrade")
+        async def upgrade_button(self, interaction: discord.Interaction, button: discord.ui.Button):
             ...
 
-        @discord.ui.button(lable="Sell")
-        async def catch_fish(self, interaction: discord.Interaction, button: discord.ui.Button):
+        @discord.ui.button(label="Sell")
+        async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
             ...
 
     async def fish(self, interaction: discord.Interaction, page: str):
@@ -53,3 +53,12 @@ class FishingCommandGroup(commands.Group):
     @app_commands.command(name="leaderboard")
     async def fish_leaderboard(self, interaction: discord.Interaction):
         await self.fish(interaction, "leaderboard")
+
+class FishingCommandCog(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.fishing = FishingCommands()
+        self.bot.tree.add_command(self.fishing)
+
+async def setup(bot):
+    await bot.add_cog(FishingCommandCog(bot))
