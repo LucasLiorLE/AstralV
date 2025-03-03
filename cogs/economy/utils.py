@@ -267,14 +267,13 @@ def command_cooldown(cooldown_seconds: int, command_name: str, user_id: str) -> 
         create_account(user_id)
         eco = open_json(eco_path)
     
-    if "cooldowns" not in eco[user_id]:
-        eco[user_id]["cooldowns"] = {}
-    
-    if command_name not in eco[user_id]["cooldowns"]:
-        eco[user_id]["cooldowns"][command_name] = 0
+    check_user_stat(["commands"][command_name], user_id)
+    check_user_stat(["commands"][command_name]["cooldown"], user_id, 0)
+    check_user_stat(["commands"][command_name]["uses"], user_id, 0)
     
     current_time = int(time.time())
-    last_used = eco[user_id]["cooldowns"][command_name]
+    last_used = eco[user_id]["commands"][command_name]["cooldown"]
+    eco[user_id]["commands"][command_name]["cooldown"] += 1
     
     if current_time < last_used + cooldown_seconds:
         return False, last_used + cooldown_seconds

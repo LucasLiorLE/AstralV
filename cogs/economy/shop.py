@@ -15,14 +15,12 @@ from .utils import (
 class ShopType:
     REGULAR = "regular"
     LIMITED = "limited"
-    FISH = "fish"
 
 class ShopData:
     def __init__(self):
         self.shops: Dict[str, List[dict]] = {
             ShopType.REGULAR: self._init_regular_shop(),
             ShopType.LIMITED: [],
-            ShopType.FISH: []
         }
 
     def get_shop(self, shop_type: str) -> List[dict]:
@@ -80,34 +78,14 @@ def update_limited_shop():
             k=min(9, len(limited_items))
         )
 
-def update_fish_shop():
-    items_data = open_json("storage/economy/items.json")
-    fish_items = []
-
-    for item_name, item_data in items_data.items():
-        prices = item_data.get("price")
-        if prices.get("currency") == "fish_tokens":
-            fish_items.append({
-                "item": item_name,
-                "price": prices.get("amount"),
-                "stock": -1,
-                "description": item_data.get("description", "No description available"),
-                "type": item_data.get("type", "Unknown")
-            })
-
-    SHOP_DATA.shops[ShopType.FISH] = fish_items
-
 @tasks.loop(hours=1)
 async def update_shops():
     update_limited_shop()
-    update_fish_shop()
 
 def create_shop_embed(shop_type: str, shop_items: List[dict]) -> discord.Embed:
-    currency = "fish tokens" if shop_type == ShopType.FISH else "coins"
     title_prefix = {
         ShopType.REGULAR: "🏪 Regular",
         ShopType.LIMITED: "⏰ Limited",
-        ShopType.FISH: "🎣 Fish"
     }
     
     embed = discord.Embed(
@@ -133,7 +111,7 @@ def create_shop_embed(shop_type: str, shop_items: List[dict]) -> discord.Embed:
             name = display_item_name(item["item"])
             price = item["price"]
             desc = item["description"]
-            items_text.append(f"**{name}** - {price:,} {currency}\n*{desc}*\nStock: {stock_text}")
+            items_text.append(f"**{name}** - {price:,} coins\n*{desc}*\nStock: {stock_text}")
         
         embed.add_field(
             name=f"📦 {item_type.title()}",
@@ -242,14 +220,13 @@ class ItemButton(discord.ui.Button):
 class ItemView(discord.ui.View):
     def __init__(self, shop_items: List[dict], shop_type: str):
         super().__init__(timeout=None)
-        currency = "fish tokens" if shop_type == ShopType.FISH else "coins"
         
         for item in shop_items:
             self.add_item(ItemButton(
                 item_name=item["item"],
                 price=item["price"],
                 stock=item["stock"],
-                currency=currency
+                currency="coins"
             ))
 
 class ShopView(discord.ui.View):
@@ -271,12 +248,6 @@ class ShopSelect(discord.ui.Select):
                 description="Random items with limited stock",
                 value=ShopType.LIMITED,
                 emoji="⏰"
-            ),
-            discord.SelectOption(
-                label="Fish Shop",
-                description="Special items purchasable with fish tokens",
-                value=ShopType.FISH,
-                emoji="🎣"
             )
         ]
         super().__init__(
@@ -317,7 +288,7 @@ async def get_shop_item_suggestions(interaction: discord.Interaction, current: s
             if current.lower() in item_name.lower():
                 item_type = items_data[item_name].get("type", "Unknown")
                 price = shop_item["price"]
-                currency = "fish tokens" if shop_item["shop_type"] == ShopType.FISH else "coins"
+                currency = "coins"
                 choices.append(
                     app_commands.Choice(
                         name=f"{display_item_name(item_name)} ({item_type}) - {price:,} {currency}",
@@ -378,7 +349,7 @@ class ShopCommands(app_commands.Group):
                 )
                 return
 
-            currency = "fish tokens" if shop_type == ShopType.FISH else "coins"
+            currency = "coins"
             stock = item_data["stock"]
             price = item_data["price"]
             

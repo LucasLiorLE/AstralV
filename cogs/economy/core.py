@@ -3,6 +3,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from bot_utils import (
+    send_cooldown,
     open_json,
     save_json,
     handle_logs
@@ -86,17 +87,6 @@ class MainEconomyCog(commands.Cog):
         save_json(self.eco_path, eco)
         return amount, coin_multi
 
-    async def send_cooldown(self, interaction: discord.Interaction, cooldown: int):
-        embed = discord.Embed(
-            title="Slow down there buddy!",
-            description=f"This command is on cooldown, please try again <t:{cooldown}:R>",
-            color=discord.Color.red()
-        )
-        if interaction.response.is_done():
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        else:
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
     @app_commands.command(name="beg")
     async def beg(self, interaction: discord.Interaction):
         try:
@@ -105,7 +95,7 @@ class MainEconomyCog(commands.Cog):
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
-                    return await self.send_cooldown(interaction, cooldown)
+                    return await send_cooldown(interaction, cooldown)
             else:
                 return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
 
@@ -151,7 +141,7 @@ class MainEconomyCog(commands.Cog):
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
-                    return await self.send_cooldown(interaction, cooldown)
+                    return await send_cooldown(interaction, cooldown)
             else:
                 return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
 
@@ -350,7 +340,7 @@ class MainEconomyCog(commands.Cog):
         try:
             user_id = str(interaction.user.id)
             check_user_stat(["balance", "purse"], user_id, 0)
-            check_user_stat(["balance", "bank"], user_id, 0)
+            check_user_stat(["balance", "bank"], user_id, 5000)
             check_user_stat(["balance", "maxBank"], user_id, 25000)
             
             if amount <= 0:

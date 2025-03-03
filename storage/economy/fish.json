@@ -1,0 +1,275 @@
+{
+    "rods": {
+        "wooden_fishing_rod": {
+            "price": {
+                "currency": "coins",
+                "amount": 2500
+            },
+            "description": "String taped to a stick.",
+            "fishing_level": 0,
+            "rod_level": 1
+        },
+        "fishing_rod": {
+            "price": {
+                "currency": "fish_tokens",
+                "amount": 50
+            },
+            "description": "An actual fishing rod",
+            "fishing_level": 5,
+            "rod_level": 2
+        },
+        "reinforced_fishing_rod": {
+            "price": {
+                "currency": "fish_tokens",
+                "amount": 800
+            },
+            "description": "A reinforced fishing rod for bigger catches!",
+            "fishing_level": 15,
+            "rod_level": 3
+        },
+        "gold_fishing_rod": {
+            "price": {
+                "currency": "fish_tokens",
+                "amount": 10000
+            },
+            "description": "A gold fishing rod for the richest of catches!",
+            "fishing_level": 25,
+            "rod_level": 4
+        },
+        "champion_fishing_rod": {
+            "price": {
+                "currency": "fish_tokens",
+                "amount": 75000
+            },
+            "description": "A diamond fishing rod for the rarest of catches!",
+            "fishing_level": 50,
+            "rod_level": 5
+        },
+        "legendary_fishing_rod": {
+            "price": {
+                "currency": "fish_tokens",
+                "amount": 1000000
+            },
+            "description": "A legendary fishing rod for the most valuable of catches!",
+            "fishing_level": 75,
+            "rod_level": 6
+        }
+    },
+    "fish": {
+        "cod": {
+            "price": {
+                "currency": "coins",
+                "amount": 50
+            },
+            "description": "A common fish found in cool waters",
+            "fishing_level": 0,
+            "rod_level": 1
+        },
+        "salmon": {
+            "price": {
+                "currency": "coins",
+                "amount": 75
+            },
+            "description": "A popular fish known for its pink meat",
+            "fishing_level": 1,
+            "rod_level": 1
+        },
+        "tuna": {
+            "price": {
+                "currency": "coins",
+                "amount": 100
+            },
+            "description": "A large fish prized by fishermen",
+            "fishing_level": 5,
+            "rod_level": 1
+        },
+        "clownfish": {
+            "price": {
+                "currency": "coins",
+                "amount": 150
+            },
+            "description": "A clownfish",
+            "fishing_level": 10,
+            "rod_level": 1
+        },
+        "swordfish": {
+            "price": {
+                "currency": "coins",
+                "amount": 500
+            },
+            "description": "A dangerous fish with a pointed nose",
+            "fishing_level": 10,
+            "rod_level": 2
+        },
+        "squid": {
+            "price": {
+                "currency": "coins",
+                "amount": 2000
+            },
+            "description": "Known for the very valuable black ink",
+            "fishing_level": 20,
+            "rod_level": 2
+        },
+        "shark": {
+            "price": {
+                "currency": "coins",
+                "amount": 2500
+            },
+            "description": "A fearsome predator of the seas",
+            "fishing_level": 30,
+            "rod_level": 3
+        },
+        "eel": {
+            "price": {
+                "currency": "coins",
+                "amount": 5000
+            },
+            "description": "A long eel",
+            "fishing_level": 40,
+            "rod_level": 3
+        },
+        "whale": {
+            "price": {
+                "currency": "coins",
+                "amount": 10000
+            },
+            "description": "A giant whale",
+            "fishing_level": 50,
+            "rod_level": 3
+        },
+        "giant_squid": {
+            "price": {
+                "currency": "coins",
+                "amount": 32000
+            },
+            "description": "A giant squid",
+            "fishing_level": 50,
+            "rod_level": 4
+        },
+        "whale_shark": {
+            "price": {
+                "currency": "coins",
+                "amount": 100000
+            },
+            "description": "A whale shark",
+            "fishing_level": 75,
+            "rod_level": 4
+        },
+        "megalodon": {
+            "price": {
+                "currency": "coins",
+                "amount": 400000
+            },
+            "description": "A megalodon",
+            "fishing_level": 100,
+            "rod_level": 5
+        },
+        "kraken": {
+            "price": {
+                "currency": "coins",
+                "amount": 2000000
+            },
+            "description": "A kraken",
+            "fishing_level": 125,
+            "rod_level": 5
+        },
+        "leviathan": {
+            "price": {
+                "currency": "coins",
+                "amount": 10000000
+            },
+            "description": "A leviathan",
+            "fishing_level": 150,
+            "rod_level": 6
+        }
+    },
+    "bait": {
+        "worm": {
+            "price": {
+                "currency": "coins",
+                "amount": 50
+            },
+            "type": "bait",
+            "fishing_power": 5,
+            "description": "A worm for fishing"
+        },
+        "bait": {
+            "price": {
+                "currency": "coins",
+                "amount": 250
+            },
+            "type": "bait",
+            "fishing_power": 10,
+            "description": "A bait for fishing",
+            "craft": {
+                "worm": 5
+            },
+            "appearInShop": {
+                "amount": 50000,
+                "weight": 10
+            }
+        },
+        "dark_bait": {
+            "price": {
+                "currency": "coins",
+                "amount": 1000
+            },
+            "type": "bait",
+            "fishing_power": 20,
+            "description": "A dark bait for fishing",
+            "craft": {
+                "bait": 1,
+                "ink": 1
+            },
+            "appearInShop": {
+                "amount": 50000,
+                "weight": 5
+            }
+        }
+    },
+    "materials": {
+        "string": {
+            "price": {
+                "currency": "coins",
+                "amount": 50
+            },
+            "type": "material",
+            "description": "A piece of string"
+        },
+        "stick": {
+            "price": {
+                "currency": "coins",
+                "amount": 50
+            },
+            "type": "material",
+            "description": "A branch from a tree"
+        },
+        "lilypad": {
+            "price": {
+                "currency": "coins",
+                "amount": 250
+            },
+            "description": "A lilypad",
+            "fishing_level": 5,
+            "rod_level": 1
+        },
+        "ink": {
+            "price": {
+                "currency": "coins",
+                "amount": 250
+            },
+            "description": "A black ink",
+            "fishing_level": 8,
+            "rod_level": 1
+        },
+        "sponge": {
+            "price": {
+                "currency": "coins",
+                "amount": 800
+            },
+            "description": "It soaks up water",
+            "fishing_level": 10,
+            "rod_level": 2
+        }
+    }
+}
