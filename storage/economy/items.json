@@ -84,7 +84,7 @@
             "amount": 4000
         },
         "type": "animal",
-        "description": "A majestic deer hunted from the forest"
+        "description": "A majestic deer from the forest"
     },
     "fox": {
         "price": {
@@ -146,122 +146,330 @@
     "cod": {
         "price": {
             "currency": "coins",
+            "amount": 10
+        },
+        "type": "fish",
+        "description": "A common cod of the billions in the ocean..."
+    },
+    "trout": {
+        "price": {
+            "currency": "coins",
+            "amount": 10
+        },
+        "type": "fish",
+        "description": "A common trout of the billions in the ocean..."
+    },
+    "salmon": {
+        "price": {
+            "currency": "coins",
+            "amount": 25
+        },
+        "type": "fish",
+        "description": "A fish known for it's pink meat."
+    },
+    "tuna": {
+        "price": {
+            "currency": "coins",
+            "amount": 30
+        },
+        "type": "fish",
+        "description": "A quick little fish."
+    },
+    "clam": {
+        "price": {
+            "currency": "coins",
             "amount": 50
         },
         "type": "fish",
-        "description": "A common fish found in cool waters"
+        "description": "Known for it's pearl."
     },
-    "salmon": {
+    "shrimp": {
+        "price": {
+            "currency": "coins",
+            "amount": 55
+        },
+        "type": "fish",
+        "description": "Very delicious"
+    },
+    "clownfish": {
         "price": {
             "currency": "coins",
             "amount": 75
         },
         "type": "fish",
-        "description": "A popular fish known for its pink meat"
+        "description": "A common clownfish of the billions in the ocean..."
     },
-    "tuna": {
+    "swordfish": {
         "price": {
             "currency": "coins",
             "amount": 100
         },
         "type": "fish",
-        "description": "A large fish prized by fishermen"
+        "description": "Even faster than the tuna! It's nose can sting."
     },
-    "clownfish": {
+    "lobster": {
         "price": {
             "currency": "coins",
-            "amount": 150
+            "amount": 125
         },
         "type": "fish",
-        "description": "A clownfish"
+        "description": "You better watch out for those quick claws!"
     },
-    "swordfish": {
+    "squid": {
+        "price": {
+            "currency": "coins",
+            "amount": 200
+        },
+        "type": "fish",
+        "description": "Known for their ink!"
+    },
+    "eel": {
+        "price": {
+            "currency": "coins",
+            "amount": 175
+        },
+        "type": "fish",
+        "description": "Touching it can sting..."
+    },
+    "crab": {
         "price": {
             "currency": "coins",
             "amount": 500
         },
         "type": "fish",
-        "description": "A dangerous fish with a pointed nose"
+        "description": "Snap snap! It's meat is also delicious."
     },
-    "squid": {
+    "golden_tuna": {
         "price": {
             "currency": "coins",
-            "amount": 2000
+            "amount": 50000
         },
         "type": "fish",
-        "description": "Known for the very valuable black ink"
+        "description": "A very rare type of tuna!"
+    },
+    "golden_shrimp": {
+        "price": {
+            "currency": "coins",
+            "amount": 50000
+        },
+        "type": "fish",
+        "description": "A very rare type of shrimp!"
+    },
+    "golden_lobster": {
+        "price": {
+            "currency": "coins",
+            "amount": 50000
+        },
+        "type": "fish",
+        "description": "A very rare type of lobster!"
     },
     "shark": {
-        "price": {
-            "currency": "coins",
-            "amount": 2500
-        },
-        "type": "fish",
-        "description": "A fearsome predator of the seas"
-    },
-    "eel": {
-        "price": {
-            "currency": "coins",
-            "amount": 5000
-        },
-        "type": "fish",
-        "description": "A long eel"
-    },
-    "whale": {
         "price": {
             "currency": "coins",
             "amount": 10000
         },
         "type": "fish",
-        "description": "A giant whale"
+        "description": "Quite an endangered species, hunted for their tooth and fins."
+    },
+    "orca": {
+        "price": {
+            "currency": "coins",
+            "amount": 25000
+        },
+        "type": "fish",
+        "description": "Quite an endangered species, predators to a lot of fish!"
+    },
+    "sea_lion": {
+        "price": {
+            "currency": "coins",
+            "amount": 50000
+        },
+        "type": "fish",
+        "description": "Cute little sea lion... how dare you catch one."
+    },
+    "whale": {
+        "price": {
+            "currency": "coins",
+            "amount": 25000
+        },
+        "type": "fish",
+        "description": "One of the biggest fishes of the sea."
     },
     "giant_squid": {
         "price": {
             "currency": "coins",
-            "amount": 32000
+            "amount": 50000
         },
         "type": "fish",
-        "description": "A giant squid"
+        "description": "Very few sailors have seen this type of squid..."
     },
     "whale_shark": {
         "price": {
             "currency": "coins",
-            "amount": 100000
+            "amount": 250000
         },
         "type": "fish",
-        "description": "A whale shark",
-        "fishing_level": 75,
-        "rod_level": 4
+        "description": "A rare type of whale!"
+    },
+    "diamond_tuna": {
+        "price": {
+            "currency": "coins",
+            "amount": 5000000
+        },
+        "type": "fish",
+        "description": "A tuna made of pure diamond!"
+    },
+    "diamond_shrimp": {
+        "price": {
+            "currency": "coins",
+            "amount": 5000000
+        },
+        "type": "fish",
+        "description": "A shrimp that sparkles like diamond!"
+    },
+    "diamond_lobster": {
+        "price": {
+            "currency": "coins",
+            "amount": 5000000
+        },
+        "type": "fish",
+        "description": "A lobster with a crystalline shell!"
+    },
+    "golden_whale": {
+        "price": {
+            "currency": "coins",
+            "amount": 7500000
+        },
+        "type": "fish",
+        "description": "A majestic whale made of pure gold!"
+    },
+    "golden_squid": {
+        "price": {
+            "currency": "coins",
+            "amount": 7500000
+        },
+        "type": "fish",
+        "description": "A golden squid that glimmers in the deep!"
     },
     "megalodon": {
         "price": {
             "currency": "coins",
-            "amount": 400000
+            "amount": 5000000
         },
         "type": "fish",
-        "description": "A megalodon",
-        "fishing_level": 100,
-        "rod_level": 5
+        "description": "An ancient shark of enormous proportions!"
     },
-    "kraken": {
-        "price": {
-            "currency": "coins",
-            "amount": 2000000
-        },
-        "type": "fish",
-        "description": "A kraken",
-        "fishing_level": 125,
-        "rod_level": 5
-    },
-    "leviathan": {
+    "diamond_whale": {
         "price": {
             "currency": "coins",
             "amount": 10000000
         },
         "type": "fish",
-        "description": "A leviathan",
-        "fishing_level": 150,
-        "rod_level": 6
+        "description": "A whale that shimmers with diamond brilliance!"
+    },
+    "diamond_squid": {
+        "price": {
+            "currency": "coins",
+            "amount": 20000000
+        },
+        "type": "fish",
+        "description": "A squid with tentacles of pure diamond!"
+    },
+    "magma_cod": {
+        "price": {
+            "currency": "coins",
+            "amount": 2500000
+        },
+        "type": "fish",
+        "description": "A cod that swims in molten lava!"
+    },
+    "magma_trout": {
+        "price": {
+            "currency": "coins",
+            "amount": 2500000
+        },
+        "type": "fish",
+        "description": "A trout that burns with magma's heat!"
+    },
+    "magma_salmon": {
+        "price": {
+            "currency": "coins",
+            "amount": 2500000
+        },
+        "type": "fish",
+        "description": "A salmon forged in volcanic waters!"
+    },
+    "magma_tuna": {
+        "price": {
+            "currency": "coins",
+            "amount": 2500000
+        },
+        "type": "fish",
+        "description": "A tuna that radiates with magma's glow!"
+    },
+    "merman": {
+        "price": {
+            "currency": "coins",
+            "amount": 5000000
+        },
+        "type": "fish",
+        "description": "A mythical creature of the sea!"
+    },
+    "mermaid": {
+        "price": {
+            "currency": "coins",
+            "amount": 5000000
+        },
+        "type": "fish",
+        "description": "A legendary beauty of the ocean!"
+    },
+    "shadow_cod": {
+        "price": {
+            "currency": "coins",
+            "amount": 7500000
+        },
+        "type": "fish",
+        "description": "A cod that lurks in the darkest depths!"
+    },
+    "shadow_whale": {
+        "price": {
+            "currency": "coins",
+            "amount": 10000000
+        },
+        "type": "fish",
+        "description": "A whale that commands the shadows!"
+    },
+    "kraken": {
+        "price": {
+            "currency": "coins",
+            "amount": 15000000
+        },
+        "type": "fish",
+        "description": "The legendary monster of the deep!"
+    },
+    "leviathan": {
+        "price": {
+            "currency": "coins",
+            "amount": 25000000
+        },
+        "type": "fish",
+        "description": "An ancient beast of unimaginable size!"
+    },
+    "shadow_kraken": {
+        "price": {
+            "currency": "coins",
+            "amount": 50000000
+        },
+        "type": "fish",
+        "description": "A kraken born from pure darkness!"
+    },
+    "space_cod": {
+        "price": {
+            "currency": "coins",
+            "amount": 100000000
+        },
+        "type": "fish",
+        "description": "A cod that transcends the ocean itself!"
     },
 
     "worm": {
@@ -329,9 +537,7 @@
             "amount": 250
         },
         "type": "material",
-        "description": "A lilypad",
-        "fishing_level": 5,
-        "rod_level": 1
+        "description": "A lilypad"
     },
     "ink": {
         "price": {
@@ -339,9 +545,7 @@
             "amount": 250
         },
         "type": "material",
-        "description": "A black ink",
-        "fishing_level": 8,
-        "rod_level": 1
+        "description": "A black ink"
     },
     "sponge": {
         "price": {
@@ -349,8 +553,6 @@
             "amount": 800
         },
         "type": "material",
-        "description": "It soaks up water",
-        "fishing_level": 10,
-        "rod_level": 2
+        "description": "It soaks up water"
     }
 }

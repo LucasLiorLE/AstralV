@@ -267,9 +267,9 @@ def command_cooldown(cooldown_seconds: int, command_name: str, user_id: str) -> 
         create_account(user_id)
         eco = open_json(eco_path)
     
-    check_user_stat(["commands"][command_name], user_id)
-    check_user_stat(["commands"][command_name]["cooldown"], user_id, 0)
-    check_user_stat(["commands"][command_name]["uses"], user_id, 0)
+    check_user_stat(["commands", command_name], user_id)
+    check_user_stat(["commands", command_name, "cooldown"], user_id, 0)
+    check_user_stat(["commands", command_name, "uses"], user_id, 0)
     
     current_time = int(time.time())
     last_used = eco[user_id]["commands"][command_name]["cooldown"]

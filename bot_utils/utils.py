@@ -221,6 +221,7 @@ async def create_interaction(ctx):
         class PseudoInteraction:
             def __init__(self, ctx):
                 self.user = ctx.author
+                self.author = ctx.author
                 self.guild = ctx.guild
                 self.guild_id = ctx.guild.id
                 self.channel = ctx.channel

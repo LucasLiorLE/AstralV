@@ -116,29 +116,6 @@ def update_streak(streak: str, user_id: str):
 
     return amount, current_streak, old_streak
 
-import random
-items_data = open_json("storage/economy/items.json")
-shop_items = []
-weights = []
-
-for item_name, item_data in items_data.items():
-    if item_data.get("appearInShop", False):
-        prices = item_data.get("price")
-        if prices.get("currency") == "coins":
-            price = prices.get("amount")
-        else:
-            break
-        stock = item_data.get("amount", -1)
-
-        if stock == -1:
-            break
-        weight = item_data.get("appearInShop").get("weight", 1)
-        shop_items.append({
-            "item": item_name,
-            "price": price,
-            "stock": stock,
-        })
-        weights.append(weight)
-
-SHOP = random.sample(shop_items, counts=weights, k=min(9, len(shop_items)))
-print(SHOP)
+eco_items = open_json("storage/economy/limited_shop.json")
+eco_items.append({})
+save_json("storage/economy/limited_shop.json", eco_items)

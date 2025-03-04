@@ -14,17 +14,23 @@ from .utils import (
 
 class ShopType:
     REGULAR = "regular"
+    MERCHANT = "merchant"
     LIMITED = "limited"
 
 class ShopData:
     def __init__(self):
         self.shops: Dict[str, List[dict]] = {
             ShopType.REGULAR: self._init_regular_shop(),
-            ShopType.LIMITED: [],
+            ShopType.MERCHANT: [],
+            ShopType.LIMITED: self._init_limited_shop()
         }
 
     def get_shop(self, shop_type: str) -> List[dict]:
         return self.shops.get(shop_type, [])
+
+    def _init_limited_shop(self) -> List[dict]:
+        limited_shop = open_json("storage/economy/limited_shop.json")
+        return limited_shop
 
     def _init_regular_shop(self) -> List[dict]:
         items_data = open_json("storage/economy/items.json")
@@ -48,9 +54,9 @@ class ShopData:
 
 SHOP_DATA = ShopData()
 
-def update_limited_shop():
+def update_merchant_shop():
     items_data = open_json("storage/economy/items.json")
-    limited_items = []
+    merchant_items = []
     weights = []
 
     for item_name, item_data in items_data.items():
@@ -62,7 +68,7 @@ def update_limited_shop():
             stock = item_data.get("amount", 0)
             if stock > 0:
                 weight = item_data.get("appearInShop").get("weight", 1)
-                limited_items.append({
+                merchant_items.append({
                     "item": item_name,
                     "price": prices.get("amount"),
                     "stock": stock,
@@ -71,20 +77,21 @@ def update_limited_shop():
                 })
                 weights.append(weight)
 
-    if limited_items:
-        SHOP_DATA.shops[ShopType.LIMITED] = random.sample(
-            limited_items, 
+    if merchant_items:
+        SHOP_DATA.shops[ShopType.MERCHANT] = random.sample(
+            merchant_items, 
             counts=weights, 
-            k=min(9, len(limited_items))
+            k=min(9, len(merchant_items))
         )
 
 @tasks.loop(hours=1)
 async def update_shops():
-    update_limited_shop()
+    update_merchant_shop()
 
 def create_shop_embed(shop_type: str, shop_items: List[dict]) -> discord.Embed:
     title_prefix = {
         ShopType.REGULAR: "🏪 Regular",
+        ShopType.MERCHANT: "💎 Merchant",
         ShopType.LIMITED: "⏰ Limited",
     }
     
@@ -244,8 +251,14 @@ class ShopSelect(discord.ui.Select):
                 emoji="🏪"
             ),
             discord.SelectOption(
-                label="Limited Shop",
+                label="Merchant Shop",
                 description="Random items with limited stock",
+                value=ShopType.MERCHANT,
+                emoji="💎"
+            ),
+            discord.SelectOption(
+                label="Limited Shop",
+                description="Shop with items hosted by an admin",
                 value=ShopType.LIMITED,
                 emoji="⏰"
             )

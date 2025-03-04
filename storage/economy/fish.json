@@ -2,8 +2,7 @@
     "rods": {
         "wooden_fishing_rod": {
             "price": {
-                "currency": "coins",
-                "amount": 2500
+                "coins": 25000
             },
             "description": "String taped to a stick.",
             "fishing_level": 0,
@@ -11,8 +10,8 @@
         },
         "fishing_rod": {
             "price": {
-                "currency": "fish_tokens",
-                "amount": 50
+                "fish_tokens": 50,
+                "coins": 100000
             },
             "description": "An actual fishing rod",
             "fishing_level": 5,
@@ -20,254 +19,398 @@
         },
         "reinforced_fishing_rod": {
             "price": {
-                "currency": "fish_tokens",
-                "amount": 800
+                "fish_tokens": 800,
+                "coins": 5000000
             },
             "description": "A reinforced fishing rod for bigger catches!",
-            "fishing_level": 15,
+            "fishing_level": 25,
             "rod_level": 3
         },
-        "gold_fishing_rod": {
+        "golden_fishing_rod": {
             "price": {
-                "currency": "fish_tokens",
-                "amount": 10000
+                "fish_tokens": 10000,
+                "coins": 75000000
             },
             "description": "A gold fishing rod for the richest of catches!",
-            "fishing_level": 25,
+            "fishing_level": 50,
             "rod_level": 4
+        },
+        "dirt_fishing_rod": {
+            "price": {
+                "fish_tokens": 80000,
+                "coins": 300000000
+            },
+            "description": "With 99.99% dirt!",
+            "fishing_level": 100,
+            "rod_level": 5
+        },
+        "mechanical_fishing_rod": {
+            "price": {
+                "fish_tokens": 500000,
+                "coins": 1000000000
+            },
+            "description": "Automate fishing at it's finest.",
+            "fishing_level": 200,
+            "rod_level": 6
         },
         "champion_fishing_rod": {
             "price": {
-                "currency": "fish_tokens",
-                "amount": 75000
+                "fish_tokens": 10000000,
+                "coins": 8000000000
             },
-            "description": "A diamond fishing rod for the rarest of catches!",
-            "fishing_level": 50,
-            "rod_level": 5
+            "description": "The rod of champions!",
+            "fishing_level": 350,
+            "rod_level": 7
+        },
+        "magma_fishing_rod": {
+            "price": {
+                "fish_tokens": 80000000,
+                "coins": 50000000000
+            },
+            "description": "A fishing rod that can withstand lava!",
+            "fishing_level": 500,
+            "rod_level": 8
+        },
+        "shadow_fishing_rod": {
+            "price": {
+                "fish_tokens": 100000000,
+                "coins": 1000000000000
+            },
+            "description": "The fish won't even know they've been caught.",
+            "fishing_level": 750,
+            "rod_level": 9
         },
         "legendary_fishing_rod": {
             "price": {
-                "currency": "fish_tokens",
-                "amount": 1000000
+                "fish_tokens": 1,
+                "coins": 1
             },
-            "description": "A legendary fishing rod for the most valuable of catches!",
+            "description": "The perfect fishing rod.",
+            "fishing_level": 1000,
+            "rod_level": 10
+        }
+    },
+    "boats": {
+        "sailboat": {
+            "price": {
+                "coins": 50000
+            },
+            "description": "Wow you can fish in the actual ocean now!",
+            "fishing_level": 10,
+            "boat_level": 1
+        },
+        "rowboat": {
+            "price": {
+                "fish_tokens": 500,
+                "coins": 100000
+            },
+            "description": "Move in the water easier.",
+            "fishing_level": 35,
+            "boat_level": 2
+        },
+        "motorboat": {
+            "price": {
+                "fish_tokens": 8000,
+                "coins": 50000000
+            },
+            "description": "Move in the water way easier.",
             "fishing_level": 75,
-            "rod_level": 6
+            "boat_level": 3
+        },
+        "yatch": {
+            "price": {
+                "fish_tokens": 50000,
+                "coins": 100000000
+            },
+            "description": "A luxury boat.",
+            "fishing_level": 150,
+            "boat_level": 4
+        },
+        "spectre": {
+            "price": {
+                "fish_tokens": 250000,
+                "coins": 500000000
+            },
+            "description": "A boat designed for speed.",
+            "fishing_level": 300,
+            "boat_level": 5
+        },
+        "golden_speedboat": {
+            "price": {
+                "fish_tokens": 8000000,
+                "coins": 5000000000
+            },
+            "description": "Luxury and speed combined!",
+            "fishing_level": 400,
+            "boat_level": 6
+        },
+        "cruise_ship": {
+            "price": {
+                "fish_tokens": 50000000,
+                "coins": 25000000000
+            },
+            "description": "So many fish...",
+            "fishing_level": 600,
+            "boat_level": 7
+        },
+        "warship": {
+            "price": {
+                "fish_tokens": 180000000,
+                "coins": 100000000000
+            },
+            "description": "Ready to go to war against the ocean.",
+            "fishing_level": 750,
+            "boat_level": 8
+        },
+        "submarine": {
+            "price": {
+                "fish_tokens": 1000000000,
+                "coins": 1000000000000
+            },
+            "description": "Can stand the pressure of the abyss.",
+            "fishing_level": 1000,
+            "boat_level": 9
+        },
+        "spaceship": {
+            "price": {
+                "fish_tokens": 1,
+                "coins": 1
+            },
+            "description": "Go beyond the ocean.",
+            "fishing_level": 2500,
+            "boat_level": 10
         }
     },
     "fish": {
         "cod": {
-            "price": {
-                "currency": "coins",
-                "amount": 50
-            },
-            "description": "A common fish found in cool waters",
-            "fishing_level": 0,
-            "rod_level": 1
+            "rod_level": 1,
+            "boat_level": 0,
+            "weight": 1000000000
+        },
+        "trout": {
+            "rod_level": 1,
+            "boat_level": 0,
+            "weight": 1000000000
         },
         "salmon": {
-            "price": {
-                "currency": "coins",
-                "amount": 75
-            },
-            "description": "A popular fish known for its pink meat",
-            "fishing_level": 1,
-            "rod_level": 1
+            "rod_level": 1,
+            "boat_level": 1,
+            "weight": 975000000
         },
         "tuna": {
-            "price": {
-                "currency": "coins",
-                "amount": 100
-            },
-            "description": "A large fish prized by fishermen",
-            "fishing_level": 5,
-            "rod_level": 1
+            "rod_level": 1,
+            "boat_level": 1,
+            "weight": 950000000
+        },
+        "clam": {
+            "rod_level": 2,
+            "boat_level": 1,
+            "weight": 950000000
+        },
+        "shrimp": {
+            "rod_level": 2,
+            "boat_level": 1,
+            "weight": 925000000
         },
         "clownfish": {
-            "price": {
-                "currency": "coins",
-                "amount": 150
-            },
-            "description": "A clownfish",
-            "fishing_level": 10,
-            "rod_level": 1
+            "rod_level": 2,
+            "boat_level": 2,
+            "weight": 900000000
         },
         "swordfish": {
-            "price": {
-                "currency": "coins",
-                "amount": 500
-            },
-            "description": "A dangerous fish with a pointed nose",
-            "fishing_level": 10,
-            "rod_level": 2
+            "rod_level": 2,
+            "boat_level": 2,
+            "weight": 900000000
+        },
+        "lobster": {
+            "rod_level": 3,
+            "boat_level": 2,
+            "weight": 900000000
         },
         "squid": {
-            "price": {
-                "currency": "coins",
-                "amount": 2000
-            },
-            "description": "Known for the very valuable black ink",
-            "fishing_level": 20,
-            "rod_level": 2
-        },
-        "shark": {
-            "price": {
-                "currency": "coins",
-                "amount": 2500
-            },
-            "description": "A fearsome predator of the seas",
-            "fishing_level": 30,
-            "rod_level": 3
+            "rod_level": 3,
+            "boat_level": 2,
+            "weight": 500000000
         },
         "eel": {
-            "price": {
-                "currency": "coins",
-                "amount": 5000
-            },
-            "description": "A long eel",
-            "fishing_level": 40,
-            "rod_level": 3
+            "rod_level": 3,
+            "boat_level": 3,
+            "weight": 850000000
+        },
+        "crab": {
+            "rod_level": 3,
+            "boat_level": 3,
+            "weight": 200000000
+        },
+        "golden_tuna": {
+            "rod_level": 4,
+            "boat_level": 3,
+            "weight": 5000000
+        },
+        "golden_shrimp": {
+            "rod_level": 4,
+            "boat_level": 3,
+            "weight": 5000000
+        },
+        "golden_lobster": {
+            "rod_level": 4,
+            "boat_level": 4,
+            "weight": 5000000
+        },
+        "shark": {
+            "rod_level": 5,
+            "boat_level": 4,
+            "weight": 100000000
+        },
+        "orca": {
+            "rod_level": 5,
+            "boat_level": 4,
+            "weight": 50000000
+        },
+        "sea_lion": {
+            "rod_level": 5,
+            "boat_level": 4,
+            "weight": 20000000
         },
         "whale": {
-            "price": {
-                "currency": "coins",
-                "amount": 10000
-            },
-            "description": "A giant whale",
-            "fishing_level": 50,
-            "rod_level": 3
+            "rod_level": 5,
+            "boat_level": 5,
+            "weight": 200000000
         },
         "giant_squid": {
-            "price": {
-                "currency": "coins",
-                "amount": 32000
-            },
-            "description": "A giant squid",
-            "fishing_level": 50,
-            "rod_level": 4
+            "rod_level": 5,
+            "boat_level": 5,
+            "weight": 100000000
         },
         "whale_shark": {
-            "price": {
-                "currency": "coins",
-                "amount": 100000
-            },
-            "description": "A whale shark",
-            "fishing_level": 75,
-            "rod_level": 4
+            "rod_level": 6,
+            "boat_level": 5,
+            "weight": 50000000
+        },
+        "diamond_tuna": {
+            "rod_level": 6,
+            "boat_level": 5,
+            "weight": 50000
+        },
+        "diamond_shrimp": {
+            "rod_level": 6,
+            "boat_level": 5,
+            "weight": 50000
+        },
+        "diamond_lobster": {
+            "rod_level": 6,
+            "boat_level": 5,
+            "weight": 50000
+        },
+        "golden_whale": {
+            "rod_level": 6,
+            "boat_level": 6,
+            "weight": 50000
+        },
+        "golden_squid": {
+            "rod_level": 6,
+            "boat_level": 6,
+            "weight": 50000
         },
         "megalodon": {
-            "price": {
-                "currency": "coins",
-                "amount": 400000
-            },
-            "description": "A megalodon",
-            "fishing_level": 100,
-            "rod_level": 5
+            "rod_level": 7,
+            "boat_level": 6,
+            "weight": 250000
+        },
+        "diamond_whale": {
+            "rod_level": 7,
+            "boat_level": 7,
+            "weight": 10000
+        },
+        "diamond_squid": {
+            "rod_level": 7,
+            "boat_level": 7,
+            "weight": 10000
+        },
+        "magma_cod": {
+            "rod_level": 8,
+            "boat_level": 7,
+            "weight": 10000000
+        },
+        "magma_trout": {
+            "rod_level": 8,
+            "boat_level": 7,
+            "weight": 10000000
+        },
+        "magma_salmon": {
+            "rod_level": 8,
+            "boat_level": 7,
+            "weight": 10000000
+        },
+        "magma_tuna": {
+            "rod_level": 8,
+            "boat_level": 7,
+            "weight": 10000000
+        },
+        "merman": {
+            "rod_level": 8,
+            "boat_level": 8,
+            "weight": 5000000
+        },
+        "mermaid": {
+            "rod_level": 8,
+            "boat_level": 8,
+            "weight": 5000000
+        },
+        "shadow_cod": {
+            "rod_level": 9,
+            "boat_level": 8,
+            "weight": 100000
+        },
+        "shadow_whale": {
+            "rod_level": 9,
+            "boat_level": 8,
+            "weight": 1000
         },
         "kraken": {
-            "price": {
-                "currency": "coins",
-                "amount": 2000000
-            },
-            "description": "A kraken",
-            "fishing_level": 125,
-            "rod_level": 5
+            "rod_level": 9,
+            "boat_level": 8,
+            "weight": 500  
         },
         "leviathan": {
-            "price": {
-                "currency": "coins",
-                "amount": 10000000
-            },
-            "description": "A leviathan",
-            "fishing_level": 150,
-            "rod_level": 6
+            "rod_level": 9,
+            "boat_level": 9,
+            "weight": 10
+        },
+        "shadow_kraken": {
+            "rod_level": 10,
+            "boat_level": 9,
+            "weight": 10
+        },
+        "space_cod": {
+            "rod_level": 10,
+            "boat_level": 10
         }
     },
     "bait": {
         "worm": {
-            "price": {
-                "currency": "coins",
-                "amount": 50
-            },
-            "type": "bait",
             "fishing_power": 5,
             "description": "A worm for fishing"
         },
         "bait": {
-            "price": {
-                "currency": "coins",
-                "amount": 250
-            },
-            "type": "bait",
             "fishing_power": 10,
-            "description": "A bait for fishing",
-            "craft": {
-                "worm": 5
-            },
-            "appearInShop": {
-                "amount": 50000,
-                "weight": 10
-            }
+            "description": "A bait for fishing"
         },
         "dark_bait": {
-            "price": {
-                "currency": "coins",
-                "amount": 1000
-            },
-            "type": "bait",
             "fishing_power": 20,
-            "description": "A dark bait for fishing",
-            "craft": {
-                "bait": 1,
-                "ink": 1
-            },
-            "appearInShop": {
-                "amount": 50000,
-                "weight": 5
-            }
+            "description": "A dark bait for fishing"
         }
     },
     "materials": {
-        "string": {
-            "price": {
-                "currency": "coins",
-                "amount": 50
-            },
-            "type": "material",
-            "description": "A piece of string"
-        },
-        "stick": {
-            "price": {
-                "currency": "coins",
-                "amount": 50
-            },
-            "type": "material",
-            "description": "A branch from a tree"
-        },
         "lilypad": {
-            "price": {
-                "currency": "coins",
-                "amount": 250
-            },
-            "description": "A lilypad",
             "fishing_level": 5,
             "rod_level": 1
         },
         "ink": {
-            "price": {
-                "currency": "coins",
-                "amount": 250
-            },
-            "description": "A black ink",
             "fishing_level": 8,
             "rod_level": 1
         },
         "sponge": {
-            "price": {
-                "currency": "coins",
-                "amount": 800
-            },
-            "description": "It soaks up water",
             "fishing_level": 10,
             "rod_level": 2
         }

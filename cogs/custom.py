@@ -124,7 +124,7 @@ class OppList(app_commands.Group):
     def __init__(self):
         super().__init__(name="opp")
         self.file_path = "storage/customs/opp_list.json"
-        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474993]
+        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993]
 
     def find_user(self, search_user: str, data: dict) -> str:
         """Find user with case-insensitive search"""

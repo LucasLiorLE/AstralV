@@ -838,16 +838,21 @@ class ModerationCog(commands.Cog):
 
     @app_commands.command(name="role")
     async def role(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = "No reason provided."):
-        await interaction.response.defer()
         try:
             has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
             if not has_mod:
+                if interaction.response.is_done():
+                    return await interaction.followup.send(embed=embed)
                 return await interaction.response.send_message(embed=embed)
 
             if not get_role_hierarchy(interaction.user, member):
+                if interaction.response.is_done():
+                    return await interaction.followup.send("You require a higher role hierachy than the target user!")
                 return await interaction.response.send_message("You require a higher role hierachy than the target user!")
 
             if not get_role_hierarchy(interaction.user, role):
+                if interaction.response.is_done():
+                    return await interaction.followup.send("You cannot manage a role higher than or equal to your highest role!")
                 return await interaction.response.send_message("You cannot manage a role higher than or equal to your highest role!")
 
             if role in member.roles:
@@ -863,7 +868,11 @@ class ModerationCog(commands.Cog):
                     color=discord.Color.orange(),
                     timestamp=datetime.now(timezone.utc)
                 )
-            await interaction.response.send_message(embed=embed)
+            
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.response.send_message(embed=embed)
 
             await store_modlog(
                 modlog_type="Role",

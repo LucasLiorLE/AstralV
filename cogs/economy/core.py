@@ -352,6 +352,7 @@ class MainEconomyCog(commands.Cog):
                 eco = open_json("storage/economy/economy.json")
                 new_purse = eco[user_id]["balance"]["purse"]
                 new_bank = eco[user_id]["balance"]["bank"]
+                max_bank = eco[user_id]["balance"]["maxBank"]
                 
                 embed = discord.Embed(
                     title="Deposit Successful!",
@@ -391,6 +392,7 @@ class MainEconomyCog(commands.Cog):
                 eco = open_json("storage/economy/economy.json")
                 new_purse = eco[user_id]["balance"]["purse"]
                 new_bank = eco[user_id]["balance"]["bank"]
+                max_bank = eco[user_id]["balance"]["maxBank"]
                 
                 embed = discord.Embed(
                     title="Withdrawal Successful!",
