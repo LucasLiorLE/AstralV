@@ -7,7 +7,8 @@ import asyncio
 from bot_utils import (
     send_cooldown,
     open_json, 
-    save_json
+    save_json,
+    handle_logs
 )
 from .utils import (
     display_item_name,
@@ -141,7 +142,9 @@ class FishingCommands(app_commands.Group):
             try:
                 import traceback
                 user_id = str(interaction.user.id)
-                cooldown_result = command_cooldown(30, "beg", user_id)
+                check_user_stat(["commands"], user_id, {})
+                check_user_stat(["commands", "fish_catch"], user_id, {"cooldown": 0, "uses": 0})
+                cooldown_result = command_cooldown(3, "fish_catch", user_id)
                 
                 if isinstance(cooldown_result, tuple):
                     done, cooldown = cooldown_result
@@ -156,6 +159,16 @@ class FishingCommands(app_commands.Group):
                 
                 eco = open_json(self.bot_self.eco_path)
                 fish_data = open_json(self.bot_self.fish_path)
+                
+                if "inventory" not in eco[user_id]:
+                    eco[user_id]["inventory"] = {}
+                
+                for fish_name in fish_data["fish"].keys():
+                    if fish_name not in eco[user_id]["inventory"]:
+                        eco[user_id]["inventory"][fish_name] = 0
+                
+                save_json(self.bot_self.eco_path, eco)
+                eco = open_json(self.bot_self.eco_path)
                 
                 current_rod = self.bot_self.get_current_rod(user_id, eco)
                 current_boat = self.bot_self.get_current_boat(user_id, eco)
@@ -195,13 +208,6 @@ class FishingCommands(app_commands.Group):
                 total_tokens = 0
                 attempts = random.randint(1, 50)
                 
-                eco = open_json(self.bot_self.eco_path)
-                
-                for fish_name in fish_data["fish"].keys():
-                    check_user_stat(["inventory", fish_name], user_id, 0)
-                save_json(self.bot_self.eco_path, eco)
-                
-                eco = open_json(self.bot_self.eco_path)
                 for attempt in range(attempts):
                     if random.random() * 100 <= success_rate:
                         fish_names = [f[0] for f in available_fish]
@@ -209,13 +215,14 @@ class FishingCommands(app_commands.Group):
                         try:
                             fish_name = random.choices(fish_names, weights=weights, k=1)[0]
                             caught_fish.append(fish_name)
-                            
-                            check_user_stat(["inventory", fish_name], user_id, 0)
+                            if "inventory" not in eco[user_id]:
+                                eco[user_id]["inventory"] = {}
+                            if fish_name not in eco[user_id]["inventory"]:
+                                eco[user_id]["inventory"][fish_name] = 0
                             eco[user_id]["inventory"][fish_name] += 1
                             total_tokens += 1
                         except Exception as e:
-                            print(traceback.format_exc())
-                            raise
+                            await handle_logs(interaction, e)
 
                 eco[user_id]["balance"]["fish_tokens"] += total_tokens
                 save_json(self.bot_self.eco_path, eco)
@@ -231,7 +238,7 @@ class FishingCommands(app_commands.Group):
                         description += f"\n🎉 Level Up! You are now level {eco[user_id]['fishing']['level']}!"
                     
                     embed = discord.Embed(
-                        title="🎣 Fishing Success!",
+                        title=f"🎣 {interaction.user.name}",
                         description=description,
                         color=discord.Color.green()
                     )
@@ -253,8 +260,7 @@ class FishingCommands(app_commands.Group):
 
                     await interaction.response.send_message(embed=embed, view=self.bot_self.AllView("catch", self.bot_self))
             except Exception as e:
-                print(traceback.format_exc())
-                await interaction.response.send_message("An error occurred while processing your catch. Please try again.", ephemeral=True)
+                await handle_logs(interaction, e)
 
         @discord.ui.button(label="Upgrade", style=discord.ButtonStyle.success)
         async def upgrade_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -409,7 +415,18 @@ class FishingCommands(app_commands.Group):
                             color=discord.Color.green()
                         )
                         
-                        await button_interaction.response.edit_message(embed=success_embed, view=UpgradeView(self.bot_self))
+                        class SuccessView(discord.ui.View):
+                            def __init__(self, bot_self):
+                                super().__init__(timeout=None)
+                                self.bot_self = bot_self
+
+                            @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
+                            async def back_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                                if button_interaction.response.is_done():
+                                    await button_interaction.followup.send(embed=discord.Embed(title="Loading...", color=discord.Color.blue()))
+                                await self.bot_self.show_profile(button_interaction)
+                        
+                        await button_interaction.response.edit_message(embed=success_embed, view=SuccessView(self.bot_self))
 
                 @discord.ui.button(label="Upgrade Boat", style=discord.ButtonStyle.primary)
                 async def upgrade_boat(self, button_interaction: discord.Interaction, button: discord.ui.Button):
@@ -455,10 +472,23 @@ class FishingCommands(app_commands.Group):
                             color=discord.Color.green()
                         )
                         
-                        await button_interaction.response.edit_message(embed=success_embed, view=UpgradeView(self.bot_self))
+                        class SuccessView(discord.ui.View):
+                            def __init__(self, bot_self):
+                                super().__init__(timeout=None)
+                                self.bot_self = bot_self
+
+                            @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
+                            async def back_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                                if button_interaction.response.is_done():
+                                    await button_interaction.followup.send(embed=discord.Embed(title="Loading...", color=discord.Color.blue()))
+                                await self.bot_self.show_profile(button_interaction)
+                        
+                        await button_interaction.response.edit_message(embed=success_embed, view=SuccessView(self.bot_self))
 
                 @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
                 async def back_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                    if button_interaction.response.is_done():
+                        await button_interaction.followup.send(embed=discord.Embed(title="Loading...", color=discord.Color.blue()))
                     await self.bot_self.show_profile(button_interaction)
 
             await interaction.response.send_message(embed=embed, view=UpgradeView(self.bot_self))
@@ -515,7 +545,10 @@ class FishingCommands(app_commands.Group):
     @app_commands.command(name="profile")
     async def fish_profile(self, interaction: discord.Interaction):
         """View your fishing profile and stats"""
-        await self.show_profile(interaction)
+        try:
+            await self.show_profile(interaction)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     @app_commands.command(name="start")
     async def fish_start(self, interaction: discord.Interaction):
@@ -530,8 +563,7 @@ class FishingCommands(app_commands.Group):
                 view=self.AllView("catch", self)
             )
         except Exception as e:
-            print(traceback.format_exc())
-            await interaction.response.send_message("An error occurred while fishing. Please try again.", ephemeral=True)
+            await handle_logs(interaction, e)
 
 class FishingCommandCog(commands.Cog):
     def __init__(self, bot):

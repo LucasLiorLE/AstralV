@@ -278,6 +278,6 @@ def command_cooldown(cooldown_seconds: int, command_name: str, user_id: str) -> 
     if current_time < last_used + cooldown_seconds:
         return False, last_used + cooldown_seconds
     
-    eco[user_id]["cooldowns"][command_name] = current_time
+    eco[user_id]["commands"][command_name]["cooldown"] = current_time
     save_json(eco_path, eco)
     return True, 0
