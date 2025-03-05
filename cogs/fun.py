@@ -1,8 +1,7 @@
 from bot_utils import (
-    check_moderation_info,
     get_member_color,
-    
     load_commands,
+    open_json,
     handle_logs,
 )
 
@@ -19,12 +18,78 @@ class FunCog(commands.Cog):
         self.bot = bot
         load_commands(self.__cog_app_commands__, "fun")
 
+    
+    def check_moderation_info(self, ctx_or_interaction, permission_name: str, minimum_role: str) -> tuple[bool, discord.Embed]:
+        try:
+            if isinstance(ctx_or_interaction, discord.Interaction):
+                user = ctx_or_interaction.user
+                guild = ctx_or_interaction.guild
+            else:
+                user = ctx_or_interaction.author
+                guild = ctx_or_interaction.guild
+
+            if not guild:
+                return False, discord.Embed(
+                    title="Error",
+                    description="This command can only be used in a server.",
+                    color=discord.Color.red()
+                )
+
+            if user.id == guild.owner_id:
+                return True, None
+
+            member = guild.get_member(user.id)
+            if not member:
+                return False, discord.Embed(
+                    title="Error",
+                    description="Could not verify your server membership.",
+                    color=discord.Color.red()
+                )
+
+            if getattr(member.guild_permissions, permission_name, False):
+                return True, None
+
+            server_info = open_json("storage/server_info.json")
+            guild_prefs = server_info.get("preferences", {}).get(str(guild.id), {})
+            required_role_id = guild_prefs.get(minimum_role)
+
+            if not required_role_id:
+                return False, discord.Embed(
+                    title="Error",
+                    description=f"No {minimum_role} role has been set for this server.",
+                    color=discord.Color.red()
+                )
+
+            required_role = guild.get_role(required_role_id)
+            if not required_role:
+                return False, discord.Embed(
+                    title="Error",
+                    description=f"The configured {minimum_role} role could not be found.",
+                    color=discord.Color.red()
+                )
+
+            if required_role in member.roles:
+                return True, None
+
+            return False, discord.Embed(
+                title="Missing Permissions",
+                description=f"You need the `{required_role.name}` role or `{permission_name}` permission to use this command.",
+                color=discord.Color.red()
+            )
+
+        except Exception as e:
+            return False, discord.Embed(
+                title="Error",
+                description=f"An error occurred while checking permissions: {str(e)}",
+                color=discord.Color.red()
+            )
+
     @app_commands.command(name="say")
     async def say(self, interaction: discord.Interaction, channel: discord.TextChannel, message: str = None, 
                   attachment: discord.Attachment = None, reply: str = None, ephemeral: bool = True):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            has_mod, embed = self.check_moderation_info(interaction, "manage_messages", "moderator")
             if not has_mod:
                 return await interaction.followup.send(embed=embed)
 

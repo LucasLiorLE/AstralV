@@ -462,6 +462,10 @@ class FishingCommands(app_commands.Group):
                     eco[user_id]["fishing"]["rod"] = rod_name
                     save_json(self.bot_self.eco_path, eco)
                     
+                    await button_interaction.response.send_message(
+                        f"Successfully upgraded to {display_item_name(rod_name)}!", 
+                        ephemeral=True
+                    )
                     await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Upgrade Boat", style=discord.ButtonStyle.primary)
@@ -495,6 +499,10 @@ class FishingCommands(app_commands.Group):
                     eco[user_id]["fishing"]["boat"] = boat_name
                     save_json(self.bot_self.eco_path, eco)
                     
+                    await button_interaction.response.send_message(
+                        f"Successfully upgraded to {display_item_name(boat_name)}!", 
+                        ephemeral=True
+                    )
                     await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Upgrade Token Gain", style=discord.ButtonStyle.success)
@@ -508,6 +516,10 @@ class FishingCommands(app_commands.Group):
                     eco[user_id]["fishing"]["upgrades"]["token_multiplier"] += 1
                     save_json(self.bot_self.eco_path, eco)
                     
+                    await button_interaction.response.send_message(
+                        f"Successfully upgraded Token Multiplier to level {token_level + 1}!", 
+                        ephemeral=True
+                    )
                     await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Upgrade Catch Amount", style=discord.ButtonStyle.success)
@@ -521,6 +533,10 @@ class FishingCommands(app_commands.Group):
                     eco[user_id]["fishing"]["upgrades"]["catch_multiplier"] += 1
                     save_json(self.bot_self.eco_path, eco)
                     
+                    await button_interaction.response.send_message(
+                        f"Successfully upgraded Catch Multiplier to level {catch_level + 1}!", 
+                        ephemeral=True
+                    )
                     await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Upgrade Rarity", style=discord.ButtonStyle.success)
@@ -534,6 +550,10 @@ class FishingCommands(app_commands.Group):
                     eco[user_id]["fishing"]["upgrades"]["rarity_modifier"] += 1
                     save_json(self.bot_self.eco_path, eco)
                     
+                    await button_interaction.response.send_message(
+                        f"Successfully upgraded Rarity Modifier to level {rarity_level + 1}!", 
+                        ephemeral=True
+                    )
                     await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)

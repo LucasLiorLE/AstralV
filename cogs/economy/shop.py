@@ -28,8 +28,13 @@ class ShopData:
     def get_shop(self, shop_type: str) -> List[dict]:
         return self.shops.get(shop_type, [])
 
+    def reload_limited_shop(self):
+        self.shops[ShopType.LIMITED] = self._init_limited_shop()
+        
     def _init_limited_shop(self) -> List[dict]:
         limited_shop = open_json("storage/economy/limited_shop.json")
+        if not isinstance(limited_shop, list):
+            limited_shop = []
         return limited_shop
 
     def _init_regular_shop(self) -> List[dict]:
@@ -60,29 +65,33 @@ def update_merchant_shop():
     weights = []
 
     for item_name, item_data in items_data.items():
-        if item_data.get("appearInShop", False):
-            prices = item_data.get("price")
-            if prices.get("currency") != "coins":
-                continue
-                
-            stock = item_data.get("amount", 0)
-            if stock > 0:
-                weight = item_data.get("appearInShop").get("weight", 1)
-                merchant_items.append({
-                    "item": item_name,
-                    "price": prices.get("amount"),
-                    "stock": stock,
-                    "description": item_data.get("description", "No description available"),
-                    "type": item_data.get("type", "Unknown")
-                })
-                weights.append(weight)
+        appear_in_shop = item_data.get("appearInShop", {})
+        prices = item_data.get("price", {})
+        
+        if (isinstance(appear_in_shop, dict) and 
+            appear_in_shop.get("amount", 0) > 0 and 
+            prices.get("currency") == "coins"):
+            
+            weight = appear_in_shop.get("weight", 1)
+            merchant_items.append({
+                "item": item_name,
+                "price": prices.get("amount"),
+                "stock": appear_in_shop.get("amount"),
+                "description": item_data.get("description", "No description available"),
+                "type": item_data.get("type", "Unknown")
+            })
+            weights.append(weight)
 
     if merchant_items:
-        SHOP_DATA.shops[ShopType.MERCHANT] = random.sample(
-            merchant_items, 
-            counts=weights, 
-            k=min(9, len(merchant_items))
-        )
+        try:
+            selected_items = random.sample(
+                merchant_items,
+                k=min(5, len(merchant_items))
+            )
+            SHOP_DATA.shops[ShopType.MERCHANT] = selected_items
+        except ValueError as e:
+            print(f"Error updating merchant shop: {e}")
+            SHOP_DATA.shops[ShopType.MERCHANT] = []
 
 @tasks.loop(hours=1)
 async def update_shops():
@@ -430,6 +439,7 @@ class ShopCommandCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.shop = ShopCommands()
+        SHOP_DATA.reload_limited_shop()
         update_shops.start()
         self.bot.tree.add_command(self.shop)
 

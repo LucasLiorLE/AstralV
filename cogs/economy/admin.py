@@ -11,6 +11,7 @@ from .utils import (
     get_item_suggestions
 )
 from main import botAdmins
+from .shop import SHOP_DATA
 
 class EconomyAdminCog(commands.Cog):
     def __init__(self, bot):
@@ -62,6 +63,7 @@ class EconomyAdminCog(commands.Cog):
 
     @app_commands.command(name="sell_limited_item")
     async def sell_limited_item(self, interaction: discord.Interaction, item: str, price: int, stock: int):
+        await interaction.response.defer()
         try:
             if self.is_not_admin(interaction.user.id):
                 return await interaction.response.send_message("You do not have permission to use this command!", ephemeral=True)
@@ -80,7 +82,8 @@ class EconomyAdminCog(commands.Cog):
             })
 
             save_json("storage/economy/limited_shop.json", limiteds)
-            await interaction.response.send_message(f"Successfully added {stock} {item}/s at ${price} to the limited shop!")
+            SHOP_DATA.reload_limited_shop()
+            await interaction.followup.send(f"Successfully added {stock} {item}/s at ${price} to the limited shop!")
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -93,6 +96,7 @@ class EconomyAdminCog(commands.Cog):
             limiteds = open_json("storage/economy/limited_shop.json")
             limiteds = [limited for limited in limiteds if limited["item"] != item]
             save_json("storage/economy/limited_shop.json", limiteds)
+            SHOP_DATA.reload_limited_shop()
 
             await interaction.response.send_message(f"Successfully removed {item} from the limited shop!")
         except Exception as e:

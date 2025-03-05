@@ -340,6 +340,7 @@ class WorkCommandGroup(app_commands.Group):
             check_user_stat(["work", "shifts"], user_id, 0)
             check_user_stat(["work", "daily_shifts"], user_id, 0)
             check_user_stat(["work", "last_shift"], user_id, 0)
+            check_user_stat(["work", "promotions"], user_id, 0)  # Added promotions initialization
             check_user_stat(["balance", "purse"], user_id, 0)
             check_user_stat(["commands"], user_id, {})
             check_user_stat(["commands", "work"], user_id, {"cooldown": 0, "uses": 0})

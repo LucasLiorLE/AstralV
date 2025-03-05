@@ -7,13 +7,13 @@
 # Release notes:
 #    - Tried to fix "AttributeError: 'NoneType' object has no attribute 'sequence'" error
 #    - Economy update
+#    - Stored moderation and economy in packets to make it easier for me to see stuff
 # 
 # TODO/FIX:
 #    - Make auto mute a server set function. (2.4.0)
 #    - Make a more efficient storage system using sql and json (2.6.0)
-#    - Finally work on economy commands. (2.4.0)
 #
-# This was last updated: 2/23/2025 12:38 AM
+# This was last updated: 3/4/2025 10:34 AM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -115,7 +115,6 @@ class botMain(commands.Bot):
 
 # Util functions
 async def load_cogs():
-    # Loading individual cog files
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py") and filename != "utils.py":
             try:
@@ -124,16 +123,16 @@ async def load_cogs():
             except Exception as e:
                 error(f"Failed to load {filename}: {e}")
 
-    # Loading cogs from folders
     for folder in os.listdir("./cogs"):
         if os.path.isdir(f"./cogs/{folder}"):
             for filename in os.listdir(f"./cogs/{folder}"):
                 if filename.endswith(".py") and filename != "utils.py":
                     try:
                         await bot.load_extension(f"cogs.{folder}.{filename[:-3]}")
-                        print(f"Loaded {folder}/{filename}")
                     except Exception as e:
                         error(f"Failed to load {folder}/{filename}: {e}")
+
+            print(f"Loaded {folder}")
 
 async def test_hy_key() -> bool:
     async with ClientSession() as session:
@@ -274,11 +273,9 @@ async def main():
             break
         except Exception as e:
             import traceback
-            print(traceback.format_exc()) if retry <= 5 else None
-            error(f"Unexpected error: {e}") if retry > 5 else None
-            sleep = min(120, 10 * retry)
-            print(f"Reconnecting in {sleep} seconds...")
-            (await asyncio.sleep(sleep))
+            print(traceback.format_exc()) if retry > 5 else error(f"Unexpected error: {e}")
+            print(f"Retrying in {min(2 ** retry, 60)} seconds.")
+            await asyncio.sleep(min(2 ** retry, 60))
             retry += 1
         finally:
             print("Bot is shutting down.")
