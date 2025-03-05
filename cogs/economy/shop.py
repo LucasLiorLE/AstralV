@@ -321,6 +321,10 @@ class ShopCommands(app_commands.Group):
     @app_commands.command(name="view")
     async def view_shop(self, interaction: discord.Interaction):
         try:
+            user_id = str(interaction.user.id)
+            check_user_stat(["balance", "purse"], user_id, 0)
+            check_user_stat(["inventory"], user_id, {})
+            
             regular_shop_items = SHOP_DATA.get_shop(ShopType.REGULAR)
             embed = create_shop_embed(ShopType.REGULAR, regular_shop_items)
             
@@ -392,6 +396,16 @@ class ShopCommands(app_commands.Group):
             eco[user_id]["balance"]["purse"] -= total_cost
             eco[user_id]["inventory"][item] += amount
             save_json("storage/economy/economy.json", eco)
+
+            if shop_type == ShopType.LIMITED and stock != -1:
+                limited_shop = open_json("storage/economy/limited_shop.json")
+                for shop_item in limited_shop:
+                    if shop_item["item"] == item:
+                        shop_item["stock"] -= amount
+                        if shop_item["stock"] <= 0:
+                            limited_shop.remove(shop_item)
+                save_json("storage/economy/limited_shop.json", limited_shop)
+                SHOP_DATA.shops[ShopType.LIMITED] = SHOP_DATA._init_limited_shop()
 
             embed = discord.Embed(
                 title="Purchase Successful!",

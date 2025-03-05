@@ -26,7 +26,7 @@ class FishingCommands(app_commands.Group):
         self.user_cooldowns = {}
 
     def calculate_required_exp(self, level):
-        return (level + 1) * 5
+        return level + 5
 
     def check_level_up(self, user_id, eco):
         check_user_stat(["fishing", "exp"], user_id, 0)
@@ -65,6 +65,18 @@ class FishingCommands(app_commands.Group):
             return items_data[fish_name]["price"]["amount"]
         return 0
 
+    def get_token_multiplier(self, user_id, eco):
+        check_user_stat(["fishing", "upgrades", "token_multiplier"], user_id, 0)
+        return eco[user_id]["fishing"]["upgrades"]["token_multiplier"]
+
+    def get_catch_multiplier(self, user_id, eco):
+        check_user_stat(["fishing", "upgrades", "catch_multiplier"], user_id, 0)
+        return 1 + (eco[user_id]["fishing"]["upgrades"]["catch_multiplier"] * 0.1)
+
+    def get_rarity_modifier(self, user_id, eco):
+        check_user_stat(["fishing", "upgrades", "rarity_modifier"], user_id, 0)
+        return eco[user_id]["fishing"]["upgrades"]["rarity_modifier"]
+
     async def show_profile(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
         check_user_stat(["fishing", "level"], user_id, 0)
@@ -72,10 +84,19 @@ class FishingCommands(app_commands.Group):
         check_user_stat(["fishing", "rod"], user_id, None)
         check_user_stat(["fishing", "boat"], user_id, None)
         check_user_stat(["balance", "fish_tokens"], user_id, 0)
+        check_user_stat(["inventory"], user_id, {})
         
         eco = open_json(self.eco_path)
         fish_data = open_json(self.fish_path)
         items_data = open_json(self.items_path)
+        
+        # Initialize inventory for all fish types if they don't exist
+        for fish_name in fish_data["fish"].keys():
+            if fish_name not in eco[user_id]["inventory"]:
+                eco[user_id]["inventory"][fish_name] = 0
+        
+        save_json(self.eco_path, eco)
+        eco = open_json(self.eco_path)
         
         fishing_level = eco[user_id]["fishing"]["level"]
         exp = eco[user_id]["fishing"]["exp"]
@@ -204,14 +225,29 @@ class FishingCommands(app_commands.Group):
 
                 success_rate = min(80 + (fishing_level / 2), 95)
                 
-                caught_fish = []
-                total_tokens = 0
-                attempts = random.randint(1, 50)
+                base_token = 1
+                token_multiplier = self.bot_self.get_token_multiplier(user_id, eco)
+                catch_multiplier = self.bot_self.get_catch_multiplier(user_id, eco)
+                rarity_modifier = self.bot_self.get_rarity_modifier(user_id, eco)
                 
+                total_tokens = base_token * (1 + token_multiplier)
+                attempts = max(1, int(random.randint(1, 50) * catch_multiplier))
+
+                caught_fish = []
                 for attempt in range(attempts):
                     if random.random() * 100 <= success_rate:
                         fish_names = [f[0] for f in available_fish]
                         weights = [f[1] for f in available_fish]
+                        
+                        if rarity_modifier > 0:
+                            total_weight = sum(weights)
+                            modified_weights = []
+                            for weight in weights:
+                                rarity = 1 - (weight / total_weight)
+                                modifier = 1 + (rarity_modifier * 0.05 * rarity)
+                                modified_weights.append(weight * modifier)
+                            weights = modified_weights
+
                         try:
                             fish_name = random.choices(fish_names, weights=weights, k=1)[0]
                             caught_fish.append(fish_name)
@@ -220,7 +256,6 @@ class FishingCommands(app_commands.Group):
                             if fish_name not in eco[user_id]["inventory"]:
                                 eco[user_id]["inventory"][fish_name] = 0
                             eco[user_id]["inventory"][fish_name] += 1
-                            total_tokens += 1
                         except Exception as e:
                             await handle_logs(interaction, e)
 
@@ -262,36 +297,46 @@ class FishingCommands(app_commands.Group):
             except Exception as e:
                 await handle_logs(interaction, e)
 
-        @discord.ui.button(label="Upgrade", style=discord.ButtonStyle.success)
-        async def upgrade_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        @discord.ui.button(label="Upgrades", style=discord.ButtonStyle.success)
+        async def upgrades_button(self, interaction: discord.Interaction, button: discord.ui.Button):
             user_id = str(interaction.user.id)
+            check_user_stat(["fishing", "upgrades", "token_multiplier"], user_id, 0)
+            check_user_stat(["fishing", "upgrades", "catch_multiplier"], user_id, 0)
+            check_user_stat(["fishing", "upgrades", "rarity_modifier"], user_id, 0)
+            check_user_stat(["balance", "fish_tokens"], user_id, 0)
+            check_user_stat(["balance", "purse"], user_id, 0)
             check_user_stat(["fishing", "level"], user_id, 0)
             check_user_stat(["fishing", "rod"], user_id, None)
             check_user_stat(["fishing", "boat"], user_id, None)
-            check_user_stat(["balance", "fish_tokens"], user_id, 0)
             
             eco = open_json(self.bot_self.eco_path)
             fish_data = open_json(self.bot_self.fish_path)
             
+            # Get all stats
             fishing_level = eco[user_id]["fishing"]["level"]
             fish_tokens = eco[user_id]["balance"]["fish_tokens"]
+            user_coins = eco[user_id]["balance"]["purse"]
             current_rod = self.bot_self.get_current_rod(user_id, eco)
             current_boat = self.bot_self.get_current_boat(user_id, eco)
             current_rod_level = self.bot_self.get_rod_level(current_rod, fish_data)
             current_boat_level = self.bot_self.get_boat_level(current_boat, fish_data)
+            token_level = eco[user_id]["fishing"]["upgrades"]["token_multiplier"]
+            catch_level = eco[user_id]["fishing"]["upgrades"]["catch_multiplier"]
+            rarity_level = eco[user_id]["fishing"]["upgrades"]["rarity_modifier"]
             
             embed = discord.Embed(
-                title="🎣 Fishing Upgrades",
-                description="Choose what to upgrade:",
+                title="🎣 Fishing Upgrades Shop",
+                description="Upgrade your fishing abilities and equipment!",
                 color=discord.Color.blue()
             )
 
             embed.add_field(
                 name="Your Stats",
-                value=f"Level: {fishing_level}\nFish Tokens: {fish_tokens:,}\nCurrent Rod: {display_item_name(current_rod) if current_rod else 'None'}\nCurrent Boat: {display_item_name(current_boat) if current_boat else 'None'}",
+                value=f"Level: {fishing_level}\nFish Tokens: {fish_tokens:,}\nCoins: {user_coins:,}",
                 inline=False
             )
 
+            # Equipment Section
             next_rod = None
             for rod_name, rod_data in fish_data["rods"].items():
                 rod_level = rod_data["rod_level"]
@@ -306,14 +351,15 @@ class FishingCommands(app_commands.Group):
                     next_boat = (boat_name, boat_data)
                     break
 
+            equipment_text = []
+            equipment_text.append(f"Current Rod: {display_item_name(current_rod) if current_rod else 'None'}")
+            equipment_text.append(f"Current Boat: {display_item_name(current_boat) if current_boat else 'None'}")
+
             if next_rod:
                 rod_name, rod_data = next_rod
                 req_level = rod_data["fishing_level"]
                 req_amount = rod_data["price"].get("coins", 0)
                 req_tokens = rod_data["price"].get("fish_tokens", 0)
-                
-                check_user_stat(["balance", "purse"], user_id, 0)
-                user_coins = eco[user_id]["balance"]["purse"]
                 
                 status = "<:check:1292269189536682004>" if (fishing_level >= req_level and 
                                                            user_coins >= req_amount and 
@@ -324,17 +370,10 @@ class FishingCommands(app_commands.Group):
                 if req_tokens > 0:
                     requirements.append(f"{req_tokens:,} fish tokens")
                 
-                embed.add_field(
-                    name="Next Rod",
-                    value=f"{status} {display_item_name(rod_name)}\n└ Required: Level {req_level}, {' and '.join(requirements)}",
-                    inline=False
-                )
+                equipment_text.append(f"\nNext Rod:")
+                equipment_text.append(f"{status} {display_item_name(rod_name)}\n└ Required: Level {req_level}, {' and '.join(requirements)}")
             else:
-                embed.add_field(
-                    name="Next Rod",
-                    value="You have the best rod!",
-                    inline=False
-                )
+                equipment_text.append("\nNext Rod: You have the best rod!")
 
             if next_boat:
                 boat_name, boat_data = next_boat
@@ -342,9 +381,6 @@ class FishingCommands(app_commands.Group):
                 req_amount = boat_data["price"].get("coins", 0)
                 req_tokens = boat_data["price"].get("fish_tokens", 0)
                 
-                check_user_stat(["balance", "purse"], user_id, 0)
-                user_coins = eco[user_id]["balance"]["purse"]
-                
                 status = "<:check:1292269189536682004>" if (fishing_level >= req_level and 
                                                            user_coins >= req_amount and 
                                                            fish_tokens >= req_tokens) else "❌"
@@ -354,19 +390,43 @@ class FishingCommands(app_commands.Group):
                 if req_tokens > 0:
                     requirements.append(f"{req_tokens:,} fish tokens")
 
-                embed.add_field(
-                    name="Next Boat",
-                    value=f"{status} {display_item_name(boat_name)}\n└ Required: Level {req_level}, {' and '.join(requirements)}",
-                    inline=False
-                )
+                equipment_text.append(f"\nNext Boat:")
+                equipment_text.append(f"{status} {display_item_name(boat_name)}\n└ Required: Level {req_level}, {' and '.join(requirements)}")
             else:
-                embed.add_field(
-                    name="Next Boat",
-                    value="You have the best boat!",
-                    inline=False
-                )
+                equipment_text.append("\nNext Boat: You have the best boat!")
 
-            class UpgradeView(discord.ui.View):
+            embed.add_field(
+                name="Equipment Upgrades",
+                value="\n".join(equipment_text),
+                inline=False
+            )
+
+            # Fishing Upgrades Section
+            token_cost = int(25 * (1.25 ** token_level))
+            can_afford_token = fish_tokens >= token_cost and token_level < 99
+            status_token = "<:check:1292269189536682004>" if can_afford_token else "❌"
+            
+            catch_cost = int(50 * (1.5 ** catch_level))
+            can_afford_catch = fish_tokens >= catch_cost and catch_level < 50
+            status_catch = "<:check:1292269189536682004>" if can_afford_catch else "❌"
+            
+            rarity_cost = int(100 * (1.5 ** rarity_level))
+            can_afford_rarity = fish_tokens >= rarity_cost and rarity_level < 20
+            status_rarity = "<:check:1292269189536682004>" if can_afford_rarity else "❌"
+
+            fishing_upgrades = [
+                f"Token Multiplier:\n{status_token} Level: {token_level}/99\n└ +{token_level} tokens per catch\n└ Cost: {token_cost:,} fish tokens",
+                f"\nCatch Multiplier:\n{status_catch} Level: {catch_level}/50\n└ +{catch_level * 10}% more fish per catch\n└ Cost: {catch_cost:,} fish tokens",
+                f"\nRarity Modifier:\n{status_rarity} Level: {rarity_level}/20\n└ +{rarity_level * 5}% rare fish chance\n└ Cost: {rarity_cost:,} fish tokens"
+            ]
+
+            embed.add_field(
+                name="Fishing Upgrades",
+                value="\n".join(fishing_upgrades),
+                inline=False
+            )
+
+            class UpgradeShopView(discord.ui.View):
                 def __init__(self, bot_self):
                     super().__init__(timeout=None)
                     self.bot_self = bot_self
@@ -374,124 +434,116 @@ class FishingCommands(app_commands.Group):
                 @discord.ui.button(label="Upgrade Rod", style=discord.ButtonStyle.primary)
                 async def upgrade_rod(self, button_interaction: discord.Interaction, button: discord.ui.Button):
                     if not next_rod:
-                        await button_interaction.response.send_message(
-                            content="You already have the best fishing rod!",
-                            ephemeral=True
-                        )
-                        return
+                        return await button_interaction.response.send_message("You already have the best fishing rod!", ephemeral=True)
 
                     rod_name, rod_data = next_rod
                     req_level = rod_data["fishing_level"]
                     req_amount = rod_data["price"].get("coins", 0)
                     req_tokens = rod_data["price"].get("fish_tokens", 0)
-                    
-                    check_user_stat(["balance", "purse"], user_id, 0)
-                    user_coins = eco[user_id]["balance"]["purse"]
 
                     if fishing_level < req_level:
-                        await button_interaction.response.send_message(
+                        return await button_interaction.response.send_message(
                             f"You need fishing level {req_level} to upgrade to {display_item_name(rod_name)}!",
                             ephemeral=True
                         )
-                    elif user_coins < req_amount:
-                        await button_interaction.response.send_message(
+                    if user_coins < req_amount:
+                        return await button_interaction.response.send_message(
                             f"You need {req_amount:,} coins to upgrade to {display_item_name(rod_name)}!",
                             ephemeral=True
                         )
-                    elif fish_tokens < req_tokens:
-                        await button_interaction.response.send_message(
+                    if fish_tokens < req_tokens:
+                        return await button_interaction.response.send_message(
                             f"You need {req_tokens:,} fish tokens to upgrade to {display_item_name(rod_name)}!",
                             ephemeral=True
                         )
-                    else:
-                        eco[user_id]["balance"]["purse"] -= req_amount
-                        eco[user_id]["balance"]["fish_tokens"] -= req_tokens
-                        eco[user_id]["fishing"]["rod"] = rod_name
-                        save_json(self.bot_self.eco_path, eco)
-                        
-                        success_embed = discord.Embed(
-                            title="Upgrade Successful!",
-                            description=f"You upgraded to a {display_item_name(rod_name)}!",
-                            color=discord.Color.green()
-                        )
-                        
-                        class SuccessView(discord.ui.View):
-                            def __init__(self, bot_self):
-                                super().__init__(timeout=None)
-                                self.bot_self = bot_self
 
-                            @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
-                            async def back_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
-                                if button_interaction.response.is_done():
-                                    await button_interaction.followup.send(embed=discord.Embed(title="Loading...", color=discord.Color.blue()))
-                                await self.bot_self.show_profile(button_interaction)
-                        
-                        await button_interaction.response.edit_message(embed=success_embed, view=SuccessView(self.bot_self))
+                    eco[user_id]["balance"]["purse"] -= req_amount
+                    eco[user_id]["balance"]["fish_tokens"] -= req_tokens
+                    eco[user_id]["fishing"]["rod"] = rod_name
+                    save_json(self.bot_self.eco_path, eco)
+                    
+                    await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Upgrade Boat", style=discord.ButtonStyle.primary)
                 async def upgrade_boat(self, button_interaction: discord.Interaction, button: discord.ui.Button):
                     if not next_boat:
-                        await button_interaction.response.send_message(
-                            content="You already have the best boat!",
-                            ephemeral=True
-                        )
-                        return
+                        return await button_interaction.response.send_message("You already have the best boat!", ephemeral=True)
 
                     boat_name, boat_data = next_boat
                     req_level = boat_data["fishing_level"]
                     req_amount = boat_data["price"].get("coins", 0)
                     req_tokens = boat_data["price"].get("fish_tokens", 0)
-                    
-                    check_user_stat(["balance", "purse"], user_id, 0)
-                    user_coins = eco[user_id]["balance"]["purse"]
 
                     if fishing_level < req_level:
-                        await button_interaction.response.send_message(
+                        return await button_interaction.response.send_message(
                             f"You need fishing level {req_level} to upgrade to {display_item_name(boat_name)}!",
                             ephemeral=True
                         )
-                    elif user_coins < req_amount:
-                        await button_interaction.response.send_message(
+                    if user_coins < req_amount:
+                        return await button_interaction.response.send_message(
                             f"You need {req_amount:,} coins to upgrade to {display_item_name(boat_name)}!",
                             ephemeral=True
                         )
-                    elif fish_tokens < req_tokens:
-                        await button_interaction.response.send_message(
+                    if fish_tokens < req_tokens:
+                        return await button_interaction.response.send_message(
                             f"You need {req_tokens:,} fish tokens to upgrade to {display_item_name(boat_name)}!",
                             ephemeral=True
                         )
-                    else:
-                        eco[user_id]["balance"]["purse"] -= req_amount
-                        eco[user_id]["balance"]["fish_tokens"] -= req_tokens
-                        eco[user_id]["fishing"]["boat"] = boat_name
-                        save_json(self.bot_self.eco_path, eco)
-                        
-                        success_embed = discord.Embed(
-                            title="Upgrade Successful!",
-                            description=f"You upgraded to a {display_item_name(boat_name)}!",
-                            color=discord.Color.green()
-                        )
-                        
-                        class SuccessView(discord.ui.View):
-                            def __init__(self, bot_self):
-                                super().__init__(timeout=None)
-                                self.bot_self = bot_self
 
-                            @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
-                            async def back_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
-                                if button_interaction.response.is_done():
-                                    await button_interaction.followup.send(embed=discord.Embed(title="Loading...", color=discord.Color.blue()))
-                                await self.bot_self.show_profile(button_interaction)
-                        
-                        await button_interaction.response.edit_message(embed=success_embed, view=SuccessView(self.bot_self))
+                    eco[user_id]["balance"]["purse"] -= req_amount
+                    eco[user_id]["balance"]["fish_tokens"] -= req_tokens
+                    eco[user_id]["fishing"]["boat"] = boat_name
+                    save_json(self.bot_self.eco_path, eco)
+                    
+                    await self.bot_self.upgrades_button(button_interaction, button)
+
+                @discord.ui.button(label="Upgrade Token Gain", style=discord.ButtonStyle.success)
+                async def upgrade_token(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                    if token_level >= 99:
+                        return await button_interaction.response.send_message("You've reached the maximum level!", ephemeral=True)
+                    if fish_tokens < token_cost:
+                        return await button_interaction.response.send_message(f"You need {token_cost:,} fish tokens!", ephemeral=True)
+                    
+                    eco[user_id]["balance"]["fish_tokens"] -= token_cost
+                    eco[user_id]["fishing"]["upgrades"]["token_multiplier"] += 1
+                    save_json(self.bot_self.eco_path, eco)
+                    
+                    await self.bot_self.upgrades_button(button_interaction, button)
+
+                @discord.ui.button(label="Upgrade Catch Amount", style=discord.ButtonStyle.success)
+                async def upgrade_catch(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                    if catch_level >= 50:
+                        return await button_interaction.response.send_message("You've reached the maximum level!", ephemeral=True)
+                    if fish_tokens < catch_cost:
+                        return await button_interaction.response.send_message(f"You need {catch_cost:,} fish tokens!", ephemeral=True)
+                    
+                    eco[user_id]["balance"]["fish_tokens"] -= catch_cost
+                    eco[user_id]["fishing"]["upgrades"]["catch_multiplier"] += 1
+                    save_json(self.bot_self.eco_path, eco)
+                    
+                    await self.bot_self.upgrades_button(button_interaction, button)
+
+                @discord.ui.button(label="Upgrade Rarity", style=discord.ButtonStyle.success)
+                async def upgrade_rarity(self, button_interaction: discord.Interaction, button: discord.ui.Button):
+                    if rarity_level >= 20:
+                        return await button_interaction.response.send_message("You've reached the maximum level!", ephemeral=True)
+                    if fish_tokens < rarity_cost:
+                        return await button_interaction.response.send_message(f"You need {rarity_cost:,} fish tokens!", ephemeral=True)
+                    
+                    eco[user_id]["balance"]["fish_tokens"] -= rarity_cost
+                    eco[user_id]["fishing"]["upgrades"]["rarity_modifier"] += 1
+                    save_json(self.bot_self.eco_path, eco)
+                    
+                    await self.bot_self.upgrades_button(button_interaction, button)
 
                 @discord.ui.button(label="Back", style=discord.ButtonStyle.secondary)
                 async def back_button(self, button_interaction: discord.Interaction, button: discord.ui.Button):
-                    if button_interaction.response.is_done():
-                        await button_interaction.followup.send(embed=discord.Embed(title="Loading...", color=discord.Color.blue()))
-                    await self.bot_self.show_profile(button_interaction)
+                    try:
+                        await self.bot_self.show_profile(button_interaction)
+                    except Exception as e:
+                        await handle_logs(button_interaction, e)
 
-            await interaction.response.send_message(embed=embed, view=UpgradeView(self.bot_self))
+            await interaction.response.send_message(embed=embed, view=UpgradeShopView(self.bot_self))
 
         @discord.ui.button(label="Sell", style=discord.ButtonStyle.danger)
         async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):

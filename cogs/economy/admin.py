@@ -36,7 +36,7 @@ class EconomyAdminCog(commands.Cog):
             
             user_id = str(user.id)
             check_user_stat(["inventory", item], user_id, 0)
-            eco = open_json("storage/eocnomy/economy.json")
+            eco = open_json("storage/economy/economy.json")
             eco[user_id]["inventory"][item] += amount
             save_json("storage/economy/economy.json", eco)
 
@@ -52,11 +52,11 @@ class EconomyAdminCog(commands.Cog):
 
             user_id = str(user.id)
             check_user_stat(["balance", "purse"], user_id, 0)
-            eco = open_json("storage/eocnomy/economy.json")
-            eco[user_id]["inventory"]["purse"] += amount
+            eco = open_json("storage/economy/economy.json")
+            eco[user_id]["balance"]["purse"] += amount
             save_json("storage/economy/economy.json", eco)
 
-            await interaction.response.send_message(f"Successfully added {amount} {amount} coins to {user.mention}")
+            await interaction.response.send_message(f"Successfully added {amount} coins to {user.mention}")
         except Exception as e:
             await handle_logs(interaction, e)
 

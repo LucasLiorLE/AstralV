@@ -2,15 +2,18 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from bot_utils import (
+    send_cooldown,
     open_json, 
     save_json,
     handle_logs
 )
 from .utils import (
-    check_user_stat
+    check_user_stat,
+    command_cooldown
 )
 import random
 import time
+from typing import List
 
 class WorkCommandGroup(app_commands.Group):
     def __init__(self):
@@ -137,8 +140,11 @@ class WorkCommandGroup(app_commands.Group):
 
     def update_job(self, user_id: str, job: str):
         check_user_stat(["work", "job"], user_id, None)
+        check_user_stat(["work", "job_start_time"], user_id, 0)
         eco = open_json(self.eco_path)
         eco[user_id]["work"]["job"] = job
+        eco[user_id]["work"]["job_start_time"] = int(time.time())
+        eco[user_id]["work"]["daily_shifts"] = 0
         save_json(self.eco_path, eco)
 
     def update_work_stats(self, user_id: str, check: str, amount: int):
@@ -148,10 +154,10 @@ class WorkCommandGroup(app_commands.Group):
         save_json(self.eco_path, eco)
 
     def check_weekly_quota(self, user_id: str, eco: dict) -> bool:
-        """Check if user has met their weekly quota and fire them if not"""
         check_user_stat(["work", "daily_shifts"], user_id, 0)
         check_user_stat(["work", "last_shift"], user_id, 0)
         check_user_stat(["work", "job"], user_id, None)
+        check_user_stat(["work", "job_start_time"], user_id, 0)
         
         current_job = eco[user_id]["work"]["job"]
         if not current_job:
@@ -159,6 +165,11 @@ class WorkCommandGroup(app_commands.Group):
             
         job_info = self.jobs[current_job]
         required_shifts = job_info["shiftsPerDay"] * 7
+        
+        current_time = int(time.time())
+        job_start_time = eco[user_id]["work"]["job_start_time"]
+        if current_time - job_start_time < 604800:
+            return True
         
         if eco[user_id]["work"]["daily_shifts"] < required_shifts:
             eco[user_id]["work"]["job"] = None
@@ -182,14 +193,42 @@ class WorkCommandGroup(app_commands.Group):
         eco[user_id]["work"]["last_shift"] = current_time
         save_json(self.eco_path, eco)
 
+    async def get_available_jobs(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        user_id = str(interaction.user.id)
+        check_user_stat(["work", "total_shifts"], user_id, 0)
+        eco = open_json(self.eco_path)
+        current_shifts = eco[user_id]["work"]["total_shifts"]
+        
+        choices = []
+        for job_name, job_info in self.jobs.items():
+            if (current.lower() in job_name.lower() and 
+                current_shifts >= job_info["requiredShiftsBefore"]):
+                choices.append(
+                    app_commands.Choice(
+                        name=f"{job_name} ({job_info['minimumWage']:,} coins/shift, {job_info['shiftsPerDay']} shifts/day)", 
+                        value=job_name.lower()
+                    )
+                )
+        return choices[:25]
+
     @app_commands.command(name="apply")
+    @app_commands.autocomplete(job=get_available_jobs)
     async def work_apply(self, interaction: discord.Interaction, job: str):
         try:
             user_id = str(interaction.user.id)
             check_user_stat(["work", "shifts"], user_id, 0)
             eco = open_json(self.eco_path)
             
-            if job not in self.jobs:
+            job_title = job.title()
+            job_lower = job.lower()
+            
+            actual_job = None
+            for j in self.jobs:
+                if j.lower() == job_lower:
+                    actual_job = j
+                    break
+            
+            if not actual_job:
                 await interaction.response.send_message(
                     embed=discord.Embed(
                         title="Invalid Job",
@@ -200,8 +239,9 @@ class WorkCommandGroup(app_commands.Group):
                 )
                 return
 
-            required_shifts = self.jobs[job]["requiredShiftsBefore"]
-            current_shifts = eco[user_id]["work"]["shifts"]
+            required_shifts = self.jobs[actual_job]["requiredShiftsBefore"]
+            check_user_stat(["work", "total_shifts"], user_id, 0)
+            current_shifts = eco[user_id]["work"]["total_shifts"]
 
             if current_shifts < required_shifts:
                 await interaction.response.send_message(
@@ -214,11 +254,11 @@ class WorkCommandGroup(app_commands.Group):
                 )
                 return
 
-            self.update_job(user_id, job)
+            self.update_job(user_id, actual_job)
             await interaction.response.send_message(
                 embed=discord.Embed(
                     title="Job Application Successful!",
-                    description=f"You are now working as a {job}!",
+                    description=f"You are now working as a {actual_job}!",
                     color=discord.Color.green()
                 )
             )
@@ -298,7 +338,11 @@ class WorkCommandGroup(app_commands.Group):
             user_id = str(interaction.user.id)
             check_user_stat(["work", "job"], user_id, None)
             check_user_stat(["work", "shifts"], user_id, 0)
+            check_user_stat(["work", "daily_shifts"], user_id, 0)
+            check_user_stat(["work", "last_shift"], user_id, 0)
             check_user_stat(["balance", "purse"], user_id, 0)
+            check_user_stat(["commands"], user_id, {})
+            check_user_stat(["commands", "work"], user_id, {"cooldown": 0, "uses": 0})
             
             eco = open_json(self.eco_path)
             current_job = eco[user_id]["work"]["job"]
@@ -337,8 +381,24 @@ class WorkCommandGroup(app_commands.Group):
             bonus = random.randint(0, 20)
             earnings = int(base_earnings * (1 + bonus/100))
             
-            self.update_work_stats(user_id, "shifts", 1)
+            check_user_stat(["work", "total_shifts"], user_id, 0)
+            eco[user_id]["work"]["total_shifts"] += 1
             self.update_daily_shifts(user_id, eco)
+            
+            check_user_stat(["work", "promotions"], user_id, 0)
+            promotion_message = ""
+            if eco[user_id]["work"]["promotions"] < 20 and random.random() < 0.05:
+                eco[user_id]["work"]["promotions"] += 1
+                current_promotions = eco[user_id]["work"]["promotions"]
+                promotion_bonus = current_promotions * 0.01
+                earnings = int(base_earnings * (1 + bonus/100 + promotion_bonus))
+                promotion_message = f"\n🎉 Congratulations! You've been promoted! ({current_promotions}/20 promotions)"
+            else:
+                current_promotions = eco[user_id]["work"]["promotions"]
+                if current_promotions > 0:
+                    promotion_bonus = current_promotions * 0.01
+                    earnings = int(base_earnings * (1 + bonus/100 + promotion_bonus))
+            
             eco[user_id]["balance"]["purse"] += earnings
             
             item_reward = ""
@@ -351,8 +411,8 @@ class WorkCommandGroup(app_commands.Group):
             save_json(self.eco_path, eco)
 
             embed = discord.Embed(
-                title="Work Shift Complete!",
-                description=f"You worked a shift as a {current_job} and earned {earnings:,} coins!{item_reward}",
+                title=f"Work Shift Complete!",
+                description=f"You worked a shift as a {current_job} and earned {earnings:,} coins!{promotion_message}{item_reward}",
                 color=discord.Color.green()
             )
             
@@ -373,7 +433,7 @@ class WorkCommandGroup(app_commands.Group):
             
             embed.add_field(
                 name="Stats",
-                value=f"Total Shifts: {eco[user_id]['work']['shifts']:,}",
+                value=f"Total Shifts: {eco[user_id]['work']['total_shifts']:,}\nPromotions: {current_promotions}/20 (+{current_promotions}% base pay)",
                 inline=False
             )
 
@@ -390,4 +450,3 @@ class WorkCog(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(WorkCog(bot))
-
