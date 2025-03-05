@@ -8,7 +8,10 @@ from discord.ext import commands
 
 from bot_utils import (
     save_json,
-    open_json
+    open_json,
+    check_user,
+    handle_logs,
+    get_context_object
 )
 
 def is_valid_bot_instance(interaction_or_context: Union[discord.Interaction, commands.Context]) -> bool:
@@ -545,3 +548,252 @@ async def send_modlog_embed(
     embed.set_footer(text=f"{total_logs} total logs | Page {page} of {total_pages}", icon_url=user.avatar.url)
 
     return embed, total_logs, total_pages
+
+class LogPaginator:
+    def __init__(self, log_type: str, logs: dict, member: discord.Member, items_per_page: int = 25):
+        self.log_type = log_type
+        self.logs = logs
+        self.member = member
+        self.items_per_page = items_per_page
+        self.total_pages = max(1, (len(logs) + items_per_page - 1) // items_per_page)
+
+    def get_page(self, page: int) -> discord.Embed:
+        embed = discord.Embed(
+            title=f"{self.log_type.capitalize()}s for {self.member.display_name}",
+            color=0xFFA500 if self.log_type == "warning" else discord.Color.yellow()
+        )
+
+        start_idx = (page - 1) * self.items_per_page
+        end_idx = start_idx + self.items_per_page
+        current_logs = dict(list(sorted(self.logs.items(), key=lambda x: int(x[0])))[start_idx:end_idx])
+
+        for case_number, log_data in current_logs.items():
+            time_str = f"<t:{log_data['time']}:R>"
+            try:
+                moderator_id = int(log_data['moderator'])
+                moderator = self.member.guild.get_member(moderator_id)
+                moderator_name = moderator.display_name if moderator else "Unknown"
+            except (ValueError, KeyError):
+                moderator_name = log_data['moderator']
+            
+            embed.add_field(
+                name=f"Case #{case_number} - By {moderator_name}",
+                value=f"Reason: {log_data['reason']}\nTime: {time_str}",
+                inline=False
+            )
+
+        embed.set_footer(text=f"Page {page}/{self.total_pages}")
+        return embed
+
+class LogPageSelect(discord.ui.Select):
+    def __init__(self, paginator: LogPaginator, current_page: int):
+        options = [
+            discord.SelectOption(
+                label=f"Page {i}",
+                value=str(i),
+                default=(i == current_page)
+            )
+            for i in range(1, paginator.total_pages + 1)
+        ]
+        super().__init__(
+            placeholder=f"Page {current_page}/{paginator.total_pages}",
+            options=options,
+            min_values=1,
+            max_values=1
+        )
+        self.paginator = paginator
+
+    async def callback(self, interaction: discord.Interaction):
+        page = int(self.values[0])
+        embed = self.paginator.get_page(page)
+        self.placeholder = f"Page {page}/{self.paginator.total_pages}"
+        await interaction.response.edit_message(embed=embed, view=self.view)
+
+class DelLog(discord.ui.Select):
+    def __init__(
+        self,
+        log_type,
+        member: discord.Member,
+        embed: discord.Embed,
+        interaction: discord.Interaction | commands.Context,
+        page: int = 1,
+        *args,
+        **kwargs,
+    ):
+        placeholder = f"Delete a {log_type}"
+        super().__init__(placeholder=placeholder, *args, **kwargs)
+
+        self.log_type = log_type
+        self.member = member
+        self.embed = embed
+        self.interaction = interaction
+        self.page = page
+        self.items_per_page = 25
+
+        server_info = open_json("storage/server_info.json")
+        
+        if self.log_type == "warn":
+            self.logs = server_info.get("warnings", {}).get(str(interaction.guild.id), {}).get(str(member.id), {})
+        elif self.log_type == "note":
+            self.logs = server_info.get("notes", {}).get(str(interaction.guild.id), {}).get(str(member.id), {})
+
+        sorted_logs = sorted(self.logs.items(), key=lambda x: int(x[0]))
+        total_logs = len(sorted_logs)
+        self.total_pages = max(1, (total_logs + self.items_per_page - 1) // self.items_per_page)
+
+        start_idx = (self.page - 1) * self.items_per_page
+        end_idx = min(start_idx + self.items_per_page, total_logs)
+        current_page_logs = dict(sorted_logs[start_idx:end_idx])
+
+        self.options = [
+            discord.SelectOption(
+                label=f"{self.log_type.capitalize()} Case #{case_number}",
+                description=(log["reason"] if "reason" in log else "No reason provided.")[:100],
+                value=str(case_number)
+            )
+            for case_number, log in current_page_logs.items()
+        ]
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            original_user = (
+                self.interaction.user if isinstance(self.interaction, discord.Interaction) 
+                else self.interaction.author
+            )
+            
+            if not check_user(interaction, original_user):
+                return await interaction.response.send_message(
+                    "You cannot interact with this button.", 
+                    ephemeral=True
+                )
+
+            selected_index = self.values[0]
+            server_info = open_json("storage/server_info.json")
+
+            if selected_index in self.logs:
+                del self.logs[selected_index]
+
+                if not self.logs:
+                    if self.log_type == "warn":
+                        server_info["warnings"].get(str(interaction.guild.id), {}).pop(str(self.member.id), None)
+                    elif self.log_type == "note":
+                        server_info["notes"].get(str(interaction.guild.id), {}).pop(str(self.member.id), None)
+                else:
+                    if self.log_type == "warn":
+                        server_info["warnings"][str(interaction.guild.id)][str(self.member.id)] = self.logs
+                    elif self.log_type == "note":
+                        server_info["notes"][str(interaction.guild.id)][str(self.member.id)] = self.logs
+
+                save_json("storage/server_info.json", server_info)
+
+                self.embed.clear_fields()
+                if self.logs:
+                    sorted_logs = sorted(self.logs.items(), key=lambda x: int(x[0]))
+                    total_logs = len(sorted_logs)
+                    self.total_pages = max(1, (total_logs + self.items_per_page - 1) // self.items_per_page)
+
+                    if self.page > self.total_pages:
+                        self.page = self.total_pages
+
+                    start_idx = (self.page - 1) * self.items_per_page
+                    end_idx = min(start_idx + self.items_per_page, total_logs)
+                    current_page_logs = dict(sorted_logs[start_idx:end_idx])
+
+                    for index, log in current_page_logs.items():
+                        time_str = f"<t:{log['time']}:R>"
+                        moderator_id = log["moderator"]
+                        moderator = interaction.guild.get_member(int(moderator_id)) if moderator_id.isdigit() else None
+                        moderator_name = moderator.display_name if moderator else "Unknown"
+                        self.embed.add_field(
+                            name=f"Case #{index} - {self.log_type.capitalize()} by {moderator_name}",
+                            value=f"Reason: {log['reason'][:100]}\nTime: {time_str}",
+                            inline=False
+                        )
+
+                    self.options = [
+                        discord.SelectOption(
+                            label=f"{self.log_type.capitalize()} Case #{index}",
+                            description=log["reason"][:100],
+                            value=str(index)
+                        )
+                        for index, log in current_page_logs.items()
+                    ]
+                    
+                    if self.total_pages > 1:
+                        self.embed.set_footer(text=f"Page {self.page}/{self.total_pages}")
+                else:
+                    self.embed.description = f"No {self.log_type}s left for {self.member.display_name}."
+
+                view = discord.ui.View()
+                if self.logs:
+                    view.add_item(self)
+                    if self.total_pages > 1:
+                        view.add_item(PageButtons(self))
+
+                try:
+                    await interaction.response.edit_message(embed=self.embed, view=view)
+                    await interaction.followup.send(
+                        f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.", 
+                        ephemeral=True
+                    )
+                except discord.NotFound:
+                    await interaction.response.send_message(
+                        f"Deleted {self.log_type.capitalize()} Case #{selected_index} for {self.member.display_name}.",
+                        ephemeral=True
+                    )
+            else:
+                await interaction.response.send_message(
+                    "Invalid selection. Please choose a valid log to delete.", 
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+class PageButtons(discord.ui.View):
+    def __init__(self, select: DelLog):
+        super().__init__()
+        self.select = select
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.gray)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.select.page > 1:
+            self.select.page -= 1
+            await self.update_page(interaction)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.gray)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.select.page < self.select.total_pages:
+            self.select.page += 1
+            await self.update_page(interaction)
+
+    async def update_page(self, interaction: discord.Interaction):
+        sorted_logs = sorted(self.select.logs.items(), key=lambda x: int(x[0]))
+        start_idx = (self.select.page - 1) * self.select.items_per_page
+        end_idx = min(start_idx + self.select.items_per_page, len(sorted_logs))
+        current_page_logs = dict(sorted_logs[start_idx:end_idx])
+
+        self.select.embed.clear_fields()
+        for index, log in current_page_logs.items():
+            time_str = f"<t:{log['time']}:R>"
+            moderator_id = log["moderator"]
+            moderator = interaction.guild.get_member(int(moderator_id)) if moderator_id.isdigit() else None
+            moderator_name = moderator.display_name if moderator else "Unknown"
+            self.select.embed.add_field(
+                name=f"Case #{index} - {self.select.log_type.capitalize()} by {moderator_name}",
+                value=f"Reason: {log['reason'][:100]}\nTime: {time_str}",
+                inline=False
+            )
+
+        self.select.embed.set_footer(text=f"Page {self.select.page}/{self.select.total_pages}")
+
+        self.select.options = [
+            discord.SelectOption(
+                label=f"{self.select.log_type.capitalize()} Case #{index}",
+                description=log["reason"][:100],
+                value=str(index)
+            )
+            for index, log in current_page_logs.items()
+        ]
+
+        await interaction.response.edit_message(embed=self.select.embed, view=self)
