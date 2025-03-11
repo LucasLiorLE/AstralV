@@ -81,7 +81,7 @@ class NoteCommands(commands.Cog):
                 return await ctx["send"](embed=embed)
 
             server_info = open_json("storage/server_info.json")
-            member_notes = server_info["notes"].get(str(ctx["guild_id"]), {}).get(str(member.id), {})
+            member_notes = server_info.get("notes", {}).get(str(ctx["guild_id"]), {}).get(str(member.id), {})
 
             if member_notes:
                 paginator = LogPaginator("note", member_notes, member)

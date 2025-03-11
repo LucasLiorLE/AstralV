@@ -129,16 +129,15 @@ def create_account(id: PlayerId) -> None:
         "joinTimestamp": int(time.time())
     }
 
-
     save_json(eco_path, players)
 
 def check_user_stat(
     root: List[str], 
     user: int, 
     value_type: Optional[type] = None
-) -> bool:
+) -> Any:
     ''' 
-    For newer versions of the bot auto updating data without needing to add them manually.
+    Checks if a certain user stat exists, then returns it. If it does not exist, create it.
 
     Args:
         root (List[str]): A list representing the path to the nested dictionary keys (e.g., ['balance', 'purse']). 
@@ -147,12 +146,16 @@ def check_user_stat(
                                                  None for a dictionary (default), or any for a value.
 
     Returns: 
-        bool: Whether or not the data existed or was initialized during this call.
+        Any: The value of the data
 
     Example:
         ```
-        # Check if user has a 'coins' stat in their inventory
-        exists = check_user_stat(['inventory', 'coins'], 123456789, 0)
+        coins = check_user_stat(['inventory', 'coins'], 123456789, 0)
+        if coins < 10:
+            break
+        else:
+            eco = open_file("file_dir")
+            eco[123456789]['inventory']['coins'] -= 10
         ```
     '''
     players: EconomyData = open_json(eco_path)
@@ -257,7 +260,7 @@ def command_cooldown(cooldown_seconds: int, command_name: str, user_id: str) -> 
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
-                    return await self.send_cooldown(interaction, cooldown)
+                    return await interaction.response.send_message(f"This command is on cooldown!\\nPlease try again in {cooldown}", ephemeral=True)
             else:
                 return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
         ```

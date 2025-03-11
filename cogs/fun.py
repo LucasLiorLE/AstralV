@@ -135,6 +135,21 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.command(name="dice")
+    async def dice(self, interaction: discord.Interaction, sides: int = 6, amount: int = 1):
+        try:
+            await interaction.response.send_message(f"Rolling {amount} {sides}-sided dice...", ephemeral=True)
+            rolls = [random.randint(1, sides) for _ in range(amount)]
+            total = sum(rolls)
+            embed = discord.Embed(
+                title=f"{amount} {sides}-sided dice roll",
+                description=f"Rolls: {', '.join(map(str, rolls))}\nTotal: {total}",
+                color=get_member_color(interaction, 0x00FF00)
+            )
+            await interaction.followup.send(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
+
     @app_commands.command(name="fact")
     async def fact(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)

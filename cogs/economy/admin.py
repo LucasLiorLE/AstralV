@@ -24,7 +24,6 @@ class EconomyAdminCog(commands.Cog):
         economy_items = open_json("storage/economy/items.json")
         return not item in [k for k in economy_items.keys()]
 
-
     @app_commands.command(name="give_items")
     @app_commands.autocomplete(item=get_item_suggestions)
     async def give_items(self, interaction: discord.Interaction, user: discord.User, item: str, amount: int):

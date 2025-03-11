@@ -340,10 +340,11 @@ class WorkCommandGroup(app_commands.Group):
             check_user_stat(["work", "shifts"], user_id, 0)
             check_user_stat(["work", "daily_shifts"], user_id, 0)
             check_user_stat(["work", "last_shift"], user_id, 0)
-            check_user_stat(["work", "promotions"], user_id, 0)  # Added promotions initialization
+            check_user_stat(["work", "promotions"], user_id, 0)
             check_user_stat(["balance", "purse"], user_id, 0)
             check_user_stat(["commands"], user_id, {})
             check_user_stat(["commands", "work"], user_id, {"cooldown": 0, "uses": 0})
+            check_user_stat(["inventory"], user_id, {})
             
             eco = open_json(self.eco_path)
             current_job = eco[user_id]["work"]["job"]
@@ -379,7 +380,7 @@ class WorkCommandGroup(app_commands.Group):
             job_info = self.jobs[current_job]
             base_earnings = job_info["minimumWage"]
             
-            bonus = random.randint(0, 20)
+            bonus = random.randint(0, 10)
             earnings = int(base_earnings * (1 + bonus/100))
             
             check_user_stat(["work", "total_shifts"], user_id, 0)
@@ -406,6 +407,7 @@ class WorkCommandGroup(app_commands.Group):
             if "item" in job_info and random.random() < 0.05:
                 item_name = job_info["item"]
                 check_user_stat(["inventory", item_name], user_id, 0)
+                eco = open_json(self.eco_path)
                 eco[user_id]["inventory"][item_name] += 1
                 item_reward = f"\nYou also received a {item_name}!"
             
@@ -417,7 +419,7 @@ class WorkCommandGroup(app_commands.Group):
                 color=discord.Color.green()
             )
             
-            if bonus > 0:
+            if bonus > 5:
                 embed.add_field(
                     name="Bonus",
                     value=f"You received a {bonus}% bonus for your hard work!",

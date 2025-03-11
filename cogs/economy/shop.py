@@ -44,7 +44,6 @@ class ShopData:
         for item_name, item_data in items_data.items():
             prices = item_data.get("price")
             if prices and prices.get("currency") == "coins":
-                stock = item_data.get("amount", 0)
                 appear_in_shop = item_data.get("appearInShop", {})
                 if isinstance(appear_in_shop, dict) and appear_in_shop.get("amount", 0) == -1:
                     regular_items.append({

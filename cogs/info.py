@@ -673,6 +673,7 @@ class InfoCog(commands.Cog):
 
 	@app_commands.command(name="emojiinfo")
 	async def emojiinfo(self, interaction: discord.Interaction, emoji: str):
+		await interaction.response.defer()
 		try:
 			emoji_obj = discord.utils.get(interaction.guild.emojis, name=emoji)
 			if emoji_obj is None:
@@ -682,8 +683,6 @@ class InfoCog(commands.Cog):
 
 			embed = discord.Embed(title=f"Emoji info for {emoji_obj.name}", color=color)
 			embed.add_field(name="Name", value=emoji_obj.name)
-			if emoji_obj.user:
-				embed.add_field(name="Created By", value=emoji_obj.user.mention)
 			embed.add_field(name="URL", value=emoji_obj.url)
 			embed.add_field(name="Emoji ID", value=emoji_obj.id)
 			embed.add_field(
@@ -691,9 +690,9 @@ class InfoCog(commands.Cog):
 				value=f"{emoji_obj.created_at.strftime('%m/%d/%Y %H:%M')} ({(datetime.now(timezone.utc) - emoji_obj.created_at).days} days ago)"
 			)
 
-			embed.set_thumbnail(emoji_obj.url)
+			embed.set_thumbnail(url=emoji_obj.url)
 
-			await interaction.response.send_message(embed=embed)
+			await interaction.followup.send(embed=embed)
 		except Exception as e:
 			await handle_logs(interaction, e)
 

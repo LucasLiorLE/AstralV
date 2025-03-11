@@ -9,8 +9,10 @@ opencv-python==4.11.0.86
 shapely==2.0.6
 
 # Data processing and visualization
-pandas==2.2.3 # Currently not used.
-matplotlib==3.9.2 # Currently not used.
+pandas==2.2.3
+matplotlib==3.9.2
+scipy==1.15.1
+
 
 # HTTP and API
 aiohttp==3.10.10

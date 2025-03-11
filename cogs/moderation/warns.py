@@ -69,6 +69,7 @@ class WarnCommands(commands.Cog):
 
     @app_commands.command(name="warn")
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+        print("Warn detected")
         await interaction.response.defer()
         try:
             await self.handle_warn(interaction, member, reason)
@@ -87,7 +88,7 @@ class WarnCommands(commands.Cog):
                 return await ctx["send"](embed=embed)
 
             server_info = open_json("storage/server_info.json")
-            member_warnings = server_info["warnings"].get(str(ctx["guild_id"]), {}).get(str(member.id), {})
+            member_warnings = server_info.get("warnings", {}).get(str(ctx["guild_id"]), {}).get(str(member.id), {})
 
             if member_warnings:
                 paginator = LogPaginator("warning", member_warnings, member)
@@ -110,6 +111,7 @@ class WarnCommands(commands.Cog):
 
     @commands.command(name="warn")
     async def manual_warn(self, ctx, member: str, *, reason: str):
+        print("Manual warn detected")
         try:
             target_member = await get_member(ctx, member)
             if not target_member:

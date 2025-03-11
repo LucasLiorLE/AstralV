@@ -432,16 +432,6 @@ async def store_modlog(
                 "timestamp": int(time.time()),
             }
 
-            if modlog_type.title() == "Warn":
-                server_info["warnings"][str(server_id)].setdefault(user_id, {})
-                warning_case_number = max(map(int, server_info["warnings"][str(server_id)][user_id].keys()), default=0) + 1
-                
-                server_info["warnings"][str(server_id)][user_id][str(warning_case_number)] = {
-                    "reason": reason,
-                    "moderator": str(moderator),
-                    "time": int(time.time())
-                }
-
     if modlog_channel:
         try:
             await modlog_channel.send(embed=embed)
