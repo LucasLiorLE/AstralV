@@ -521,3 +521,4 @@ async def send_cooldown(interaction: discord.Interaction, cooldown: int):
         await interaction.followup.send(embed=embed, ephemeral=True)
     else:
         await interaction.response.send_message(embed=embed, ephemeral=True)
+

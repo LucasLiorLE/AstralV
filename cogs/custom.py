@@ -61,8 +61,34 @@ class QuizView(View):
             embed.add_field(name="Winner", value=interaction.user.mention, inline=False)
             await interaction.response.edit_message(view=self)
             await interaction.followup.send(embed=embed)
+            self.stop()
         else:
             await interaction.response.send_message("Wrong lmfao.", ephemeral=True)
+
+class RevealView(View):
+    def __init__(self, quiz_data):
+        super().__init__()
+        self.quiz_data = quiz_data
+
+    @discord.ui.button(label="Reveal Quiz", style=discord.ButtonStyle.primary)
+    async def reveal_button(self, interaction: discord.Interaction, button: Button):
+        embed = discord.Embed(title="Trivia Question", color=discord.Color.green())
+        embed.add_field(name="Question", value=self.quiz_data["question"], inline=False)
+        embed.add_field(name="Time to answer", value=f"{self.quiz_data['time_limit']} seconds", inline=False)
+
+        view = QuizView(self.quiz_data["correct_answer"], self.quiz_data["question"], self.quiz_data["time_limit"])
+        
+        options = [self.quiz_data["correct_answer"]] + self.quiz_data["wrong_answers"]
+        random.shuffle(options)
+        
+        for i, option in enumerate(options, 1):
+            button = Button(label=str(option), style=discord.ButtonStyle.primary, custom_id=f"option_{i}")
+            button.callback = lambda i=interaction, b=button: view.handle_click(i, b)
+            view.add_item(button)
+
+        await interaction.response.send_message(embed=embed, view=view)
+        view.message = await interaction.original_response()
+        self.stop()
 
 class Quiz(commands.Cog):
     def __init__(self, bot):
@@ -70,6 +96,8 @@ class Quiz(commands.Cog):
 
         self.bot.tree.add_command(OppList())
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="quiz", description="Create a quiz question")
     @app_commands.describe(
         question="The question to ask",
@@ -103,28 +131,21 @@ class Quiz(commands.Cog):
         if (correct_answer in wrong_answers_list):
             return await interaction.response.send_message("You cannot have duplicate answers!", ephemeral=True)
 
-        embed = discord.Embed(title="Trivia Question", color=discord.Color.green())
-        embed.add_field(name="Question", value=question, inline=False)
-        embed.add_field(name="Time to answer", value=f"{time_limit} seconds", inline=False)
+        quiz_data = {
+            "question": question,
+            "correct_answer": correct_answer,
+            "wrong_answers": wrong_answers_list,
+            "time_limit": time_limit
+        }
 
-        view = QuizView(correct_answer, question, time_limit)
-        
-        options = [correct_answer] + wrong_answers_list
-        random.shuffle(options)
-        
-        for i, option in enumerate(options, 1):
-            button = Button(label=str(option), style=discord.ButtonStyle.primary, custom_id=f"option_{i}")
-            button.callback = lambda i=interaction, b=button: view.handle_click(i, b)
-            view.add_item(button)
-
-        response = await interaction.response.send_message(embed=embed, view=view)
-        view.message = await interaction.original_response()
+        view = RevealView(quiz_data)
+        await interaction.response.send_message("Click the button below to reveal the quiz:", view=view, ephemeral=True)
 
 class OppList(app_commands.Group):
     def __init__(self):
         super().__init__(name="opp")
         self.file_path = "storage/customs/opp_list.json"
-        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993]
+        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993, 1173963781706088451]
 
     def find_user(self, search_user: str, data: dict) -> str:
         """Find user with case-insensitive search"""

@@ -1,3 +1,4 @@
+from ast import alias
 from bot_utils import (
     get_member_color,
     load_commands,
@@ -135,6 +136,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="dice")
     async def dice(self, interaction: discord.Interaction, sides: int = 6, amount: int = 1):
         try:
@@ -150,6 +153,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="fact")
     async def fact(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -171,6 +176,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="joke")
     async def joke(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -195,6 +202,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="cat")
     async def cat(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -216,6 +225,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="dog")
     async def dog(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -236,7 +247,9 @@ class FunCog(commands.Cog):
                         await interaction.followup.send("An error occurred while fetching the dog picture.")
         except Exception as e:
             await handle_logs(interaction, e)
-            
+
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="duck")
     async def duck(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -260,6 +273,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="quote")
     async def quote(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -282,6 +297,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="meme")
     async def meme(self, interaction: discord.Interaction, # allow_nsfw: bool = False, Removing allow_nsfw since people don't want it, you can easily add it back.
                   allow_spoilers: bool = False, ephemeral: bool = False):
@@ -326,6 +343,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name='8ball')
     async def eight_ball(self, interaction: discord.Interaction, question: str, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
@@ -353,6 +372,8 @@ class FunCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="xkcd")
     async def xkcd(self, interaction: discord.Interaction, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)

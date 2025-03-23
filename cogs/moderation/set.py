@@ -33,7 +33,10 @@ class SetCommandGroup(app_commands.Group):
 
             has_mod, embed = check_moderation_info(interaction, "administrator", "manager")
             if not has_mod:
-                return await embed.send(interaction)
+                return await interaction.followup.send(embed=embed)
+
+            if "moderation" not in server_info:
+                server_info["moderation"] = {}
 
             server_info["moderation"][option.value] = channel.id
                 
@@ -58,7 +61,10 @@ class SetCommandGroup(app_commands.Group):
 
             has_mod, embed = check_moderation_info(interaction, "administrator", "manager")
             if not has_mod:
-                return await embed.send(interaction)
+                return await interaction.followup.send(embed=embed)
+
+            if "moderation" not in server_info:
+                server_info["moderation"] = {}
 
             server_info["moderation"][option.value] = role.id   
             store_modlog(server_info, guild_id)

@@ -16,7 +16,6 @@ from typing import (
 from bot_utils import (
     open_json,
     save_json,
-    check_user
 )
 
 class LevelsData(TypedDict):
@@ -208,7 +207,7 @@ async def process_transaction(
         ```
     """
     check_user_stat(["balance", "purse"], user_id, 0)
-    check_user_stat(["balance", "bank"], user_id, 0)
+    check_user_stat(["balance", "bank"], user_id, 5000)
     check_user_stat(["balance", "maxBank"], user_id, 25000)
     eco: EconomyData = open_json(eco_path)
 

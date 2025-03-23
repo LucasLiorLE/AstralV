@@ -90,7 +90,6 @@ class FishingCommands(app_commands.Group):
         fish_data = open_json(self.fish_path)
         items_data = open_json(self.items_path)
         
-        # Initialize inventory for all fish types if they don't exist
         for fish_name in fish_data["fish"].keys():
             if fish_name not in eco[user_id]["inventory"]:
                 eco[user_id]["inventory"][fish_name] = 0
@@ -312,7 +311,6 @@ class FishingCommands(app_commands.Group):
             eco = open_json(self.bot_self.eco_path)
             fish_data = open_json(self.bot_self.fish_path)
             
-            # Get all stats
             fishing_level = eco[user_id]["fishing"]["level"]
             fish_tokens = eco[user_id]["balance"]["fish_tokens"]
             user_coins = eco[user_id]["balance"]["purse"]
@@ -336,7 +334,6 @@ class FishingCommands(app_commands.Group):
                 inline=False
             )
 
-            # Equipment Section
             next_rod = None
             for rod_name, rod_data in fish_data["rods"].items():
                 rod_level = rod_data["rod_level"]
@@ -401,7 +398,6 @@ class FishingCommands(app_commands.Group):
                 inline=False
             )
 
-            # Fishing Upgrades Section
             token_cost = int(25 * (1.25 ** token_level))
             can_afford_token = fish_tokens >= token_cost and token_level < 99
             status_token = "<:check:1292269189536682004>" if can_afford_token else "❌"

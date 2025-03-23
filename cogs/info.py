@@ -232,7 +232,7 @@ class InfoCog(commands.Cog):
 				
 			member_id = str(interaction.user.id)
 			server_id = str(interaction.guild.id)
-			server_info = open_file("info/server_info.json")
+			server_info = open_file("storage/server_info.json")
 				
 			if where == "guild": 
 				server_exp = server_info.get("exp", {}).get(server_id, {})

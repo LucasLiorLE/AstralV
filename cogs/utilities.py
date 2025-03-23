@@ -32,10 +32,12 @@ class ReminderGroup(app_commands.Group):
             if duration_delta.total_seconds() < 1:
                 await interaction.followup.send("Reminder time must be greater than 0 seconds.")
                 return
-
+            
+            """
             if duration_delta.total_seconds() > 2592000:
                 await interaction.followup.send("Reminder time cannot be longer than 30 days.")
                 return
+            """
 
             member_info = open_file("storage/member_info.json")
             user_id = str(interaction.user.id)

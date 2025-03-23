@@ -141,6 +141,14 @@ class GiveawayGroup(app_commands.Group):
         super().__init__(name="giveaway", description="Giveaway related commands")
         
         load_commands(self.commands, "giveaway")
+        for command in self.commands:
+            command.guild_only = True
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not interaction.guild:
+            await interaction.response.send_message("Giveaway commands can only be used within a server!", ephemeral=True)
+            return False
+        return True
 
     @app_commands.command(name="reroll")
     async def greroll(self, interaction: discord.Interaction, id: str, winners: int):
@@ -185,8 +193,11 @@ class GiveawayGroup(app_commands.Group):
         try:
             server_info = open_file("storage/server_info.json")
             duration_timedelta = parse_duration(duration)
+
             if duration_timedelta is None or duration_timedelta.total_seconds() <= 0:
-                raise ValueError("Duration must be greater than 0.")
+                return await interaction.followup.send("Invalid duration specified. Please use a valid format (e.g., `1h`, `30m`, `2d`).", ephemeral=True)
+            if winners <= 0:
+                return await interaction.followup.send("Number of winners must be at least 1.", ephemeral=True)
 
             start_time = int(time.time())
             end_time = start_time + int(duration_timedelta.total_seconds())

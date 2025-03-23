@@ -1,11 +1,14 @@
+from tabnanny import check
 import discord
 from datetime import datetime, timezone, timedelta
 from discord import app_commands
 from discord.ext import commands
 from bot_utils import (
     open_json, 
-    save_json
+    save_json,
+    handle_logs
 )
+from bot_utils.utils import check_user
 from .utils import (
     check_user_stat
 )
@@ -51,6 +54,11 @@ class StreaksCog(commands.Cog):
         if streak == "monthly": 
             amount = 200000 * ((current_streak * 0.16) + 1)
 
+        check_user_stat(["balance", "purse"], user_id, 0)
+        check_user_stat(["balance", "bank"], user_id, 5000)
+        check_user_stat(["balance", "maxBank"], user_id, 25000)
+        eco = open_json("storage/economy/economy.json")
+
         eco[user_id]["balance"]["purse"] += int(amount)
         eco[user_id]["streaks"][streak]["streak"] += 1
         eco[user_id]["streaks"][streak]["last_claimed"] = now.isoformat()
@@ -60,48 +68,57 @@ class StreaksCog(commands.Cog):
 
     @app_commands.command(name="daily")
     async def daily(self, interaction: discord.Interaction):
-        amount, current, next_streak = self.update_streak("daily", str(interaction.user.id))
-        if not amount or current:
-            return await interaction.response.send_message(f"You alredy claimed your daily reward. Please try again after <t:{next_streak}:F>")
+        try:
+            amount, current, next_streak = self.update_streak("daily", str(interaction.user.id))
+            if not amount or current:
+                return await interaction.response.send_message(f"You already claimed your daily reward. Please try again after <t:{next_streak}:F>")
 
-        embed = discord.Embed(
-            title="Daily Reward",
-            description=f"Amount: {amount}",
-            color=discord.Color.green(),
-            timestamp=datetime.fromtimestamp(next_streak)
-        )
+            embed = discord.Embed(
+                title="Daily Reward",
+                description=f"Amount: {amount}",
+                color=discord.Color.green(),
+                timestamp=datetime.fromtimestamp(next_streak)
+            )
 
-        await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     @app_commands.command(name="weekly")
     async def weekly(self, interaction: discord.Interaction):
-        amount, current, next_streak = self.update_streak("weekly", str(interaction.user.id))
-        if not amount or current:
-            return await interaction.response.send_message(f"You alredy claimed your weekly reward. Please try again after <t:{next_streak}:F>")
+        try:
+            amount, current, next_streak = self.update_streak("weekly", str(interaction.user.id))
+            if not amount or current:
+                return await interaction.response.send_message(f"You already claimed your weekly reward. Please try again after <t:{next_streak}:F>")
 
-        embed = discord.Embed(
-            title="Weekly Reward",
-            description=f"Amount: {amount}",
-            color=discord.Color.green(),
-            timestamp=datetime.fromtimestamp(next_streak)
-        )
+            embed = discord.Embed(
+                title="Weekly Reward",
+                description=f"Amount: {amount}",
+                color=discord.Color.green(),
+                timestamp=datetime.fromtimestamp(next_streak)
+            )
 
-        await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     @app_commands.command(name="monthly")
     async def monthly(self, interaction: discord.Interaction):
-        amount, current, next_streak = self.update_streak("monthly", str(interaction.user.id))
-        if not amount or current:
-            return await interaction.response.send_message(f"You alredy claimed your monthly reward. Please try again after <t:{next_streak}:F>")
+        try:
+            amount, current, next_streak = self.update_streak("monthly", str(interaction.user.id))
+            if not amount or current:
+                return await interaction.response.send_message(f"You already claimed your monthly reward. Please try again after <t:{next_streak}:F>")
 
-        embed = discord.Embed(
-            title="Monthly Reward",
-            description=f"Amount: {amount}",
-            color=discord.Color.green(),
-            timestamp=datetime.fromtimestamp(next_streak)
-        )
+            embed = discord.Embed(
+                title="Monthly Reward",
+                description=f"Amount: {amount}",
+                color=discord.Color.green(),
+                timestamp=datetime.fromtimestamp(next_streak)
+            )
 
-        await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
 async def setup(bot):
     await bot.add_cog(StreaksCog(bot))    

@@ -1,1 +1,17 @@
-{}
+{
+    "721151215010054165": {
+        "playerID": 1,
+        "joinTimestamp": 1741888510,
+        "streaks": {
+            "daily": {
+                "streak": 1,
+                "last_claimed": "2025-03-13T18:16:28.427397+00:00"
+            }
+        },
+        "balance": {
+            "purse": 5000,
+            "bank": 5000,
+            "maxBank": 25000
+        }
+    }
+}

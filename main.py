@@ -281,7 +281,7 @@ async def main():
             print("Bot is shutting down.")
             await bot.close()
 
-if __name__ == "__main__": # Was used to check if main was imported before bot_utils.
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
