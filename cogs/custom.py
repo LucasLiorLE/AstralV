@@ -79,7 +79,9 @@ class RevealView(View):
 
         view = QuizView(self.quiz_data["correct_answer"], self.quiz_data["question"], self.quiz_data["time_limit"])
         
-        options = [self.quiz_data["correct_answer"]] + self.quiz_data["wrong_answers"]
+        options = []
+        options.extend(self.quiz_data["correct_answer"])
+        options.extend(self.quiz_data["wrong_answers"])
         random.shuffle(options)
         
         for i, option in enumerate(options, 1):
@@ -144,6 +146,18 @@ class OppList(app_commands.Group):
         self.file_path = "storage/customs/opp_list.json"
         self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993, 1173963781706088451]
 
+    async def user_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        data = open_file(self.file_path)
+        if not data:
+            return []
+        
+        users = list(data.keys())
+        return [
+            app_commands.Choice(name=user, value=user)
+            for user in users
+            if current.lower() in user.lower()
+        ][:25]
+
     def find_user(self, search_user: str, data: dict) -> str:
         """Find user with case-insensitive search"""
         for user in data:
@@ -194,6 +208,7 @@ class OppList(app_commands.Group):
 
     @app_commands.command(name="remove", description="Remove someone from the opp list")
     @app_commands.describe(user="The user to remove")
+    @app_commands.autocomplete(user=user_autocomplete)
     async def remove(self, interaction: discord.Interaction, user: str):
         if interaction.user.id not in self.opp_editors:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
@@ -211,6 +226,7 @@ class OppList(app_commands.Group):
 
     @app_commands.command(name="edit", description="Edit someone's reason in the opp list")
     @app_commands.describe(user="The user to edit", reason="New reason")
+    @app_commands.autocomplete(user=user_autocomplete)
     async def edit(self, interaction: discord.Interaction, user: str, reason: str):
         if interaction.user.id not in self.opp_editors:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
@@ -238,6 +254,7 @@ class OppList(app_commands.Group):
         user="The user to view",
         version="Version number to view (optional, defaults to latest)"
     )
+    @app_commands.autocomplete(user=user_autocomplete)
     async def view(self, interaction: discord.Interaction, user: str, version: int = None):
         data = open_file(self.file_path)
         existing_user = self.find_user(user, data)
@@ -268,6 +285,7 @@ class OppList(app_commands.Group):
 
     @app_commands.command(name="reorder", description="Reorder someone in the opp list")
     @app_commands.describe(user="The user to reorder", position="New position (1-based)")
+    @app_commands.autocomplete(user=user_autocomplete)
     async def reorder(self, interaction: discord.Interaction, user: str, position: int):
         if interaction.user.id not in self.opp_editors:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
