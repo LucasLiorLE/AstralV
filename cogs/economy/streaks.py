@@ -66,12 +66,12 @@ class StreaksCog(commands.Cog):
 
         return amount, current_streak, next_streak
 
-    @app_commands.command(name="daily")
-    async def daily(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="daily")
+    async def daily(self, ctx: commands.Context):
         try:
-            amount, current, next_streak = self.update_streak("daily", str(interaction.user.id))
+            amount, current, next_streak = self.update_streak("daily", str(ctx.author.id))
             if not amount or current:
-                return await interaction.response.send_message(f"You already claimed your daily reward. Please try again after <t:{next_streak}:F>")
+                return await ctx.send(f"You already claimed your daily reward. Please try again after <t:{next_streak}:F>")
 
             embed = discord.Embed(
                 title="Daily Reward",
@@ -80,16 +80,16 @@ class StreaksCog(commands.Cog):
                 timestamp=datetime.fromtimestamp(next_streak)
             )
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="weekly")
-    async def weekly(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="weekly")
+    async def weekly(self, ctx: commands.Context):
         try:
-            amount, current, next_streak = self.update_streak("weekly", str(interaction.user.id))
+            amount, current, next_streak = self.update_streak("weekly", str(ctx.author.id))
             if not amount or current:
-                return await interaction.response.send_message(f"You already claimed your weekly reward. Please try again after <t:{next_streak}:F>")
+                return await ctx.send(f"You already claimed your weekly reward. Please try again after <t:{next_streak}:F>")
 
             embed = discord.Embed(
                 title="Weekly Reward",
@@ -98,16 +98,16 @@ class StreaksCog(commands.Cog):
                 timestamp=datetime.fromtimestamp(next_streak)
             )
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="monthly")
-    async def monthly(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="monthly")
+    async def monthly(self, ctx: commands.Context):
         try:
-            amount, current, next_streak = self.update_streak("monthly", str(interaction.user.id))
+            amount, current, next_streak = self.update_streak("monthly", str(ctx.author.id))
             if not amount or current:
-                return await interaction.response.send_message(f"You already claimed your monthly reward. Please try again after <t:{next_streak}:F>")
+                return await ctx.send(f"You already claimed your monthly reward. Please try again after <t:{next_streak}:F>")
 
             embed = discord.Embed(
                 title="Monthly Reward",
@@ -116,9 +116,9 @@ class StreaksCog(commands.Cog):
                 timestamp=datetime.fromtimestamp(next_streak)
             )
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
 async def setup(bot):
-    await bot.add_cog(StreaksCog(bot))    
+    await bot.add_cog(StreaksCog(bot))

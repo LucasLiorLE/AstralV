@@ -14,9 +14,9 @@ from bot_utils import (
 )
 
 class QuizView(View):
-    def __init__(self, correct_answer, question, timeout):
+    def __init__(self, correct_answers, question, timeout):
         super().__init__(timeout=timeout)
-        self.correct_answer = correct_answer
+        self.correct_answers = [str(ans).lower() for ans in correct_answers]
         self.used = []
         self.question = question
         self.winner_found = False
@@ -28,7 +28,7 @@ class QuizView(View):
 
         embed = discord.Embed(
             title="Error",
-            description=f"No one answered the question in time. The answer was {self.correct_answer}.",
+            description=f"No one answered the question in time. The answers were: {', '.join(self.correct_answers)}.",
             color=discord.Color.red()
         )
         
@@ -47,7 +47,7 @@ class QuizView(View):
         
         self.used.append(user_id)
 
-        if button.label.lower() == str(self.correct_answer).lower():
+        if button.label.lower() in self.correct_answers:
             self.winner_found = True
             for item in self.children:
                 item.disabled = True
@@ -57,7 +57,8 @@ class QuizView(View):
                 description=self.question,
                 color=discord.Color.green()
             )
-            embed.add_field(name="Answer", value=f"{self.correct_answer}", inline=False)
+            embed.add_field(name="Answer Given", value=f"{button.label}", inline=False)
+            embed.add_field(name="All Correct Answers", value=f"{', '.join(self.correct_answers)}", inline=False)
             embed.add_field(name="Winner", value=interaction.user.mention, inline=False)
             await interaction.response.edit_message(view=self)
             await interaction.followup.send(embed=embed)
@@ -101,39 +102,35 @@ class Quiz(commands.Cog):
     @app_commands.command(name="quiz", description="Create a quiz question")
     @app_commands.describe(
         question="The question to ask",
-        correct_answer="The correct answer",
-        wrong_answers="Comma-separated list of wrong answers (e.g. 'London,Berlin,Madrid')",
+        correct_answers="Comma-separated list of correct answers (e.g. 'Paris,France,République française')",
+        wrong_answers="Optional: Comma-separated list of wrong answers",
         time_limit="Time limit in seconds (default: 60)"
     )
     async def quiz(
         self, 
         interaction: discord.Interaction, 
         question: str,
-        correct_answer: str,
-        wrong_answers: str,
+        correct_answers: str,
+        wrong_answers: str = None,
         time_limit: float = 60.0
     ):
+        correct_answers_list = [ans.strip() for ans in correct_answers.split(",")]
         wrong_answers_list = []
 
-        for ans in wrong_answers.split(","):
-            ans = ans.strip()
-            if ans in wrong_answers_list:
-                return await interaction.response.send_message("You cannot have duplicate answers!", ephemeral=True)
-            else:
-                wrong_answers_list.append(ans)
+        if wrong_answers:
+            for ans in wrong_answers.split(","):
+                ans = ans.strip()
+                if ans in wrong_answers_list or ans in correct_answers_list:
+                    return await interaction.response.send_message("You cannot have duplicate answers!", ephemeral=True)
+                else:
+                    wrong_answers_list.append(ans)
 
-        if not wrong_answers_list:
-            return await interaction.response.send_message("Please provide at least one wrong answer!", ephemeral=True)
-
-        if len(wrong_answers_list) + 1 > 10:
-            return await interaction.response.send_message("Please provide with less than 10 answers.", ephemeral=True)
-
-        if (correct_answer in wrong_answers_list):
-            return await interaction.response.send_message("You cannot have duplicate answers!", ephemeral=True)
+        if len(correct_answers_list) + len(wrong_answers_list) > 10:
+            return await interaction.response.send_message("Please provide less than 10 answers total.", ephemeral=True)
 
         quiz_data = {
             "question": question,
-            "correct_answer": correct_answer,
+            "correct_answer": correct_answers_list,
             "wrong_answers": wrong_answers_list,
             "time_limit": time_limit
         }

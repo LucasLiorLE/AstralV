@@ -4,6 +4,7 @@ from discord import app_commands
 
 from bot_utils import (
     open_json,
+    save_json,
     handle_logs
 )
 
@@ -39,8 +40,16 @@ class SetCommandGroup(app_commands.Group):
                 server_info["moderation"] = {}
 
             server_info["moderation"][option.value] = channel.id
+            save_json("storage/server_info.json", server_info)
                 
-            store_modlog(server_info, guild_id)
+            await store_modlog(
+                modlog_type="settings_update",
+                server_id=interaction.guild_id,
+                moderator=interaction.user,
+                channel=channel,
+                reason=f"Set {option.name} channel",
+                bot=interaction.client
+            )
             await interaction.followup.send(f"Successfully set {option.name} to {channel.mention}")
         except Exception as e:
             await handle_logs(interaction, e)
@@ -67,7 +76,14 @@ class SetCommandGroup(app_commands.Group):
                 server_info["moderation"] = {}
 
             server_info["moderation"][option.value] = role.id   
-            store_modlog(server_info, guild_id)
+            await store_modlog(
+                modlog_type="settings_update",
+                server_id=interaction.guild_id,
+                moderator=interaction.user,
+                role=role,
+                reason=f"Set {option.name} role",
+                bot=interaction.client
+            )
             await interaction.followup.send(f"Successfully set {option.name} to {role.mention}")
         except Exception as e:
             await handle_logs(interaction, e)

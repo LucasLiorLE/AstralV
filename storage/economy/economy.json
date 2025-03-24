@@ -1,17 +1,29 @@
 {
     "721151215010054165": {
-        "playerID": 1,
-        "joinTimestamp": 1741888510,
-        "streaks": {
-            "daily": {
-                "streak": 1,
-                "last_claimed": "2025-03-13T18:16:28.427397+00:00"
+        "commands": {
+            "beg": {
+                "uses": 3,
+                "cooldown": 1742852698
             }
         },
         "balance": {
-            "purse": 5000,
-            "bank": 5000,
-            "maxBank": 25000
+            "purse": 128100,
+            "bank": 0,
+            "maxBank": 25000,
+            "fish_tokens": 0
+        },
+        "boosts": {
+            "coin": 100
+        },
+        "streaks": {
+            "daily": {
+                "streak": 1,
+                "last_claimed": "2025-03-24T21:46:03.027061+00:00"
+            },
+            "weekly": {
+                "streak": 1,
+                "last_claimed": "2025-03-24T21:46:06.186340+00:00"
+            }
         }
     }
 }

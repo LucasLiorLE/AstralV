@@ -238,48 +238,24 @@ async def process_transaction(
     
     return True, f"{transaction_type.capitalize()} of {amount} Coins has been processed."
 
-def command_cooldown(cooldown_seconds: int, command_name: str, user_id: str) -> Union[Tuple[bool, int], bool]:
-    """
-    Check if a command is on cooldown for a user.
-    
-    Args:
-        cooldown_seconds (int): The cooldown duration in seconds
-        command_name (str): The name of the command
-        user_id (str): The user's ID
-        
-    Returns:
-        Union[Tuple[bool, int], bool]: Either (False, timestamp) if on cooldown, or True if ready
-
-    Example:
-        ```
-        @app_commands.command(name="test")
-        async def test(interaction: discord.Interaction):
-            user_id = str(interaction.user.id)
-            cooldown_result = command_cooldown(60, "test", user_id)
-            if isinstance(cooldown_result, tuple):
-                done, cooldown = cooldown_result
-                if not done:
-                    return await interaction.response.send_message(f"This command is on cooldown!\\nPlease try again in {cooldown}", ephemeral=True)
-            else:
-                return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
-        ```
-    """
-    eco = open_json(eco_path)
-    if user_id not in eco:
-        create_account(user_id)
-        eco = open_json(eco_path)
-    
-    check_user_stat(["commands", command_name], user_id)
-    check_user_stat(["commands", command_name, "cooldown"], user_id, 0)
-    check_user_stat(["commands", command_name, "uses"], user_id, 0)
-    
+def command_cooldown(cooldown: int, command_name: str, user_id: str) -> tuple[bool, int]:
     current_time = int(time.time())
-    last_used = eco[user_id]["commands"][command_name]["cooldown"]
-    eco[user_id]["commands"][command_name]["cooldown"] += 1
+    eco = open_json("storage/economy/economy.json")
     
-    if current_time < last_used + cooldown_seconds:
-        return False, last_used + cooldown_seconds
+    if str(user_id) not in eco:
+        eco[str(user_id)] = {}
+    if "commands" not in eco[str(user_id)]:
+        eco[str(user_id)]["commands"] = {}
+    if command_name not in eco[str(user_id)]["commands"]:
+        eco[str(user_id)]["commands"][command_name] = {"uses": 0, "cooldown": 0}
     
-    eco[user_id]["commands"][command_name]["cooldown"] = current_time
-    save_json(eco_path, eco)
+    last_used = eco[str(user_id)]["commands"][command_name]["cooldown"]
+    
+    if current_time - last_used < cooldown:
+        return False, last_used + cooldown
+    
+    eco[str(user_id)]["commands"][command_name]["uses"] += 1
+    eco[str(user_id)]["commands"][command_name]["cooldown"] = current_time
+    save_json("storage/economy/economy.json", eco)
+    
     return True, 0

@@ -87,17 +87,17 @@ class MainEconomyCog(commands.Cog):
         save_json(self.eco_path, eco)
         return amount, coin_multi
 
-    @app_commands.command(name="beg")
-    async def beg(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="beg")
+    async def beg(self, ctx: commands.Context):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             cooldown_result = command_cooldown(30, "beg", user_id)
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
-                    return await send_cooldown(interaction, cooldown)
+                    return await send_cooldown(ctx, cooldown)
             else:
-                return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
+                return await ctx.send("Error checking cooldown", ephemeral=True)
 
             embed = discord.Embed(
                 title=random.choice(["pls munee", "im por", "pls beg", "begging"])
@@ -128,22 +128,22 @@ class MainEconomyCog(commands.Cog):
                 ])
                 embed.color = discord.Color.green()
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="search")
-    async def search(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="search")
+    async def search(self, ctx: commands.Context):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             cooldown_result = command_cooldown(45, "search", user_id)
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
-                    return await send_cooldown(interaction, cooldown)
+                    return await send_cooldown(ctx, cooldown)
             else:
-                return await interaction.response.send_message("Error checking cooldown", ephemeral=True)
+                return await ctx.send("Error checking cooldown", ephemeral=True)
 
             embed = discord.Embed(
                 title="Where would you like to search?",
@@ -168,7 +168,7 @@ class MainEconomyCog(commands.Cog):
                         self.add_item(button)
                 
                 async def interaction_check(self, button_interaction: discord.Interaction) -> bool:
-                    return button_interaction.user.id == interaction.user.id
+                    return button_interaction.user.id == ctx.author.id
 
                 async def button_callback(self, button_interaction: discord.Interaction):
                     location = button_interaction.data["custom_id"]
@@ -228,22 +228,22 @@ class MainEconomyCog(commands.Cog):
                     await button_interaction.response.edit_message(embed=embed, view=self)
 
             view = SearchButtons(self)
-            await interaction.response.send_message(embed=embed, view=view)
+            await ctx.send(embed=embed, view=view)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="crime")
-    async def crime(self, interaction: discord.Interaction): ...
+    @commands.hybrid_command(name="crime")
+    async def crime(self, ctx: commands.Context): ...
 
-    @app_commands.command(name="hunt")
-    async def hunt(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="hunt")
+    async def hunt(self, ctx: commands.Context):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             check_user_stat(["inventory", "rifle"], user_id, 0)
             eco = open_json("storage/economy/economy.json")
             if eco[user_id]["inventory"]["rifle"] < 1:
-                return await interaction.response.send_message("You need a rifle to hunt!", ephemeral=True)
+                return await ctx.send("You need a rifle to hunt!", ephemeral=True)
 
             weights = {
                 "rabbit": 25, "mole": 23, "deer": 20,
@@ -299,19 +299,19 @@ class MainEconomyCog(commands.Cog):
                 eco[user_id]["inventory"]["rifle"] -= 1
                 save_json(self.eco_path, eco)
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="dig")
-    async def dig(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="dig")
+    async def dig(self, ctx: commands.Context):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             check_user_stat(["inventory", "shovel"], user_id, 0)
             eco = open_json("storage/economy/economy.json")
             if eco[user_id]["inventory"]["shovel"] < 1:
-                return await interaction.response.send_message("You need a shovel to hunt!", ephemeral=True)
+                return await ctx.send("You need a shovel to hunt!", ephemeral=True)
 
             weights = {
                 "rabbit": 25, "mole": 23, "deer": 20,
@@ -330,21 +330,21 @@ class MainEconomyCog(commands.Cog):
                 color=discord.Color.green()
             )
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="deposit")
-    async def deposit(self, interaction: discord.Interaction, amount: int):
+    @commands.hybrid_command(name="deposit")
+    async def deposit(self, ctx: commands.Context, amount: int):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             check_user_stat(["balance", "purse"], user_id, 0)
             check_user_stat(["balance", "bank"], user_id, 5000)
             check_user_stat(["balance", "maxBank"], user_id, 25000)
             
             if amount <= 0:
-                return await interaction.response.send_message("Please enter a positive amount.", ephemeral=True)
+                return await ctx.send("Please enter a positive amount.", ephemeral=True)
             
             success, message = await process_transaction(user_id, "deposit", amount)
             
@@ -371,20 +371,20 @@ class MainEconomyCog(commands.Cog):
                     color=discord.Color.red()
                 )
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="withdraw")
-    async def withdraw(self, interaction: discord.Interaction, amount: int):
+    @commands.hybrid_command(name="withdraw")
+    async def withdraw(self, ctx: commands.Context, amount: int):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             check_user_stat(["balance", "purse"], user_id, 0)
             check_user_stat(["balance", "bank"], user_id, 0)
             
             if amount <= 0:
-                return await interaction.response.send_message("Please enter a positive amount.", ephemeral=True)
+                return await ctx.send("Please enter a positive amount.", ephemeral=True)
             
             success, message = await process_transaction(user_id, "withdraw", amount)
             
@@ -411,15 +411,15 @@ class MainEconomyCog(commands.Cog):
                     color=discord.Color.red()
                 )
 
-            await interaction.response.send_message(embed=embed)
+            await ctx.send(embed=embed)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="balance")
-    async def balance(self, interaction: discord.Interaction):
+    @commands.hybrid_command(name="balance")
+    async def balance(self, ctx: commands.Context):
         try:
-            user_id = str(interaction.user.id)
+            user_id = str(ctx.author.id)
             check_user_stat(["balance", "purse"], user_id, 0)
             check_user_stat(["balance", "bank"], user_id, 0)
             check_user_stat(["balance", "maxBank"], user_id, 25000)
@@ -433,7 +433,7 @@ class MainEconomyCog(commands.Cog):
                 fish_tokens = eco[user_id]["balance"]["fish_tokens"]
                 
                 embed = discord.Embed(
-                    title=f"{interaction.user.name}'s Balance",
+                    title=f"{ctx.author.name}'s Balance",
                     color=discord.Color.gold()
                 )
                 
@@ -583,10 +583,10 @@ class MainEconomyCog(commands.Cog):
 
             initial_embed, _, _, _ = await create_balance_embed()
             view = BalanceView()
-            await interaction.response.send_message(embed=initial_embed, view=view)
+            await ctx.send(embed=initial_embed, view=view)
 
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
 async def setup(bot):
     await bot.add_cog(MainEconomyCog(bot))

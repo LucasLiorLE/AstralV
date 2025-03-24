@@ -511,14 +511,18 @@ async def autocomplete_choices(
         for choice in choices[:25]
     ]
 
-async def send_cooldown(interaction: discord.Interaction, cooldown: int):
+async def send_cooldown(ctx_or_interaction: Union[commands.Context, discord.Interaction], cooldown: int):
     embed = discord.Embed(
         title="Slow down there buddy!",
         description=f"This command is on cooldown, please try again <t:{cooldown}:R>",
         color=discord.Color.red()
     )
-    if interaction.response.is_done():
-        await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    if isinstance(ctx_or_interaction, discord.Interaction):
+        if ctx_or_interaction.response.is_done():
+            await ctx_or_interaction.followup.send(embed=embed, ephemeral=True)
+        else:
+            await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
     else:
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await ctx_or_interaction.send(embed=embed)
 
