@@ -18,9 +18,11 @@ from urllib.parse import urlparse
 import numpy as np
 import cv2
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class ImageGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="image", description="Image manipulation commands")
+        super().__init__(name="image", description="Image manipulation commands", guild_only=False)
         load_commands(self.commands, "image")
 
     async def togif(self, image_buffer: io.BytesIO) -> io.BytesIO:
@@ -561,9 +563,11 @@ class ImageGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)    
 
+@app_commands.allowed_installs(guilds=True, users=True)  
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class ConvertGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="convert", description="Image conversion commands")
+        super().__init__(name="convert", description="Image conversion commands", guild_only=False)
         load_commands(self.commands, "convert")
 
     @app_commands.command(name="image")

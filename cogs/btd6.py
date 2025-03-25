@@ -12,9 +12,11 @@ from discord import app_commands
 import re
 from aiohttp import ClientSession
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class BloonsTD6CommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands")
+        super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands", guild_only=False)
         load_commands(self.commands, "btd6")
 
     @app_commands.command(name="connect")

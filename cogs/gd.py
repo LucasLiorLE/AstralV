@@ -9,9 +9,11 @@ from discord import app_commands
 
 from aiohttp import ClientSession
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class GeometryDashCommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="gd", description="Geometry Dash related commands")
+        super().__init__(name="gd", description="Geometry Dash related commands", guild_only=False)
         load_commands(self.commands, "gd")
 
     @app_commands.command(name="profile", description="Fetch a Geometry Dash profile's data.")

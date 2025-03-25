@@ -14,9 +14,11 @@ from discord import app_commands
 
 from ossapi import UserLookupKey
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class OsuCommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="osu", description="Osu related commands")
+        super().__init__(name="osu", description="Osu related commands", guild_only=False)
 
         load_commands(self.commands, "osu")
 

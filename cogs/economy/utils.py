@@ -242,6 +242,7 @@ def command_cooldown(cooldown: int, command_name: str, user_id: str) -> tuple[bo
     current_time = int(time.time())
     eco = open_json("storage/economy/economy.json")
     
+    # Initialize command data structure if it doesn't exist
     if str(user_id) not in eco:
         eco[str(user_id)] = {}
     if "commands" not in eco[str(user_id)]:

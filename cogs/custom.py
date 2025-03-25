@@ -140,9 +140,15 @@ class Quiz(commands.Cog):
         view = RevealView(quiz_data)
         await interaction.response.send_message("Click the button below to reveal the quiz:", view=view, ephemeral=True)
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class OppList(app_commands.Group):
     def __init__(self):
-        super().__init__(name="opp")
+        super().__init__(
+            name="opp",
+            description="Manage the opp list",
+            guild_only=False
+        )
         self.file_path = "storage/customs/opp_list.json"
         self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993, 1173963781706088451]
 

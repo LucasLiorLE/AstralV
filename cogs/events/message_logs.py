@@ -5,6 +5,7 @@ from typing import Dict, Optional
 from collections import defaultdict
 from datetime import datetime, timedelta
 from bot_utils import open_json
+from discord import app_commands
 
 class MessageLink(Button):
     def __init__(self, guild_id: int, channel_id: int, message_id: Optional[int] = None):
@@ -143,6 +144,15 @@ class MessageLogs(commands.Cog):
 
     @commands.hybrid_command(name="snipe", description="Show recently deleted messages or reactions")
     @commands.guild_only()
+    @app_commands.describe(
+        type="Type of snipe to view",
+        index="Which snipe to view (0 is most recent)"
+    )
+    @app_commands.choices(type=[
+        app_commands.Choice(name="Messages", value="messages"),
+        app_commands.Choice(name="Reactions", value="reactions"),
+        app_commands.Choice(name="Edits", value="edits")
+    ])
     async def snipe(self, ctx: commands.Context, type: str = "messages", index: int = 0):
         snipe_type = type.lower()
         if snipe_type not in ["messages", "reactions", "edits"]:
@@ -163,17 +173,21 @@ class MessageLogs(commands.Cog):
         )
 
         if snipe_type == "messages":
-            embed.description = snipe["content"] or "No content"
+            embed.description = f"**Content:** {snipe['content'] or 'No content'}\n**Deleted by:** {snipe['author'].mention}"
             if snipe["attachments"]:
                 embed.add_field(name="Attachments", value="\n".join(snipe["attachments"]), inline=False)
         elif snipe_type == "reactions":
-            embed.description = f"Reaction {snipe['emoji']} removed"
+            embed.description = f"Reaction {snipe['emoji']} removed by {snipe['author'].mention}"
             view = View()
-            view.add_item(MessageLink(ctx.guild.id, ctx.channel.id))
+            view.add_item(MessageLink(ctx.guild.id, ctx.channel.id, snipe["message_id"]))
             await ctx.send(embed=embed, view=view)
             return
+        elif snipe_type == "edits":
+            embed.description = f"Message edited by {snipe['author'].mention}"
+            embed.add_field(name="Before", value=snipe["before"] or "No content", inline=False)
+            embed.add_field(name="After", value=snipe["after"] or "No content", inline=False)
 
-        embed.set_author(name=snipe["author"], icon_url=snipe["author"].avatar.url)
+        embed.set_author(name=str(snipe["author"]), icon_url=snipe["author"].avatar.url)
         embed.set_footer(text=f"#{index+1} | {len(snipes)} snipes available")
         await ctx.send(embed=embed)
 

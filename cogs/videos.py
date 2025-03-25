@@ -14,9 +14,11 @@ from aiohttp import ClientSession
 from moviepy.editor import VideoFileClip, AudioFileClip, vfx, CompositeVideoClip
 from urllib.parse import urlparse
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class VideoGroup(app_commands.Group):
 	def __init__(self):
-		super().__init__(name="video", description="Video manipulation commands")
+		super().__init__(name="video", description="Video manipulation commands", guild_only=False)
 		
 		load_commands(self.commands, "video")
 
@@ -205,7 +207,7 @@ class VideoGroup(app_commands.Group):
 						os.unlink(temp_file)
 					except Exception:
 						pass
-				
+					
 	@app_commands.command(name="speed")
 	async def speed_video(self, interaction: discord.Interaction, factor: float, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
 		await interaction.response.defer(ephemeral=ephemeral)

@@ -9,9 +9,11 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class MinecraftCommandsGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="minecraft", description="Minecraft related commands")
+        super().__init__(name="minecraft", description="Minecraft related commands", guild_only=False)
 
         load_commands(self.commands, "minecraft")
         

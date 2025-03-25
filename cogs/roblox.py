@@ -46,9 +46,11 @@ class SequenceButton(discord.ui.View):
     async def show_sequence(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(self.sequence, ephemeral=True)
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class CGlovesGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="cgloves", description="Slap Battles glove-related commands")
+        super().__init__(name="cgloves", description="Slap Battles glove-related commands", guild_only=False)
         self.setup_commands()
 
     def setup_commands(self):
@@ -381,9 +383,11 @@ class CGlovesGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class RobloxGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="roblox", description="Roblox account-related commands")
+        super().__init__(name="roblox", description="Roblox account-related commands", guild_only=False)
         load_commands(self.commands, "roblox")
 
     @app_commands.command(name="connect")

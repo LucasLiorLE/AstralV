@@ -178,9 +178,11 @@ class ProfileView(View):
             return f"<:{formatted_name}:{emoji_id}>"
         return "❓" 
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class ClashRoyaleCommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="cr", description="Clash Royale related commands")
+        super().__init__(name="cr", description="Clash Royale related commands", guild_only=False)
 
         load_commands(self.commands, "cr")
         

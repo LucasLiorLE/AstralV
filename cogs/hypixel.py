@@ -74,6 +74,11 @@ class HypixelView(View):
         time_played = profile_data.get("time_played", 0)
         longest_bow_kill = profile_data.get("longest_bow_kill", 0)
 
+        hours = time_played // 3600
+        minutes = (time_played % 3600) // 60
+        seconds = time_played % 60
+        formatted_time = f"{hours}h {minutes}m {seconds}s"
+
         embed = discord.Embed(
             title="SkyWars Stats",
             color=discord.Color.red(),
@@ -89,7 +94,7 @@ class HypixelView(View):
         embed.add_field(name="Wins", value=f"{wins:,}")
         embed.add_field(name="Games Played", value=f"{games_played:,}")
         embed.add_field(name="Win Streak", value=f"{win_streak:,}")
-        embed.add_field(name="Time Played", value=f"{time_played} seconds") # TODO: Format this?
+        embed.add_field(name="Time Played", value=formatted_time)
         embed.add_field(name="Longest Bow Kill", value=f"{longest_bow_kill} blocks")
 
         return embed
@@ -148,60 +153,72 @@ class HypixelView(View):
 
     def create_arcade_embed(self):
         profile_data = self.player.get("stats", {}).get("Arcade", {})
-        coins = profile_data.get("coins", 0)
+        embeds = []
         
-        embed = discord.Embed(
+        # Main stats embed
+        main_embed = discord.Embed(
             title="Arcade Stats",
             color=discord.Color.blurple(),
             timestamp=datetime.now(timezone.utc)
         )
+        main_embed.add_field(name="Coins", value=f"{profile_data.get('coins', 0):,}", inline=False)
 
-        embed.add_field(name="Coins", value=f"{coins:,}", inline=False)
-
+        # Add Pixel Party stats
         pixel_party = profile_data.get("pixel_party", {})
-        embed.add_field(
-            name="Pixel Party",
-            value=f"Games Played: {pixel_party.get('games_played', 0)}\n"
-                f"Games Played (Normal): {pixel_party.get('games_played_normal', 0)}",
-            inline=False
-        )
+        if pixel_party:
+            main_embed.add_field(
+                name="Pixel Party",
+                value=f"Games Played: {pixel_party.get('games_played', 0)}\n"
+                    f"Games Played (Normal): {pixel_party.get('games_played_normal', 0)}",
+                inline=False
+            )
+        embeds.append(main_embed)
 
+        # Create separate embed for dropper stats
         dropper = profile_data.get("dropper", {})
-        map_stats = dropper.get("map_stats", {})
-        dropper_maps = "\n".join(
-            f"{map_name.title()}: Best Time: {stats.get('best_time', 'N/A')} ms, Completions: {stats.get('completions', 0)}"
-            for map_name, stats in map_stats.items()
-        )
-        embed.add_field(
-            name="Dropper",
-            value=f"Fails: {dropper.get('fails', 0)}\n"
-                f"Games Played: {dropper.get('games_played', 0)}\n"
-                f"Maps Completed: {dropper.get('maps_completed', 0)}\n\n"
-                f"**Map Stats:**\n{dropper_maps}",
-            inline=False
-        )
+        if dropper:
+            dropper_embed = discord.Embed(
+                title="Arcade Stats - Dropper",
+                color=discord.Color.blurple(),
+                timestamp=datetime.now(timezone.utc)
+            )
+            map_stats = dropper.get("map_stats", {})
+            dropper_maps = "\n".join(
+                f"{map_name.title()}: Best Time: {stats.get('best_time', 'N/A')} ms, Completions: {stats.get('completions', 0)}"
+                for map_name, stats in map_stats.items()
+            )
+            dropper_embed.add_field(
+                name="Dropper",
+                value=f"Fails: {dropper.get('fails', 0)}\n"
+                    f"Games Played: {dropper.get('games_played', 0)}\n"
+                    f"Maps Completed: {dropper.get('maps_completed', 0)}\n\n"
+                    f"**Map Stats:**\n{dropper_maps}",
+                inline=False
+            )
+            embeds.append(dropper_embed)
 
-        # print(profile_data)
-        # TODO: This doesn't work on large profiles (too much lines)
-        # Probably just use multiple embeds via returning multiple if too much.
-        # Work on in later verions
-
+        # Create separate embed for party games stats
         stats_party_games = {
-            (
-                re.sub(
-                    r"(.*) (Deaths|Kills|Final Kills|Wins|Score|Time)$",
-                    r"(\2) \1",
-                    key.title().replace("_", " ").replace("Party", "").strip()
-                )
+            re.sub(
+                r"(.*) (Deaths|Kills|Final Kills|Wins|Score|Time)$",
+                r"(\2) \1",
+                key.title().replace("_", " ").replace("Party", "").strip()
             ): value
-            for key, value in profile_data.items() if isinstance(value, int) and key != "coins"
+            for key, value in profile_data.items() 
+            if isinstance(value, int) and key != "coins"
         }
 
-        party_games_stats = "\n".join(f"{k}: {v}" for k, v in stats_party_games.items())
-        if stats_party_games is not None:
-            embed.add_field(name="Party Games Stats", value=party_games_stats, inline=False)
+        if stats_party_games:
+            party_embed = discord.Embed(
+                title="Arcade Stats - Party Games",
+                color=discord.Color.blurple(),
+                timestamp=datetime.now(timezone.utc)
+            )
+            party_stats = "\n".join(f"{k}: {v}" for k, v in stats_party_games.items())
+            party_embed.add_field(name="Party Games Stats", value=party_stats, inline=False)
+            embeds.append(party_embed)
 
-        return embed
+        return embeds
 
     async def show_skyblock_page(self, interaction: discord.Interaction):
         self.current_page = "skyblock"
@@ -313,9 +330,11 @@ class HypixelView(View):
 
         return embed
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class HypixelCommandsGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="hypixel", description="Base Hypixel commands")
+        super().__init__(name="hypixel", description="Base Hypixel commands", guild_only=False)
         load_commands(self.commands, "hypixel")
 
     @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
@@ -337,6 +356,7 @@ class HypixelCommandsGroup(app_commands.Group):
                         await interaction.followup.send(f"Failed to retrieve data. Status code: {response.status}")
         except Exception as e:
             await handle_logs(interaction, e)
+
 
 class SkyblockView(View):
     def __init__(self, player_data, message, uuid, find_profile, current_page="main"):
@@ -373,14 +393,18 @@ class SkyblockView(View):
         self.misc_button = Button(label="Miscellaneous", style=ButtonStyle.secondary)
         self.misc_button.callback = self.show_misc_page
         self.add_item(self.misc_button)
-        '''
-        TODO: Add these buttons for later versions?
-        $.members.found_profile.events.easter (For chocolate factory)
-        $.members.found_profile.dungeons (For dungeons data)
-        $.members.found_profile.nether_island_player_data (That place i forgot what it was called)
-        $.members.found_profile.auctions
 
-        '''
+        self.dungeons_button = Button(label="Dungeons", style=ButtonStyle.secondary)
+        self.dungeons_button.callback = self.show_dungeons_page
+        self.add_item(self.dungeons_button)
+
+        self.easter_button = Button(label="Easter Event", style=ButtonStyle.secondary)
+        self.easter_button.callback = self.show_easter_page
+        self.add_item(self.easter_button)
+
+        self.nether_button = Button(label="Crimson Isle", style=ButtonStyle.secondary)
+        self.nether_button.callback = self.show_nether_page
+        self.add_item(self.nether_button)
 
         self.update_buttons()
 
@@ -417,6 +441,9 @@ class SkyblockView(View):
         self.farm_button.disabled = self.current_page == "farm"
         self.collections_button.disabled = self.current_page == "collections"
         self.misc_button.disabled = self.current_page == "misc"
+        self.dungeons_button.disabled = self.current_page == "dungeons"
+        self.easter_button.disabled = self.current_page == "easter"
+        self.nether_button.disabled = self.current_page == "nether"
 
     async def show_mine_page(self, interaction: discord.Interaction):
         self.current_page = "mine"
@@ -442,7 +469,7 @@ class SkyblockView(View):
         tokens = mining.get("token", 0)
         tokens_spent = mining.get("tokens_spent", 0)
 
-        mithril = mining.get("powder_mithril_total", 0) # TODO: Check if it is this or just powder_mithril
+        mithril = mining.get("powder_mithril", 0)  # Use current amount instead of total
         gemstone = mining.get("powder_gemstone_total", 0)
         glacite = mining.get("powder_glacite_total", 0)
 
@@ -707,9 +734,156 @@ class SkyblockView(View):
 
         return embed    
 
+    async def show_dungeons_page(self, interaction: discord.Interaction):
+        self.current_page = "dungeons"
+        self.update_buttons()
+        
+        embed = self.create_dungeons_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_dungeons_embed(self):
+        found_profile = self.profile_data.get("members", {}).get(self.uuid, {})
+        dungeons = found_profile.get("dungeons", {})
+        
+        embed = discord.Embed(
+            title="Dungeons Stats",
+            color=discord.Color.dark_purple(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        dungeon_types = dungeons.get("dungeon_types", {})
+        for dungeon_type, data in dungeon_types.items():
+            completion_data = []
+            for floor, completions in data.get("tier_completions", {}).items():
+                if floor != "total":
+                    completion_data.append(f"Floor {floor}: {completions}")
+            
+            if completion_data:
+                embed.add_field(
+                    name=f"{dungeon_type.title()} Completions",
+                    value="\n".join(completion_data),
+                    inline=False
+                )
+
+        classes = dungeons.get("player_classes", {})
+        if classes:
+            class_data = []
+            for class_name, data in classes.items():
+                exp = data.get("experience", 0)
+                class_data.append(f"{class_name.title()}: {exp:,.0f} XP")
+            
+            embed.add_field(
+                name="Class Experience",
+                value="\n".join(class_data),
+                inline=False
+            )
+
+        return embed
+
+    async def show_easter_page(self, interaction: discord.Interaction):
+        self.current_page = "easter"
+        self.update_buttons()
+        
+        embed = self.create_easter_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_easter_embed(self):
+        found_profile = self.profile_data.get("members", {}).get(self.uuid, {})
+        easter = found_profile.get("events", {}).get("easter", {})
+        
+        embed = discord.Embed(
+            title="Easter Event Stats",
+            color=discord.Color.purple(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        chocolate = easter.get("chocolate", 0)
+        total_chocolate = easter.get("total_chocolate", 0)
+        chocolate_level = easter.get("chocolate_level", 0)
+        barn_level = easter.get("rabbit_barn_capacity_level", 0)
+
+        embed.add_field(
+            name="Chocolate Factory",
+            value=f"Current Chocolate: {chocolate:,}\n"
+                  f"Total Chocolate: {total_chocolate:,}\n"
+                  f"Chocolate Level: {chocolate_level}\n"
+                  f"Barn Capacity Level: {barn_level}",
+            inline=False
+        )
+
+        rabbits = easter.get("rabbits", {})
+        if rabbits:
+            collected_eggs = rabbits.get("collected_eggs", {})
+            eggs_data = []
+            for egg_type, amount in collected_eggs.items():
+                eggs_data.append(f"{egg_type.title()}: {amount:,}")
+            
+            if eggs_data:
+                embed.add_field(
+                    name="Collected Eggs",
+                    value="\n".join(eggs_data),
+                    inline=False
+                )
+
+        return embed
+
+    async def show_nether_page(self, interaction: discord.Interaction):
+        self.current_page = "nether"
+        self.update_buttons()
+        
+        embed = self.create_nether_embed()
+        await self.message.edit(embed=embed, view=self)
+        await interaction.response.defer()
+
+    def create_nether_embed(self):
+        found_profile = self.profile_data.get("members", {}).get(self.uuid, {})
+        nether = found_profile.get("nether_island_player_data", {})
+        
+        embed = discord.Embed(
+            title="Crimson Isle Stats",
+            color=discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        # Dojo stats
+        dojo = nether.get("dojo", {})
+        if dojo:
+            dojo_stats = []
+            for stat, value in dojo.items():
+                if stat.startswith("dojo_points_"):
+                    discipline = stat.replace("dojo_points_", "").replace("_", " ").title()
+                    dojo_stats.append(f"{discipline}: {value} points")
+            
+            if dojo_stats:
+                embed.add_field(
+                    name="Dojo Scores",
+                    value="\n".join(dojo_stats),
+                    inline=False
+                )
+
+        # Kuudra stats
+        kuudra = nether.get("kuudra_completed_tiers", {})
+        if kuudra:
+            kuudra_stats = []
+            for tier, completions in kuudra.items():
+                kuudra_stats.append(f"Tier {tier}: {completions} completions")
+            
+            if kuudra_stats:
+                embed.add_field(
+                    name="Kuudra Completions",
+                    value="\n".join(kuudra_stats),
+                    inline=False
+                )
+
+        return embed
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class SkyblockCommandsGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="sb", description="Hypixel skyblock commands")
+        super().__init__(name="sb", description="Hypixel skyblock commands", guild_only=False)
         
         load_commands(self.commands, "sb")
 
