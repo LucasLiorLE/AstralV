@@ -37,6 +37,14 @@ async def get_connected_accounts(interaction: discord.Interaction, current: str)
     
     return choices[:25]
 
+async def autocomplete_badge_name(interaction: discord.Interaction, current: str):
+    gloves = open_json("storage/bot_data.json")["cgloves"]
+    badge_names = [glove for glove in gloves.keys()]
+    return [
+        app_commands.Choice(name=badge, value=badge)
+        for badge in badge_names if current.lower() in badge.lower()
+    ][:25]
+
 class SequenceButton(discord.ui.View):
     def __init__(self, sequence: str):
         super().__init__(timeout=None)
@@ -380,6 +388,60 @@ class CGlovesGroup(app_commands.Group):
 
             await interaction.followup.send(embed=compare_embed)
 
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    @app_commands.command(name="search")
+    @app_commands.autocomplete(badge=autocomplete_badge_name, user=get_connected_accounts)
+    async def search(self, interaction: discord.Interaction, badge: str, user: str = None):
+        await interaction.response.defer()
+    
+        try:
+            if user:
+                roblox_id = await rbx_fetchUserID(user)
+                if roblox_id is None:
+                    await interaction.followup.send(f"Failed to retrieve Roblox ID for {user}.")
+                    return
+            else:
+                discord_user_id = str(interaction.user.id)
+                member_info = open_json("storage/member_info.json")
+    
+                if discord_user_id not in member_info or "roblox_id" not in member_info[discord_user_id]:
+                    await interaction.followup.send("Your account is not linked.")
+                    return
+    
+                roblox_id = member_info[discord_user_id]["roblox_id"]
+    
+            gloves = open_json("storage/bot_data.json")["cgloves"]
+            if badge not in gloves:
+                await interaction.followup.send("Invalid badge name.")
+                return
+    
+            badge_ids = gloves[badge]
+            url = f"https://badges.roblox.com/v1/users/{roblox_id}/badges/awarded-dates?badgeIds={','.join(map(str, badge_ids))}"
+    
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if not data["data"]:
+                            await interaction.followup.send(f"{user or interaction.user.name} does not have the `{badge}` badge.")
+                            return
+    
+                        awarded_date = data["data"][0]["awardedDate"]
+                        date = datetime.strptime(awarded_date.replace("Z", "+0000"), "%Y-%m-%dT%H:%M:%S%z")
+                        epoch_time = int(date.timestamp())
+    
+                        embed = discord.Embed(
+                            title=f"Badge Info: {badge}",
+                            description=f"**User:** {user or interaction.user.name}\n**Obtained:** <t:{epoch_time}:F>",
+                            color=0xDA8EE7
+                        )
+                        await interaction.followup.send(embed=embed)
+    
+                    else:
+                        await interaction.followup.send("Failed to retrieve badge data.")
+    
         except Exception as error:
             await handle_logs(interaction, error)
 
