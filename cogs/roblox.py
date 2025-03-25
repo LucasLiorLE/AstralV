@@ -429,7 +429,9 @@ class CGlovesGroup(app_commands.Group):
                             return
     
                         awarded_date = data["data"][0]["awardedDate"]
-                        date = datetime.strptime(awarded_date.replace("Z", "+0000"), "%Y-%m-%dT%H:%M:%S%z")
+
+                        date, _, _ = awarded_date.partition(".")
+                        date = datetime.strptime(date + "+0000", "%Y-%m-%dT%H:%M:%S%z")
                         epoch_time = int(date.timestamp())
     
                         embed = discord.Embed(
