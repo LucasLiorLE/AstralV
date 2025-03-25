@@ -8,12 +8,21 @@
 #    - Tried to fix "AttributeError: 'NoneType' object has no attribute 'sequence'" error
 #    - Economy update
 #    - Stored moderation and economy in packets to make it easier for me to see stuff
+#    - Hypixel command update
+#    - Some moderation fixes
+#    - Minor commands (Useless feature: poll!)
+#
+# Other notes:
+#    - Attempt to fix status upon disconnect
+#    - Fixed some bugs with the moderation commands
+#    - Discovered how to use hybrid_commands 
+#         - Was too use to bridge_commands from pycord
 # 
 # TODO/FIX:
 #    - Make auto mute a server set function. (2.4.0)
 #    - Make a more efficient storage system using sql and json (2.6.0)
 #
-# This was last updated: 3/4/2025 10:34 AM
+# This was last updated: 3/25/2025 9:55 AM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -61,18 +70,28 @@ class StatusManager:
             "I really need to sleep...",
             "Do people even read these?"
         ]
+        self.running = False
+        self.current_status = None
 
     async def change_status(self):
-        while True:
-            await self.bot.wait_until_ready()
-            current_status = random.choice(self.status_messages)
-            await self.bot.change_presence(
-                status=discord.Status.dnd, 
-                activity=discord.Game(
-                    name=current_status,
+        self.running = True
+        while self.running:
+            try:
+                await self.bot.wait_until_ready()
+                self.current_status = random.choice(self.status_messages)
+                await self.bot.change_presence(
+                    status=discord.Status.dnd, 
+                    activity=discord.Game(
+                        name=self.current_status,
+                    )
                 )
-            )
-            await asyncio.sleep(600)
+                await asyncio.sleep(600)
+            except Exception as e:
+                print(f"Status update error: {e}")
+                await asyncio.sleep(30)
+
+    def stop(self):
+        self.running = False
 
 # Bot def 
 class botMain(commands.Bot):
@@ -245,6 +264,19 @@ async def on_message(message):
 
         save_file("storage/member_info.json", member_data)
         save_file("storage/server_info.json", server_info)
+
+@bot.event
+async def on_connect():
+    if not bot.status_manager.running:
+        bot.loop.create_task(bot.status_manager.change_status())
+
+@bot.event
+async def on_resumed():
+    if bot.status_manager.current_status:
+        await bot.change_presence(
+            status=discord.Status.dnd,
+            activity=discord.Game(name=bot.status_manager.current_status)
+        )
 
 # Main execution thing
 

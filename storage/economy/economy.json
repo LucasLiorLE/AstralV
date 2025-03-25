@@ -2,12 +2,20 @@
     "721151215010054165": {
         "commands": {
             "beg": {
+                "uses": 6,
+                "cooldown": 1742925812
+            },
+            "search": {
+                "uses": 1,
+                "cooldown": 1742923144
+            },
+            "crime": {
                 "uses": 3,
-                "cooldown": 1742852698
+                "cooldown": 1742926466
             }
         },
         "balance": {
-            "purse": 128100,
+            "purse": 70781.0,
             "bank": 0,
             "maxBank": 25000,
             "fish_tokens": 0
@@ -24,6 +32,10 @@
                 "streak": 1,
                 "last_claimed": "2025-03-24T21:46:06.186340+00:00"
             }
+        },
+        "inventory": {
+            "lifesaver": 0,
+            "rifle": 0
         }
     }
 }

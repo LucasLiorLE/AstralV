@@ -19,6 +19,61 @@ class MainEconomyCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.eco_path = "storage/economy/economy.json"
+        self.crimes = {
+        "Robbery": {
+            "Success": [
+                "You executed a perfect heist and escaped with {} coins!", "You cracked the vault and secured {} coins!", "You held up the bank and got away with {} coins!"
+            ],
+            "Fail": [
+                "The vault was empty, better luck next time.", "Silent alarm triggered—cops arrived too fast!", "An undercover guard knocked you out!"
+            ],
+            "Death": [
+                "SWAT showed up and took you out!", "A guard fired first—you didn't stand a chance.", "Your getaway car exploded mid-escape!"
+            ],
+            "Items": ["Bank Note"],
+            "Risk": 25
+        },
+        "Hacking": {
+            "Success": [
+                "You bypassed the firewalls and stole {} coins!", "You drained a billionaire's account for {} coins!", "You deployed a virus and siphoned {} coins unnoticed!"
+            ],
+            "Fail": [
+                "The system locked you out before you could steal anything!", "An AI detected you and shut everything down!", "You tripped a digital booby trap and lost your connection!"
+            ],
+            "Death": [
+                "The FBI traced your signal and raided your location!", "Your laptop short-circuited and electrocuted you!", "A rival hacker found you first—you vanished from the web... and life!"
+            ],
+            "Items": ["Fake ID"],
+            "Risk": 30
+        },
+        "Arson": {
+            "Success": [
+                "You set fire to a high-end store and looted {} coins!", "Chaos ensued, and you grabbed {} coins in the smoke!", "You torched a warehouse and found {} coins inside!"
+            ],
+            "Fail": [
+                "It rained—your fire never caught on.", "Sprinklers activated before you could get away.", "Firefighters arrived instantly and doused everything!"
+            ],
+            "Death": [
+                "You got trapped in the flames—you didn't make it out...", "An explosion from a gas leak obliterated you!", "The police tackled you before you could strike the match!"
+            ],
+            "Items": [],
+            "Risk": 35
+        },
+        "Treason": {
+            "Success": [
+                "You sold government secrets and got {} coins!",  "You leaked classified intel and were rewarded with {} coins!"
+            ],
+            "Fail": [
+                "Your contact was actually a double agent!", "The government was already watching you!", "Your encrypted messages were intercepted!"
+            ],
+            "Death": [
+                "A covert agency silenced you permanently!", "You were taken into a dark cell... never to be seen again.", "Your allies turned on you—no escape!"
+            ],
+            "Items": ["Fake ID"],
+            "Risk": 50
+        }
+    }
+
         self.places = {
             "Couch": {
                 "Success": ["You found {} coins in the couch.", "{} spare coins was under the couch", "You found {} coins between the cushions"],
@@ -52,7 +107,7 @@ class MainEconomyCog(commands.Cog):
                 "Success": ["You grabbed {} coins out of the air!", "{} coins pop out of thin air."],
                 "Fail": ["\"Mommy, why is that man grabbing the air?\"", "Nothing happens", "What did you expect"],
                 "Death": ["You suffocated... in the air...", "You forgot to breathe"],
-                "Item": [],
+                "Items": [],
                 "Risk": 10
             },
             "Car": {
@@ -63,8 +118,6 @@ class MainEconomyCog(commands.Cog):
                 "Risk": 10
             }
         }
-        self.crimes = {}
-
 
     def on_death(self, id: str) -> bool:
         check_user_stat(["balance", "purse"], id, 0)
@@ -83,15 +136,15 @@ class MainEconomyCog(commands.Cog):
         check_user_stat(["balance", "purse"], id, 0)
         coin_multi = check_user_stat(["boosts", "coin"], id, 100)
         eco = open_json(self.eco_path)
-        eco[id]["balance"]["purse"] += amount * coin_multi
+        eco[id]["balance"]["purse"] += amount * (coin_multi / 100)
         save_json(self.eco_path, eco)
-        return amount, coin_multi
+        return amount, (coin_multi / 100)
 
     @commands.hybrid_command(name="beg")
     async def beg(self, ctx: commands.Context):
         try:
             user_id = str(ctx.author.id)
-            cooldown_result = command_cooldown(30, "beg", user_id)
+            cooldown_result = command_cooldown(10, "beg", user_id)
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
@@ -119,7 +172,7 @@ class MainEconomyCog(commands.Cog):
                 ])
                 embed.color = discord.Color.red()
             else:
-                amount, coin_multi = self.add_money(user_id, random.randint(80, 400))
+                amount, coin_multi = self.add_money(user_id, random.randint(10, 100))
                 coins = amount * coin_multi
                 embed.description = random.choice([
                     f"A grandma hands you {coins} coins", f"You found {coins} coins on the sidewalk", f"{coins} coins fall out of the sky",
@@ -137,7 +190,7 @@ class MainEconomyCog(commands.Cog):
     async def search(self, ctx: commands.Context):
         try:
             user_id = str(ctx.author.id)
-            cooldown_result = command_cooldown(45, "search", user_id)
+            cooldown_result = command_cooldown(30, "search", user_id)
             if isinstance(cooldown_result, tuple):
                 done, cooldown = cooldown_result
                 if not done:
@@ -188,7 +241,7 @@ class MainEconomyCog(commands.Cog):
                     else:
                         success = random.choice([True, False])
                         if success:
-                            base_amount = random.randint(100, 500)
+                            base_amount = random.randint(20, 150)
                             risk_bonus = risk * 2
                             bonus_multiplier = 1 + (risk_bonus / 100)
                             
@@ -234,12 +287,113 @@ class MainEconomyCog(commands.Cog):
             await handle_logs(ctx, e)
 
     @commands.hybrid_command(name="crime")
-    async def crime(self, ctx: commands.Context): ...
+    async def crime(self, ctx: commands.Context):
+        try:
+            user_id = str(ctx.author.id)
+            cooldown_result = command_cooldown(30, "crime", user_id)
+            if isinstance(cooldown_result, tuple):
+                done, cooldown = cooldown_result
+                if not done:
+                    return await send_cooldown(ctx, cooldown)
+            else:
+                return await ctx.send("Error checking cooldown", ephemeral=True)
+
+            embed = discord.Embed(
+                title="What crime would you like to commit?",
+                description="Please choose a crime.",
+                color=discord.Color.red()
+            )
+
+            buttons = random.sample(list(self.crimes.keys()), k=3)
+
+            class CrimeButtons(discord.ui.View):
+                def __init__(self, bot_self):
+                    super().__init__(timeout=30)
+                    self.bot_self = bot_self
+
+                    for crime in buttons:
+                        button = discord.ui.Button(
+                            label=f"{crime}",
+                            custom_id=crime,
+                            style=discord.ButtonStyle.danger
+                        )
+                        button.callback = self.button_callback
+                        self.add_item(button)
+
+                async def interaction_check(self, button_interaction: discord.Interaction) -> bool:
+                    return button_interaction.user.id == ctx.author.id
+
+                async def button_callback(self, button_interaction: discord.Interaction):
+                    crime_risk = self.bot_self.crimes[button_interaction.data["custom_id"]]["Risk"]
+                    if random.randint(1, 100) <= 95:
+                        death = self.bot_self.on_death(user_id)
+                        embed = discord.Embed(
+                            title=f"Committing {button_interaction.data['custom_id']}...",
+                            description=random.choice(self.bot_self.crimes[button_interaction.data["custom_id"]]["Death"]),
+                            color=discord.Color.yellow() if death else discord.Color.red()
+                        )
+                        if death:
+                            embed.set_footer(text="Your lifesaver saved you!")
+                    else:
+                        if random.randint(1, 100) <= crime_risk:
+                            crime_failed_message = random.choice(self.bot_self.crimes[button_interaction.data["custom_id"]]["Fail"])
+                            embed = discord.Embed(
+                                title="Crime Failed!",
+                                description=crime_failed_message,
+                                color=discord.Color.red()
+                            )
+
+                        else:
+                            crime_success_message = random.choice(self.bot_self.crimes[button_interaction.data["custom_id"]]["Success"])
+                            base_amount = random.randint(100, 500)
+                            risk_bonus = crime_risk * 2
+                            bonus_multiplier = 1 + (risk_bonus / 100)
+
+                            amount, coin_multi = self.bot_self.add_money(user_id, int(base_amount * bonus_multiplier))
+                            coins = amount * coin_multi
+
+                            embed = discord.Embed(
+                                title="Crime Successful!",
+                                description=crime_success_message.format(coins),
+                                color=discord.Color.green()
+                            )
+
+                            if self.bot_self.crimes[button_interaction.data["custom_id"]]["Items"] and random.randint(1, 100) <= crime_risk:
+                                item = random.choice(self.bot_self.crimes[button_interaction.data["custom_id"]]["Items"])
+                                item = get_item_name(item)
+                                check_user_stat(["inventory", item], user_id, 0)
+                                eco = open_json(self.bot_self.eco_path)
+                                eco[user_id]["inventory"][item] += 1
+                                save_json(self.bot_self.eco_path, eco)
+
+                                embed.add_field(
+                                    name="Bonus!",
+                                    value=f"You also found a {item}!\n(Found due to {crime_risk}% risk)"
+                                )
+
+                    for child in self.children:
+                        child.disabled = True
+
+                    await button_interaction.response.edit_message(embed=embed, view=self)
+
+            view = CrimeButtons(self)
+            await ctx.send(embed=embed, view=view)
+
+        except Exception as e:
+            await handle_logs(ctx, e)
 
     @commands.hybrid_command(name="hunt")
     async def hunt(self, ctx: commands.Context):
         try:
             user_id = str(ctx.author.id)
+            cooldown_result = command_cooldown(15, "hunt", user_id)
+            if isinstance(cooldown_result, tuple):
+                done, cooldown = cooldown_result
+                if not done:
+                    return await send_cooldown(ctx, cooldown)
+            else:
+                return await ctx.send("Error checking cooldown", ephemeral=True)
+
             check_user_stat(["inventory", "rifle"], user_id, 0)
             eco = open_json("storage/economy/economy.json")
             if eco[user_id]["inventory"]["rifle"] < 1:
@@ -255,7 +409,7 @@ class MainEconomyCog(commands.Cog):
             choice = random.sample(list(weights.keys()), counts=list(weights.values()), k=1)
             roll = random.randint(0, 100)
             if roll < 59:
-                coins = random.randint(300, 800) * (1 - (weights[choice[0]] / 100))
+                coins = random.randint(50, 200) * (1 - (weights[choice[0]] / 100))
                 self.add_money(user_id, coins)
 
                 embed = discord.Embed(
@@ -307,7 +461,16 @@ class MainEconomyCog(commands.Cog):
     @commands.hybrid_command(name="dig")
     async def dig(self, ctx: commands.Context):
         try:
+            
             user_id = str(ctx.author.id)
+            cooldown_result = command_cooldown(15, "dig", user_id)
+            if isinstance(cooldown_result, tuple):
+                done, cooldown = cooldown_result
+                if not done:
+                    return await send_cooldown(ctx, cooldown)
+            else:
+                return await ctx.send("Error checking cooldown", ephemeral=True)
+
             check_user_stat(["inventory", "shovel"], user_id, 0)
             eco = open_json("storage/economy/economy.json")
             if eco[user_id]["inventory"]["shovel"] < 1:
@@ -321,7 +484,7 @@ class MainEconomyCog(commands.Cog):
             }
 
             choice = random.sample(list(weights.keys()), counts=list(weights.values()), k=1)
-            coins = random.randint(300, 800) * (1 - (weights[choice[0]] / 100))
+            coins = random.randint(50, 200) * (1 - (weights[choice[0]] / 100))
             self.add_money(user_id, coins)
 
             embed = discord.Embed(
@@ -335,7 +498,7 @@ class MainEconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(ctx, e)
 
-    @commands.hybrid_command(name="deposit")
+    @commands.hybrid_command(name="deposit", aliases=["dep"])
     async def deposit(self, ctx: commands.Context, amount: int):
         try:
             user_id = str(ctx.author.id)
@@ -376,7 +539,7 @@ class MainEconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(ctx, e)
 
-    @commands.hybrid_command(name="withdraw")
+    @commands.hybrid_command(name="withdraw", aliases=["with"])
     async def withdraw(self, ctx: commands.Context, amount: int):
         try:
             user_id = str(ctx.author.id)
@@ -416,7 +579,7 @@ class MainEconomyCog(commands.Cog):
         except Exception as e:
             await handle_logs(ctx, e)
 
-    @commands.hybrid_command(name="balance")
+    @commands.hybrid_command(name="balance", aliases=["bal"])
     async def balance(self, ctx: commands.Context):
         try:
             user_id = str(ctx.author.id)
@@ -584,6 +747,39 @@ class MainEconomyCog(commands.Cog):
             initial_embed, _, _, _ = await create_balance_embed()
             view = BalanceView()
             await ctx.send(embed=initial_embed, view=view)
+
+        except Exception as e:
+            await handle_logs(ctx, e)
+
+    @commands.hybrid_command(name="inventory", aliases=["inv", "items", "bag"])
+    async def inventory(self, ctx: commands.Context):
+        try:
+            user_id = str(ctx.author.id)
+            eco = open_json(self.eco_path)
+            
+            if user_id not in eco or "inventory" not in eco[user_id]:
+                eco[user_id] = eco.get(user_id, {})
+                eco[user_id]["inventory"] = {}
+                save_json(self.eco_path, eco)
+            
+            inventory = eco[user_id]["inventory"]
+            
+            embed = discord.Embed(
+                title=f"{ctx.author.name}'s Inventory",
+                color=discord.Color.blue()
+            )
+            
+            items_text = ""
+            for item, amount in inventory.items():
+                if amount > 0:
+                    items_text += f"**{item}**: {amount:,}\n"
+            
+            if items_text:
+                embed.description = items_text
+            else:
+                embed.description = "Your inventory is empty!"
+            
+            await ctx.send(embed=embed)
 
         except Exception as e:
             await handle_logs(ctx, e)
