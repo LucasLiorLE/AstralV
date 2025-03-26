@@ -26,24 +26,22 @@ class WarnCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def handle_warn(self, ctx_or_interaction, member: discord.Member, reason: str):
-        ctx = get_context_object(ctx_or_interaction)
-
-        has_mod, embed = check_moderation_info(ctx_or_interaction, "manage_messages", "moderator")
+    async def handle_warn(self, ctx, member: discord.Member, reason: str):
+        has_mod, embed = check_moderation_info(ctx, "manage_messages", "moderator")
         if not has_mod:
-            return await ctx["send"](embed=embed)
+            return await ctx.send(embed=embed)
 
-        if member.id == ctx["user"].id:
-            return await ctx["send"]("You cannot warn yourself.")
+        if member.id == ctx.author.id:
+            return await ctx.send("You cannot warn yourself.")
 
         if member.bot:
-            return await ctx["send"]("You cannot warn bots.")
+            return await ctx.send("You cannot warn bots.")
 
         if len(reason) > 1024:
-            return await ctx["send"]("Please provide a shorter reason.")
+            return await ctx.send("Please provide a shorter reason.")
 
         server_info = open_json("storage/server_info.json")
-        guild_id = str(ctx["guild_id"])
+        guild_id = str(ctx.guild.id)
 
         server_info.setdefault("warnings", {}).setdefault(guild_id, {}).setdefault(str(member.id), {})
         case_numbers = [int(x) for x in server_info["warnings"][guild_id][str(member.id)].keys()]
@@ -51,44 +49,44 @@ class WarnCommands(commands.Cog):
 
         server_info["warnings"][guild_id][str(member.id)][next_case] = {
             "reason": reason,
-            "moderator": str(ctx["user"].id),
+            "moderator": str(ctx.author.id),
             "time": int(time.time())
         }
         save_json("storage/server_info.json", server_info)
 
-        await dm_moderation_embed(ctx_or_interaction, member, "warn", reason)
+        await dm_moderation_embed(ctx, member, "warn", reason)
 
         await store_modlog(
             modlog_type="Warn",
-            moderator=ctx["user"],
+            moderator=ctx.author,
             user=member,
             reason=reason,
-            server_id=ctx["guild_id"],
+            server_id=ctx.guild.id,
             bot=self.bot
         )
 
-    @app_commands.command(name="warn")
-    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
-        print("Warn detected")
-        await interaction.response.defer()
+    @commands.hybrid_command(name="warn")
+    async def warn(self, ctx, member: discord.Member, *, reason: str):
+        if isinstance(ctx, discord.Interaction):
+            await ctx.response.defer()
         try:
-            await self.handle_warn(interaction, member, reason)
+            await self.handle_warn(ctx, member, reason)
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="warns")
-    async def warns(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1):
-        await interaction.response.defer()
+    @commands.hybrid_command(name="warns", aliases=["warnings"])
+    async def warns(self, ctx, member: discord.Member = None, page: int = 1):
+        if isinstance(ctx, discord.Interaction):
+            await ctx.response.defer()
         try:
-            ctx = get_context_object(interaction)
-            member = member or ctx["user"]
+            member = member or ctx.author
 
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            has_mod, embed = check_moderation_info(ctx, "manage_messages", "moderator")
             if not has_mod:
-                return await ctx["send"](embed=embed)
+                return await ctx.send(embed=embed)
 
             server_info = open_json("storage/server_info.json")
-            member_warnings = server_info.get("warnings", {}).get(str(ctx["guild_id"]), {}).get(str(member.id), {})
+            member_warnings = server_info.get("warnings", {}).get(str(ctx.guild.id), {}).get(str(member.id), {})
 
             if member_warnings:
                 paginator = LogPaginator("warning", member_warnings, member)
@@ -100,36 +98,12 @@ class WarnCommands(commands.Cog):
                 view = discord.ui.View()
                 if paginator.total_pages > 1:
                     view.add_item(LogPageSelect(paginator, page))
-                view.add_item(DelLog("warn", member, embed, interaction))
+                view.add_item(DelLog("warn", member, embed, ctx))
 
-                await ctx["send"](embed=embed, view=view)
+                await ctx.send(embed=embed, view=view)
             else:
-                await ctx["send"](f"No warnings found for {member.display_name}.")
+                await ctx.send(f"No warnings found for {member.display_name}.")
 
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @commands.command(name="warn")
-    async def manual_warn(self, ctx, member: str, *, reason: str):
-        print("Manual warn detected")
-        try:
-            target_member = await get_member(ctx, member)
-            if not target_member:
-                return await ctx.send("User not found.")
-            
-            await self.handle_warn(ctx, target_member, reason)
-        except Exception as e:
-            await handle_logs(ctx, e)
-
-    @commands.command(name="warns", aliases=["warnings"])
-    async def manual_warns(self, ctx, member: str = None, page: int = 1):
-        try:
-            target_member = await get_member(ctx, member)
-            if not target_member:
-                return await ctx.send("User not found.")
-            
-            interaction = await create_interaction(ctx)
-            await self.warns.callback(self, interaction, target_member, page)
         except Exception as e:
             await handle_logs(ctx, e)
 

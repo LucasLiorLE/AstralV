@@ -368,7 +368,7 @@ class MainEconomyCog(commands.Cog):
 
                                 embed.add_field(
                                     name="Bonus!",
-                                    value=f"You also found a {item}!\n(Found due to {crime_risk}% risk)"
+                                    value=f"You also found a {item}!"
                                 )
 
                     for child in self.children:

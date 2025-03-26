@@ -201,5 +201,28 @@ class PurgeCog(commands.Cog):
         self.purge_command.setup_commands()
         self.bot.tree.add_command(self.purge_command)
 
+    @commands.hybrid_command(name="clean")
+    async def manual_clean(self, ctx, amount: int = 10):
+        if isinstance(ctx, discord.Interaction):
+            await ctx.response.defer()
+        try:
+            has_mod, embed = check_moderation_info(ctx, "manage_messages", "moderator")
+            if not has_mod:
+                return await ctx.send(embed=embed)
+
+            deleted = await ctx.channel.purge(limit=amount, check=MessageCheck.cleanCommand)
+            
+            text = f"Cleaned {len(deleted)} bot messages and commands."
+            await store_modlog(
+                text,
+                ctx.guild.id,
+                ctx.author,
+                bot=self.bot
+            )
+            await ctx.send(text, delete_after=5)
+
+        except Exception as e:
+            await handle_logs(ctx, e)
+
 async def setup(bot):
     await bot.add_cog(PurgeCog(bot))

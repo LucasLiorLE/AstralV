@@ -11,6 +11,8 @@
 #    - Hypixel command update
 #    - Some moderation fixes
 #    - Minor commands (Useless feature: poll!)
+#    - String commands
+#    - Roblox friendswish command testing, might make faster later on and is buggy!
 #
 # Other notes:
 #    - Attempt to fix status upon disconnect
@@ -22,7 +24,7 @@
 #    - Make auto mute a server set function. (2.4.0)
 #    - Make a more efficient storage system using sql and json (2.6.0)
 #
-# This was last updated: 3/25/2025 9:55 AM
+# This was last updated: 3/26/2025 2:06 AM
 
 import os, random, math, asyncio
 # import asyncpraw

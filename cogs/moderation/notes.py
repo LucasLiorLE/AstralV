@@ -61,27 +61,28 @@ class NoteCommands(commands.Cog):
 
         await ctx["send"](embed=embed)
 
-    @app_commands.command(name="note")
-    async def note(self, interaction: discord.Interaction, member: discord.Member, note: str):
-        await interaction.response.defer()
+    @commands.hybrid_command(name="note")
+    async def note(self, ctx, member: discord.Member, *, note: str):
+        if isinstance(ctx, discord.Interaction):
+            await ctx.response.defer()
         try:
-            await self.handle_note(interaction, member, note)
+            await self.handle_note(ctx, member, note)
         except Exception as e:
-            await handle_logs(interaction, e)
+            await handle_logs(ctx, e)
 
-    @app_commands.command(name="notes")
-    async def notes(self, interaction: discord.Interaction, member: discord.Member = None, page: int = 1): 
-        await interaction.response.defer()
+    @commands.hybrid_command(name="notes")
+    async def notes(self, ctx, member: discord.Member = None, page: int = 1):
+        if isinstance(ctx, discord.Interaction):
+            await ctx.response.defer()
         try:
-            ctx = get_context_object(interaction)
-            member = member or ctx["user"]
+            member = member or ctx.author
 
-            has_mod, embed = check_moderation_info(interaction, "manage_messages", "moderator")
+            has_mod, embed = check_moderation_info(ctx, "manage_messages", "moderator")
             if not has_mod:
-                return await ctx["send"](embed=embed)
+                return await ctx.send(embed=embed)
 
             server_info = open_json("storage/server_info.json")
-            member_notes = server_info.get("notes", {}).get(str(ctx["guild_id"]), {}).get(str(member.id), {})
+            member_notes = server_info.get("notes", {}).get(str(ctx.guild.id), {}).get(str(member.id), {})
 
             if member_notes:
                 paginator = LogPaginator("note", member_notes, member)
@@ -93,35 +94,12 @@ class NoteCommands(commands.Cog):
                 view = discord.ui.View()
                 if paginator.total_pages > 1:
                     view.add_item(LogPageSelect(paginator, page))
-                view.add_item(DelLog("note", member, embed, interaction))
+                view.add_item(DelLog("note", member, embed, ctx))
 
-                await ctx["send"](embed=embed, view=view)
+                await ctx.send(embed=embed, view=view)
             else:
-                await ctx["send"](f"No notes found for {member.display_name}.")
+                await ctx.send(f"No notes found for {member.display_name}.")
 
-        except Exception as e:
-            await handle_logs(interaction, e)
-
-    @commands.command(name="notes")
-    async def manual_notes(self, ctx, member: str = None, page: int = 1):
-        try:
-            target_member = await get_member(ctx, member)
-            if not target_member:
-                return await ctx.send("User not found.")
-            
-            interaction = await create_interaction(ctx)
-            await self.notes.callback(self, interaction, target_member, page)
-        except Exception as e:
-            await handle_logs(ctx, e)
-
-    @commands.command(name="note")
-    async def manual_note(self, ctx, member: str, *, note: str):
-        try:
-            target_member = await get_member(ctx, member)
-            if not target_member:
-                return await ctx.send("User not found.")
-            
-            await self.handle_note(ctx, target_member, note)
         except Exception as e:
             await handle_logs(ctx, e)
 

@@ -11,7 +11,6 @@ from bot_utils import (
 from .utils import (
     check_moderation_info,
     store_modlog,
-    check_user
 )
 
 class SetCommandGroup(app_commands.Group):
@@ -30,7 +29,6 @@ class SetCommandGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             server_info = open_json("storage/server_info.json")
-            guild_id = str(interaction.guild_id)
 
             has_mod, embed = check_moderation_info(interaction, "administrator", "manager")
             if not has_mod:
@@ -66,7 +64,6 @@ class SetCommandGroup(app_commands.Group):
         await interaction.response.defer()
         try:
             server_info = open_json("storage/server_info.json")
-            guild_id = str(interaction.guild_id)    
 
             has_mod, embed = check_moderation_info(interaction, "administrator", "manager")
             if not has_mod:

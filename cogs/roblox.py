@@ -3,8 +3,6 @@ from bot_utils import (
     rbx_fetchUserBio,
 
     check_user,
-    get_member_color,
-
     open_json,
     save_json,
     load_commands,
@@ -17,8 +15,10 @@ from discord.ui import View, Button, button
 from discord import app_commands, ButtonStyle
 
 import random, asyncio, aiohttp
+from collections import deque
 from datetime import datetime
 from typing import List
+import time
 
 async def get_connected_accounts(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
     member_info = open_json("storage/member_info.json")
@@ -447,6 +447,16 @@ class CGlovesGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
+async def get_friends(session: aiohttp.ClientSession, user_id: int) -> dict:
+    url = f"https://friends.roblox.com/v1/users/{user_id}/friends"
+    async with session.get(url) as response:
+        data = await response.json()
+        if response.status == 200:
+            return {int(friend['id']): friend['name'] for friend in data.get('data', [])}
+        elif "errors" in data and data["errors"] and data["errors"][0].get("message") == "":
+            return None
+        return {}
+
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class RobloxGroup(app_commands.Group):
@@ -661,6 +671,127 @@ class RobloxGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
+    @app_commands.command(name="friendswith")
+    @app_commands.autocomplete(username1=get_connected_accounts, username2=get_connected_accounts)
+    async def friendswith(self, interaction: discord.Interaction, username1: str = None, username2: str = None):
+        await interaction.response.defer()
+        start_time = time.time()
+        
+        if not username1 or not username2:
+            return await interaction.followup.send("Please provide both usernames.")
+        if username1.lower() == username2.lower():
+            return await interaction.followup.send("Please provide two different usernames.")
+
+        status_msg = await interaction.followup.send("⚠️ Starting search...", ephemeral=True)
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                id1, id2 = await asyncio.gather(
+                    rbx_fetchUserID(username1), rbx_fetchUserID(username2)
+                )
+                if not id1 or not id2:
+                    await status_msg.delete()
+                    return await interaction.followup.send(f"Could not find Roblox user(s): {username1 if not id1 else ''} {username2 if not id2 else ''}")
+            except Exception as e:
+                await status_msg.delete()
+                return await interaction.followup.send(f"Error fetching user IDs: {str(e)}")
+
+            if id1 == id2:
+                await status_msg.delete()
+                return await interaction.followup.send("You cannot check closeness with the same user!")
+
+            try:
+                friends1, friends2 = await asyncio.gather(
+                    get_friends(session, id1), get_friends(session, id2)
+                )
+                if friends1 is None or friends2 is None:
+                    await status_msg.delete()
+                    return await interaction.followup.send(f"Cannot access friend list for {username1 if friends1 is None else username2}. Their friends list may be private.")
+            except Exception as e:
+                await status_msg.delete()
+                return await interaction.followup.send(f"Error fetching friends: {str(e)}")
+
+            if id2 in friends1:
+                await status_msg.delete()
+                return await self.send_embed(interaction, [id1, id2], [username1, username2], 1, start_time)
+
+            await status_msg.edit(content="⚠️ Users aren't direct friends. Starting breadth-first search...")
+            path, total_checked = await self.bidirectional_bfs(session, id1, id2, friends1, friends2, status_msg)
+            
+            if not path:
+                return await interaction.followup.send(f"No connection found between {username1} and {username2} after checking {total_checked} users.")
+            
+            await self.send_embed(interaction, path, [username1, username2], len(path) - 1, start_time, total_checked)
+
+    async def bidirectional_bfs(self, session, id1, id2, friends1, friends2, status_msg):
+        forward_queue, backward_queue = deque([(id1, None)]), deque([(id2, None)])
+        forward_visited, backward_visited = {id1: None}, {id2: None}
+        usernames, total_checked = {id1: "User1", id2: "User2"}, 0
+        last_update = time.time()
+        
+        while forward_queue and backward_queue:
+            total_checked += 1
+            current_time = time.time()
+            
+            if current_time - last_update >= 1:
+                forward_depth = len(forward_visited)
+                backward_depth = len(backward_visited)
+                total_visited = forward_depth + backward_depth
+                status = (
+                    f"⚠️ Searching...\n"
+                    f"Users checked: {total_checked}\n"
+                    f"Forward search depth: {forward_depth}\n"
+                    f"Backward search depth: {backward_depth}\n"
+                    f"Total visited users: {total_visited}"
+                )
+                await status_msg.edit(content=status)
+                last_update = current_time
+
+            if await self.process_queue(session, forward_queue, forward_visited, backward_visited, usernames):
+                return self.build_path(forward_visited, backward_visited), total_checked
+            
+            if await self.process_queue(session, backward_queue, backward_visited, forward_visited, usernames):
+                return self.build_path(forward_visited, backward_visited), total_checked
+        
+        return None, total_checked
+
+    async def process_queue(self, session, queue, visited, opposite_visited, usernames):
+        if queue:
+            current_id, parent = queue.popleft()
+            friends = await get_friends(session, current_id)
+            if friends is None:
+                return False
+
+            for friend_id, friend_name in friends.items():
+                if friend_id in opposite_visited:
+                    visited[friend_id] = current_id
+                    return True
+                if friend_id not in visited:
+                    visited[friend_id] = current_id
+                    queue.append((friend_id, current_id))
+                    usernames[friend_id] = friend_name
+        return False
+
+    def build_path(self, forward_visited, backward_visited):
+        path = []
+        current = next(iter(set(forward_visited) & set(backward_visited)))
+        while current:
+            path.append(current)
+            current = forward_visited[current]
+        path.reverse()
+        
+        current = backward_visited[next(iter(set(forward_visited) & set(backward_visited)))]
+        while current:
+            path.append(current)
+            current = backward_visited[current]
+        return path
+
+    async def send_embed(self, interaction, path, usernames, degrees, start_time, total_checked=0):
+        path_str = " → ".join(f"[{usernames[i]}](https://www.roblox.com/users/{uid}/profile)" for i, uid in enumerate(path))
+        elapsed_time = round(time.time() - start_time, 2)
+        embed = discord.Embed(title="Friend Connection Path", description=path_str, color=0xDA8EE7)
+        embed.set_footer(text=f"Degrees of separation: {degrees} | Users checked: {total_checked} | Time taken: {elapsed_time}s")
+        await interaction.followup.send(embed=embed)
 
 class GloveView(View):
     def __init__(
