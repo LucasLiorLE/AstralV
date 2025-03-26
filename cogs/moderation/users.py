@@ -33,7 +33,7 @@ class UsersCog(commands.Cog):
         
         if 'tempbans' not in data:
             data['tempbans'] = {}
-            save_json(data)
+            save_json("storage/server_info.json", data)
             return
             
         for guild_id in data['tempbans'].copy():
@@ -61,7 +61,7 @@ class UsersCog(commands.Cog):
             if not data['tempbans'][guild_id]:
                 del data['tempbans'][guild_id]
                 
-        save_json(data)
+        save_json("storage/server_info.json", data)
 
     @commands.hybrid_command(name="kick")
     async def kick(self, ctx: commands.Context, member: discord.Member, reason: str):
@@ -128,7 +128,7 @@ class UsersCog(commands.Cog):
                 data['tempbans'][str(ctx.guild.id)][str(user.id)] = {
                     'expires': int(time.time()) + seconds
                 }
-                save_json(data)
+                save_json("storage/server_info.json", data)
                 
                 expire_time = datetime.now() + timedelta(seconds=seconds)
                 reason = f"{reason} (Temporary: until {expire_time.strftime('%Y-%m-%d %H:%M:%S')})"
