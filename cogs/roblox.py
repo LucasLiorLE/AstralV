@@ -563,44 +563,68 @@ class RobloxGroup(app_commands.Group):
                     async with session.post("https://presence.roblox.com/v1/presence/users", json={"userIds": [roblox_user_id]}) as response:
                         if response.status == 200:
                             data = await response.json()
-                            return data["userPresences"][0]
+                            if data.get("userPresences") and len(data["userPresences"]) > 0:
+                                return data["userPresences"][0]
+                        return None
 
                 async def fetch_user_info(roblox_user_id: int):
                     async with session.get(f"https://users.roblox.com/v1/users/{roblox_user_id}") as response:
                         if response.status == 200:
                             return await response.json()
+                        return None
 
-
-                async def check_premium(roblox_user_id: int):
-                    headers = {'accept': 'application/json'}
-                    url = f"https://premiumfeatures.roblox.com/v1/users/{roblox_user_id}/validate-membership"
-
-                    async with session.get(url, headers=headers) as response:
-                        if response.status == 200:
-                            return await response.json()
-
-                is_premium = await check_premium(roblox_user_id)
+                    '''                
+                    async def check_premium(user_id: int):
+                    url = f"https://www.roblox.com/users/{user_id}/profile"
+                    headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                    }
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(url, headers=headers) as response:
+                            if response.status == 200:
+                                print(await response.text())
+                                return bool('icon-premium' in await response.text())
+                            return False
+                    '''
+                    
+                is_premium = False # await check_premium(roblox_user_id)
                 friends_count = await fetch_count(roblox_user_id, "friends")
                 followers_count = await fetch_count(roblox_user_id, "followers")
                 following_count = await fetch_count(roblox_user_id, "followings")
                 presence_data = await fetch_user_presence(roblox_user_id)
                 user_info = await fetch_user_info(roblox_user_id)
 
-            embed = discord.Embed(title=f"{'<:Premium:1298832636805910589> ' if is_premium else ''}Roblox Account Info", color=0x808080)
-            display_name = user_info.get("displayName", "N/A")
-            username = user_info.get("name", "N/A")
-            embed.add_field(name="Username", value=f"{display_name} (@{username})", inline=False)
-            embed.add_field(name="Friends/Followers/Following", value=f"Friends: {friends_count}\nFollowers: {followers_count}\nFollowing: {following_count}", inline=False)
+                if not user_info:
+                    return await interaction.followup.send("Failed to fetch user information.")
 
-            status = "Offline" if presence_data["userPresenceType"] == 0 else "Ingame" if presence_data["userPresenceType"] == 1 else "Online"
-            last_online = datetime.strptime(presence_data["lastOnline"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
-            last_online_str = last_online.strftime("%m-%d-%Y")  
-            embed.add_field(name="Status", value=f"{status} | Last online: {last_online_str}", inline=False)
-            creation_date = datetime.strptime(user_info["created"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
-            creation_date_str = creation_date.strftime("%m-%d-%Y")  
-            embed.set_footer(text=f"Account created: {creation_date_str} | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+                embed = discord.Embed(title=f"{'<:Premium:1298832636805910589> ' if is_premium else ''}Roblox Account Info", color=0x808080)
+                display_name = user_info.get("displayName", "N/A")
+                username = user_info.get("name", "N/A")
+                embed.add_field(name="Username", value=f"{display_name} (@{username})", inline=False)
+                embed.add_field(name="Friends/Followers/Following", value=f"Friends: {friends_count}\nFollowers: {followers_count}\nFollowing: {following_count}", inline=False)
 
-            await interaction.followup.send(embed=embed)
+                if presence_data:
+                    status = "Offline"
+                    if presence_data.get("userPresenceType") == 1:
+                        status = "Online"
+                    elif presence_data.get("userPresenceType") > 1:
+                        status = "Ingame"
+
+                    embed.add_field(name="Status", value=f"{status}", inline=False)
+                else:
+                    embed.add_field(name="Status", value="Status unavailable", inline=False)
+
+                if "created" in user_info:
+                    try:
+                        creation_date = datetime.strptime(user_info["created"][:-1], "%Y-%m-%dT%H:%M:%S.%f")
+                        creation_date_str = creation_date.strftime("%m-%d-%Y")
+                        embed.set_footer(text=f"Account created: {creation_date_str} | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+                    except (ValueError, TypeError):
+                        embed.set_footer(text=f"Account creation date unknown | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+                else:
+                    embed.set_footer(text=f"Account creation date unavailable | Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
+
+                await interaction.followup.send(embed=embed)
         except Exception as error:
             await handle_logs(interaction, error)
 

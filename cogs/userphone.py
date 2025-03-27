@@ -237,30 +237,38 @@ class UserphoneCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if (message.author.bot):
+        if message.author.bot:
             return
 
-        if not message.content:  # Skip empty messages
+        if not message.content and not message.attachments:
             return
 
         channel_id = str(message.channel.id)
         
         for room in self.userphone_group.rooms.values():
-            if (channel_id in room.members):
+            if channel_id in room.members:
                 member_data = open_file("storage/member_info.json")
                 is_anonymous = member_data.get(str(message.author.id), {}).get("user_anom", False)
 
                 for other_channel_id in room.members:
-                    if (other_channel_id != channel_id):
+                    if other_channel_id != channel_id:
                         try:
                             channel = self.bot.get_channel(int(other_channel_id))
-                            if (channel):
-                                if (is_anonymous):
-                                    anon_name = room.get_anonymous_name(channel_id, message.author.id)
-                                    await channel.send(f"**{anon_name}**: {message.content}")
-                                else:
+                            if channel:
+                                sender_name = (
+                                    room.get_anonymous_name(channel_id, message.author.id)
+                                    if is_anonymous
+                                    else f"{message.author.name} ({room.guild_names[channel_id]})"
+                                )
+
+                                if message.content:
+                                    await channel.send(f"**{sender_name}**: {message.content}")
+
+                                if message.attachments:
+                                    files = [await attachment.to_file() for attachment in message.attachments]
                                     await channel.send(
-                                        f"**{message.author.name}** ({room.guild_names[channel_id]}): {message.content}"
+                                        f"**{sender_name}** sent attachments:",
+                                        files=files
                                     )
                         except Exception as e:
                             print(f"Error forwarding message: {e}")
