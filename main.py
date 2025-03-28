@@ -14,6 +14,7 @@
 #    - String commands
 #    - Roblox friendswish command testing, might make faster later on and is buggy!
 #    - Role command group
+#    - Level calculation rework
 #
 # Other notes:
 #    - Attempt to fix status upon disconnect
