@@ -322,7 +322,7 @@ async def get_shop_item_suggestions(interaction: discord.Interaction, current: s
         print(f"Error in get_shop_item_suggestions: {e}")
         return []
 
-class ShopCommands(app_commands.Group):
+class ShopCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="shop", description="Economy shop commands")
 
@@ -437,7 +437,7 @@ class ShopCommands(app_commands.Group):
 class ShopCommandCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.shop = ShopCommands()
+        self.shop = ShopCommandGroup()
         SHOP_DATA.reload_limited_shop()
         update_shops.start()
         self.bot.tree.add_command(self.shop)

@@ -8,7 +8,6 @@ from bot_utils import (
     save_json,
     handle_logs
 )
-from bot_utils.utils import check_user
 from .utils import (
     check_user_stat
 )

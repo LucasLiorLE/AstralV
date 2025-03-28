@@ -1,1 +1,19 @@
-{}
+{
+    "721151215010054165": {
+        "commands": {
+            "beg": {
+                "uses": 1,
+                "cooldown": 1743092390
+            }
+        },
+        "balance": {
+            "purse": 234234234193434.0
+        },
+        "boosts": {
+            "coin": 100
+        },
+        "inventory": {
+            "rifle": 0
+        }
+    }
+}
