@@ -88,8 +88,7 @@ class SetCommandGroup(app_commands.Group):
 class SetCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.set_command = SetCommandGroup()
-        self.bot.tree.add_command(self.set_command)
+        self.bot.tree.add_command(SetCommandGroup())
 
 async def setup(bot):
     await bot.add_cog(SetCog(bot))

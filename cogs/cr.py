@@ -4,7 +4,6 @@ from bot_utils import (
 
     open_json,
     save_json,
-    load_commands,
     handle_logs,
 )
 
@@ -183,8 +182,6 @@ class ProfileView(View):
 class ClashRoyaleCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="cr", description="Clash Royale related commands", guild_only=False)
-
-        load_commands(self.commands, "cr")
         
     @app_commands.command(name="connect")
     async def crconnect(self, interaction: discord.Interaction, tag: str):

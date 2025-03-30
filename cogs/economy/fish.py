@@ -1,9 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-import random
-import time
-import asyncio
+
 from bot_utils import (
     send_cooldown,
     open_json, 
@@ -16,6 +14,8 @@ from .utils import (
     command_cooldown,
     display_item_name
 )
+
+import random
 
 class FishingCommands(app_commands.Group):
     def __init__(self):
@@ -160,7 +160,6 @@ class FishingCommands(app_commands.Group):
         @discord.ui.button(label="Catch", style=discord.ButtonStyle.primary)
         async def catch_button(self, interaction: discord.Interaction, button: discord.ui.Button):
             try:
-                import traceback
                 user_id = str(interaction.user.id)
                 check_user_stat(["commands"], user_id, {})
                 check_user_stat(["commands", "fish_catch"], user_id, {"cooldown": 0, "uses": 0})
@@ -233,7 +232,7 @@ class FishingCommands(app_commands.Group):
                 attempts = max(1, int(random.randint(1, 50) * catch_multiplier))
 
                 caught_fish = []
-                for attempt in range(attempts):
+                for _ in range(attempts):
                     if random.random() * 100 <= success_rate:
                         fish_names = [f[0] for f in available_fish]
                         weights = [f[1] for f in available_fish]
@@ -612,7 +611,6 @@ class FishingCommands(app_commands.Group):
 
     @app_commands.command(name="profile")
     async def fish_profile(self, interaction: discord.Interaction):
-        """View your fishing profile and stats"""
         try:
             await self.show_profile(interaction)
         except Exception as e:
@@ -620,7 +618,6 @@ class FishingCommands(app_commands.Group):
 
     @app_commands.command(name="start")
     async def fish_start(self, interaction: discord.Interaction):
-        """Start fishing!"""
         try:
             await interaction.response.send_message(
                 embed=discord.Embed(
@@ -636,8 +633,7 @@ class FishingCommands(app_commands.Group):
 class FishingCommandCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.fishing = FishingCommands()
-        self.bot.tree.add_command(self.fishing)
+        self.bot.tree.add_command(FishingCommands())
 
 async def setup(bot):
     await bot.add_cog(FishingCommandCog(bot))

@@ -47,7 +47,7 @@ class TDSCommandGroup(app_commands.Group):
                     target_level: int = None, target_exp: float = None,
                     target_date: str = None, games_per_day: int = None,
                     gamemode: str = "fallen", vip: bool = False,
-                    vip_plus: bool = False, ephemeral: bool = True):
+                    vip_plus: bool = False, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             if target_level is None and target_exp is None:

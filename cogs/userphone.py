@@ -1,7 +1,6 @@
 from bot_utils import (
-    open_file,
-    save_file,
-    load_commands,
+    open_json,
+    save_json,
     handle_logs,
 )
 
@@ -34,8 +33,6 @@ class UserphoneGroup(app_commands.Group):
         super().__init__(name="userphone", description="Userphone commands allows you to talk to people in different servers!")
         self.rooms: Dict[str, Room] = {}
         
-        load_commands(self.commands, "userphone")
-
     @app_commands.command(name="create")
     async def create(self, interaction: discord.Interaction, password: str = None):
         try:
@@ -166,7 +163,7 @@ class UserphoneGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="leave") 
+    @app_commands.command(name="leave")
     async def leave(self, interaction: discord.Interaction):
         try:
             channel_id = str(interaction.channel_id)
@@ -212,7 +209,7 @@ class UserphoneGroup(app_commands.Group):
                 await interaction.followup.send("You must be in a room to toggle anonymous mode!", ephemeral=True)
                 return
 
-            member_data = open_file("storage/member_info.json")
+            member_data = open_json("storage/member_info.json")
             
             if (user_id not in member_data):
                 member_data[user_id] = {"userphone_anom": False}
@@ -224,7 +221,7 @@ class UserphoneGroup(app_commands.Group):
             else:
                 await interaction.followup.send("Anonymous mode disabled.", ephemeral=True)
             
-            save_file("storage/member_info.json", member_data)
+            save_json("storage/member_info.json", member_data)
 
         except Exception as e:
             await handle_logs(interaction, e)
@@ -247,7 +244,7 @@ class UserphoneCog(commands.Cog):
         
         for room in self.userphone_group.rooms.values():
             if channel_id in room.members:
-                member_data = open_file("storage/member_info.json")
+                member_data = open_json("storage/member_info.json")
                 is_anonymous = member_data.get(str(message.author.id), {}).get("user_anom", False)
 
                 for other_channel_id in room.members:

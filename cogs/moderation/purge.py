@@ -3,7 +3,6 @@ from discord.ext import commands
 from discord import app_commands
 
 from bot_utils import (
-    open_file,
     handle_logs
 )
 
@@ -11,7 +10,6 @@ from .utils import (
     store_modlog,
     check_moderation_info,
 )
-
 
 class MessageCheck:
     @staticmethod
@@ -175,31 +173,10 @@ class PurgeCommandGroup(app_commands.Group):
             )
         except Exception as e:
             await handle_logs(interaction, e)
-
-    def setup_commands(self):
-        command_help = open_file("storage/command_help.json")
-        purge_data = command_help.get("moderation", {}).get("purge", {})
-        
-        if "description" in purge_data:
-            self.description = purge_data["description"]
-            
-        if "subcommands" in purge_data:
-            for cmd in self.commands:
-                if cmd.name in purge_data["subcommands"]:
-                    cmd_data = purge_data["subcommands"][cmd.name]
-                    cmd.description = cmd_data.get("description", cmd.description)
-                    
-                    if "parameters" in cmd_data:
-                        for param_name, param_desc in cmd_data["parameters"].items():
-                            if param_name in cmd._params:
-                                cmd._params[param_name].description = param_desc
-
 class PurgeCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.purge_command = PurgeCommandGroup()
-        self.purge_command.setup_commands()
-        self.bot.tree.add_command(self.purge_command)
+        self.bot.tree.add_command(PurgeCommandGroup())
 
     @commands.hybrid_command(name="clean")
     async def manual_clean(self, ctx, amount: int = 10):

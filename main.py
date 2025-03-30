@@ -15,6 +15,7 @@
 #    - Roblox friendswish command testing, might make faster later on and is buggy!
 #    - Role command group
 #    - Level calculation rework
+#    - Help command & commands.json entirely reworked (Took more than a day im dying)
 #
 # Other notes:
 #    - Attempt to fix status upon disconnect
@@ -34,12 +35,15 @@ from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
+from discord import app_commands
 from aiohttp import ClientSession
 from ossapi import Ossapi
 
+from typing import Union, List
+
 from bot_utils import (
-    open_file,
-    save_file,
+    open_json,
+    save_json,
     cr_fetchPlayerData,
     get_member_cooldown,
     # debug,
@@ -125,13 +129,14 @@ class botMain(commands.Bot):
             await load_cogs()
             print("-----------------\nCogs loaded successfully.")
             try:
-                # for guild in bot.guilds:
-                #     await bot.tree.clear_commands(guild=guild)
                 print("Syncing commands...")
+                await load_commands(self) 
                 await bot.tree.sync()
                 print("Commands successfully synced.")
             except Exception as e:
                 error(f"An error occurred when syncing commands: {e}")
+                import traceback
+                print(traceback.format_exc())
         except Exception as e:
             error(f"An error occurred when loading cogs: {e}")
         print("Bot is ready.")
@@ -155,7 +160,49 @@ async def load_cogs():
                     except Exception as e:
                         error(f"Failed to load {folder}/{filename}: {e}")
 
-            print(f"Loaded {folder}")
+async def load_commands(bot: commands.Bot) -> None:
+    commands_data = open_json("storage/commands.json")
+    
+    for command in bot.walk_commands():
+        command_parts = str(command).split()
+        if len(command_parts) > 1:
+            group_name = command_parts[0]
+            cmd_name = command_parts[1]
+            if group_name in commands_data and cmd_name in commands_data[group_name]:
+                cmd_data = commands_data[group_name][cmd_name]
+                command.description = cmd_data.get("description", command.description)
+                if hasattr(command, 'app_command'):
+                    for param_name, param_desc in cmd_data.get("parameters", {}).items():
+                        if param_name in command.app_command._params:
+                            command.app_command._params[param_name].description = param_desc
+        else:
+            cmd_name = command_parts[0]
+            if cmd_name in commands_data:
+                cmd_data = commands_data[cmd_name]
+                command.description = cmd_data.get("description", command.description)
+                if hasattr(command, 'app_command'):
+                    for param_name, param_desc in cmd_data.get("parameters", {}).items():
+                        if param_name in command.app_command._params:
+                            command.app_command._params[param_name].description = param_desc
+
+    for cmd in bot.tree.get_commands():
+        if isinstance(cmd, app_commands.Group):
+            if cmd.name in commands_data:
+                group_data = commands_data[cmd.name]
+                for subcmd in cmd.commands:
+                    if subcmd.name in group_data:
+                        cmd_data = group_data[subcmd.name]
+                        subcmd.description = cmd_data.get("description", subcmd.description)
+                        for param_name, param_desc in cmd_data.get("parameters", {}).items():
+                            if param_name in subcmd._params:
+                                subcmd._params[param_name].description = param_desc
+        else:
+            if cmd.name in commands_data:
+                cmd_data = commands_data[cmd.name]
+                cmd.description = cmd_data.get("description", cmd.description)
+                for param_name, param_desc in cmd_data.get("parameters", {}).items():
+                    if param_name in cmd._params:
+                        cmd._params[param_name].description = param_desc
 
 async def test_hy_key() -> bool:
     async with ClientSession() as session:
@@ -216,15 +263,15 @@ async def on_message(message):
     server_id = str(message.guild.id)
     member_id = str(message.author.id)
 
-    server_info = open_file("storage/server_info.json")
-    member_data = open_file("storage/member_info.json")
+    server_info = open_json("storage/server_info.json")
+    member_data = open_json("storage/member_info.json")
 
     afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
 
     if member_id in afk_data:
         original_name = afk_data[member_id].get("original_name")
         del afk_data[member_id]
-        save_file("storage/server_info.json", server_info)
+        save_json("storage/server_info.json", server_info)
 
         await message.add_reaction("👋")
         await message.channel.send(f"Welcome back, {message.author.mention}! You are no longer AFK.", delete_after=3)
@@ -266,8 +313,8 @@ async def on_message(message):
             server_info["exp"][server_id][member_id] = 0
         server_info["exp"][server_id][member_id] += exp_gain
 
-        save_file("storage/member_info.json", member_data)
-        save_file("storage/server_info.json", server_info)
+        save_json("storage/member_info.json", member_data)
+        save_json("storage/server_info.json", server_info)
 
 @bot.event
 async def on_connect():
@@ -286,7 +333,7 @@ async def on_resumed():
 
 async def main():
     print(f"Script loaded. Version: v{__version__}")
-
+    
     # Checking for APIs not required but it will be required
     # if you want to use some commands later.
     # Recommended to uncomment this if you want to use it for that.

@@ -1,5 +1,4 @@
 from bot_utils import (
-    load_commands,
     handle_logs,
 )
 
@@ -14,11 +13,10 @@ from aiohttp import ClientSession
 class GeometryDashCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="gd", description="Geometry Dash related commands", guild_only=False)
-        load_commands(self.commands, "gd")
 
     @app_commands.command(name="profile", description="Fetch a Geometry Dash profile's data.")
     @app_commands.describe(username="The Geometry Dash username to fetch.")
-    async def gdprofile(self, interaction: discord.Interaction, username: str):
+    async def profile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
             async with ClientSession() as session:

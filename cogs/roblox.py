@@ -1,3 +1,4 @@
+
 from bot_utils import (
     rbx_fetchUserID,
     rbx_fetchUserBio,
@@ -5,7 +6,7 @@ from bot_utils import (
     check_user,
     open_json,
     save_json,
-    load_commands,
+
     handle_logs,
 )
 
@@ -59,27 +60,7 @@ class SequenceButton(discord.ui.View):
 class CGlovesGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="cgloves", description="Slap Battles glove-related commands", guild_only=False)
-        self.setup_commands()
-
-    def setup_commands(self):
-        # Gonna use this for some stuff until a rework for load_commands
-        command_help = open_json("storage/command_help.json")
-        cgloves_data = command_help.get("roblox", {}).get("cgloves", {})
         
-        if "description" in cgloves_data:
-            self.description = cgloves_data["description"]
-            
-        if "subcommands" in cgloves_data:
-            for cmd in self.commands:
-                if cmd.name in cgloves_data["subcommands"]:
-                    cmd_data = cgloves_data["subcommands"][cmd.name]
-                    cmd.description = cmd_data.get("description", cmd.description)
-                    
-                    if "parameters" in cmd_data:
-                        for param_name, param_desc in cmd_data["parameters"].items():
-                            if param_name in cmd._params:
-                                cmd._params[param_name].description = param_desc
-
     @app_commands.command(name="check")
     @app_commands.autocomplete(username=get_connected_accounts)
     async def check(self, interaction: discord.Interaction, username: str = None, member: discord.Member = None, ephemeral: bool = True):
@@ -462,7 +443,6 @@ async def get_friends(session: aiohttp.ClientSession, user_id: int) -> dict:
 class RobloxGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="roblox", description="Roblox account-related commands", guild_only=False)
-        load_commands(self.commands, "roblox")
 
     @app_commands.command(name="connect")
     async def rbxconnect(self, interaction: discord.Interaction, username: str):
@@ -907,7 +887,6 @@ class RobloxCog(commands.Cog):
         self.bot = bot
         self.bot.tree.add_command(RobloxGroup())
         self.bot.tree.add_command(CGlovesGroup())
-        load_commands(self.__cog_app_commands__, "roblox")
 
 async def setup(bot):
     await bot.add_cog(RobloxCog(bot))

@@ -1,22 +1,18 @@
+import discord
+from discord.ext import commands
+from discord import app_commands
+
 from bot_utils import (
     handle_logs,
 )
 
-import discord
-
-from discord.ext import commands
-from discord import app_commands
-
+import cv2
+import numpy as np
 import asyncio, tempfile, io, random
-
 from PIL import Image, ImageSequence, ImageOps, ImageFilter, ImageEnhance
 from moviepy.editor import VideoFileClip, AudioFileClip
 from aiohttp import ClientSession
 from urllib.parse import urlparse
-
-import numpy as np
-import cv2
-
 class ImageCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

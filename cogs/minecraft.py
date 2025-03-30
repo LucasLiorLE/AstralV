@@ -1,7 +1,5 @@
 from bot_utils import (
     mc_fetchUUID,
-
-    load_commands,
     handle_logs,
 )
 
@@ -14,11 +12,8 @@ from discord import app_commands
 class MinecraftCommandsGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="minecraft", description="Minecraft related commands", guild_only=False)
-
-        load_commands(self.commands, "minecraft")
         
     @app_commands.command(name="uuid", description="Get a Minecraft UUID based on a username")
-    @app_commands.describe(username="A Minecraft username")
     async def uuid(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
@@ -29,7 +24,6 @@ class MinecraftCommandsGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="avatar", description="Provides a Minecraft account's avatar.")
-    @app_commands.describe(username="A Minecraft username")
     async def avatar(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:

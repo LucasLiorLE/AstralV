@@ -1,8 +1,6 @@
 import discord
 from discord.ext import commands, tasks
 from discord import app_commands
-import time
-from datetime import datetime, timedelta
 
 from bot_utils import (
     get_role_hierarchy,
@@ -17,6 +15,9 @@ from .utils import (
     check_moderation_info,
     dm_moderation_embed,
 )
+
+import time
+from datetime import datetime, timedelta
 
 class UsersCog(commands.Cog):
     def __init__(self, bot):

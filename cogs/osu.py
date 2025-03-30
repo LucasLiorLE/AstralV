@@ -1,6 +1,5 @@
 from bot_utils import (
     get_dominant_color,
-    load_commands,
     handle_logs,
 
     OsuAPI,
@@ -20,10 +19,8 @@ class OsuCommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="osu", description="Osu related commands", guild_only=False)
 
-        load_commands(self.commands, "osu")
-
     @app_commands.command(name="profile")
-    async def osuprofile(self, interaction: discord.Interaction, username: str):
+    async def profile(self, interaction: discord.Interaction, username: str):
         await interaction.response.defer()
         try:
             osu_api = OsuAPI(osuAPI, osuSecret)

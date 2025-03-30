@@ -10,7 +10,6 @@ from typing import (
     TypeAlias,
     Literal,
     Tuple,
-    Union
 )
 
 from bot_utils import (

@@ -1,7 +1,5 @@
-from ast import alias
 from bot_utils import (
     get_member_color,
-    load_commands,
     open_json,
     handle_logs,
 )
@@ -17,8 +15,6 @@ from aiohttp import ClientSession
 class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        load_commands(self.__cog_app_commands__, "fun")
-
     
     def check_moderation_info(self, ctx_or_interaction, permission_name: str, minimum_role: str) -> tuple[bool, discord.Embed]:
         try:
@@ -375,35 +371,37 @@ class FunCog(commands.Cog):
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     @app_commands.command(name="xkcd")
-    async def xkcd(self, interaction: discord.Interaction, ephemeral: bool = False):
+    async def xkcd(self, interaction: discord.Interaction, comic_id: int = None, ephemeral: bool = False):
         await interaction.response.defer(ephemeral=ephemeral)
         try:
             async with ClientSession() as session:
                 async with session.get("https://xkcd.com/info.0.json") as latest_response:
-                    if latest_response.status == 200:
-                        latest_data = await latest_response.json()
-                        max_comic = latest_data["num"]
-                        async with session.get(f"https://xkcd.com/{random.randint(1, max_comic)}/info.0.json") as random_response:
-                            if random_response.status == 200:
-                                comic_data = await random_response.json()
-                                comic_url = f"https://xkcd.com/{comic_data['num']}/"
-                                year = int(comic_data['year'])
-                                posted_date = datetime(year, 1, 1).date()
+                    if latest_response.status != 200:
+                        return await interaction.followup.send("An error occurred while fetching the latest xkcd comic.")
+                    latest_data = await latest_response.json()
+                    max_comic = latest_data["num"]
 
-                                embed = discord.Embed(
-                                    title=comic_data["title"], 
-                                    description=comic_data["alt"], 
-                                    color=get_member_color(interaction, 0xFFFFFF),
-                                    timestamp=datetime.now(timezone.utc)
-                                )
-                                embed.url = comic_url
-                                embed.set_footer(text=f"Posted on {posted_date}", icon_url="https://xkcd.com/favicon.ico")
-                                embed.set_image(url=comic_data["img"])
-                                await interaction.followup.send(embed=embed)
-                            else:
-                                await interaction.followup.send("An error occurred while fetching the xkcd comic.")
+                comic_num = comic_id if comic_id is not None else random.randint(1, max_comic)
+                
+                async with session.get(f"https://xkcd.com/{comic_num}/info.0.json") as comic_response:
+                    if comic_response.status == 200:
+                        comic_data = await comic_response.json()
+                        comic_url = f"https://xkcd.com/{comic_data['num']}/"
+                        year = int(comic_data['year'])
+                        posted_date = datetime(year, 1, 1).date()
+
+                        embed = discord.Embed(
+                            title=comic_data["title"], 
+                            description=comic_data["alt"], 
+                            color=get_member_color(interaction, 0xFFFFFF),
+                            timestamp=datetime.now(timezone.utc)
+                        )
+                        embed.url = comic_url
+                        embed.set_footer(text=f"Posted on {posted_date}", icon_url="https://xkcd.com/favicon.ico")
+                        embed.set_image(url=comic_data["img"])
+                        await interaction.followup.send(embed=embed)
                     else:
-                        await interaction.followup.send("An error occurred while fetching the latest xkcd comic.")
+                        await interaction.followup.send("An error occurred while fetching the xkcd comic.")
         except Exception as e:
             await handle_logs(interaction, e)
 

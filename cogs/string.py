@@ -2,6 +2,10 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+from bot_utils import (
+    handle_logs
+)
+
 class StringCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

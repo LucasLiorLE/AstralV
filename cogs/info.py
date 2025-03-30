@@ -1,21 +1,19 @@
-from shapely import is_valid
-from bot_utils import (
-	get_dominant_color,
-	__version__,
-	__status__,
-	load_commands,
-	open_file,
-	handle_logs,
-)
-
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
 from discord import app_commands
 
-import time, asyncio, os, tempfile, math
+from bot_utils import (
+	get_dominant_color,
+	__version__,
+	__status__,
+	open_json,
+	handle_logs,
+)
+
+import time, asyncio, os, tempfile
 from aiohttp import ClientSession, ClientError
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from moviepy.editor import VideoFileClip, AudioFileClip
 from PIL import Image
 
@@ -73,34 +71,12 @@ class AvatarGroup(app_commands.Group):
 		except Exception as error:
 			await handle_logs(interaction, error)
 
-	def setup_commands(self):
-		command_help = open_file("storage/command_help.json")
-		avatar_data = command_help.get("info", {}).get("avatar", {})
-		
-		if "description" in avatar_data:
-			self.description = avatar_data["description"]
-			
-		if "subcommands" in avatar_data:
-			for cmd in self.commands:
-				if cmd.name in avatar_data["subcommands"]:
-					cmd_data = avatar_data["subcommands"][cmd.name]
-					cmd.description = cmd_data.get("description", cmd.description)
-					
-					if "parameters" in cmd_data:
-						for param_name, param_desc in cmd_data["parameters"].items():
-							if param_name in cmd._params:
-								cmd._params[param_name].description = param_desc
-
 class InfoCog(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 		self.start_time = datetime.now(timezone.utc)
-		
-		load_commands(self.__cog_app_commands__, "info")
-		
-		avatar_group = AvatarGroup()
-		avatar_group.setup_commands()
-		self.bot.tree.add_command(avatar_group)
+				
+		self.bot.tree.add_command(AvatarGroup())
 
 		self.context_userinfo = app_commands.ContextMenu(
 			name='User Information',
@@ -119,62 +95,40 @@ class InfoCog(commands.Cog):
 	@app_commands.command(name="help")
 	async def help(self, interaction: discord.Interaction, command: str, ephemeral: bool = True):
 		try:
-			command_help = open_file("storage/command_help.json")
-
-			if command:
-				for category, commands in command_help.items():
-					if isinstance(commands, dict):
-						if command in commands:
-							cmd_data = commands[command]
-							embed = discord.Embed(
-								title=f"Help: {command}",
-								description=cmd_data.get("description", "No description available."),
-								color=discord.Color.blue()
-							)
-							
-							if "parameters" in cmd_data:
-								params = []
-								for param_name, param_desc in cmd_data["parameters"].items():
-									params.append(f"• **{param_name}**: {param_desc}")
-								if params:
-									embed.add_field(
-										name="Parameters",
-										value="\n".join(params),
-										inline=False
-									)
-							
-							if "subcommands" in cmd_data:
-								subcmds = []
-								for subcmd_name, subcmd_data in cmd_data["subcommands"].items():
-									subcmds.append(f"• **{subcmd_name}**: {subcmd_data['description']}")
-								if subcmds:
-									embed.add_field(
-										name="Subcommands",
-										value="\n".join(subcmds),
-										inline=False
-									)
-							
-							await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
-							return
-						
-				await interaction.response.send_message(f"No help found for command: {command}", ephemeral=ephemeral)
-				return
-
+			command_help = open_json("storage/commands.json")
+			
+			command_parts = command.lower().split()
+			current_level = command_help
+			
+			for part in command_parts:
+				if part in current_level:
+					current_level = current_level[part]
+				else:
+					await interaction.response.send_message(f"Command `{command}` not found.", ephemeral=True)
+					return
+			
 			embed = discord.Embed(
-				title="Command Categories",
-				description="Here are all available command categories.\nUse `/help <command>` for detailed help on a command.",
-				color=discord.Color.blue()
+				title=f"Help: {command}",
+				color=interaction.user.color if interaction.user.color.value else discord.Color.blue()
 			)
-
-			for category, commands in command_help.items():
-				if isinstance(commands, dict) and category not in ["modlogs", "warn", "mute"]:
-					cmd_list = [f"`{cmd}`" for cmd in commands.keys() if not isinstance(commands[cmd], dict)]
-					if cmd_list:
+			
+			if isinstance(current_level, dict):
+				if "description" in current_level:
+					embed.description = current_level["description"]
+				
+				if "parameters" in current_level:
+					params = []
+					for param_name, param_desc in current_level["parameters"].items():
+						params.append(f"**{param_name}**: {param_desc}")
+					
+					if params:
 						embed.add_field(
-							name=category.title(),
-							value=", ".join(cmd_list),
+							name="Parameters",
+							value="\n".join(params),
 							inline=False
 						)
+			else:
+				embed.description = current_level
 
 			await interaction.response.send_message(embed=embed, ephemeral=ephemeral)
 
@@ -210,7 +164,7 @@ class InfoCog(commands.Cog):
 				
 			member_id = str(interaction.user.id)
 			server_id = str(interaction.guild.id)
-			server_info = open_file("storage/server_info.json")
+			server_info = open_json("storage/server_info.json")
 				
 			if where == "guild": 
 				server_exp = server_info.get("exp", {}).get(server_id, {})

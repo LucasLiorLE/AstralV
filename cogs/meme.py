@@ -1,5 +1,4 @@
 from bot_utils import (
-    load_commands,
     handle_logs,
 )
 
@@ -18,7 +17,6 @@ from urllib.parse import quote
 class MemeCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        load_commands(self.__cog_app_commands__, "meme")
 
     @app_commands.command(name="spongebob")
     async def spongebob(self, interaction: discord.Interaction, text: str):
@@ -34,8 +32,8 @@ class MemeCog(commands.Cog):
         except Exception as e:
             await handle_logs(interaction, e)
 
-    @app_commands.command(name="drakelikehate")
-    async def drakelikehate(self, interaction: discord.Interaction, text1: str, text2: str):
+    @app_commands.command(name="likehate")
+    async def likehate(self, interaction: discord.Interaction, text1: str, text2: str):
         await interaction.response.defer(ephemeral=True)
         try:
             async with ClientSession() as session:

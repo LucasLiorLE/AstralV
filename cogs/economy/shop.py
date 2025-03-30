@@ -437,10 +437,9 @@ class ShopCommandGroup(app_commands.Group):
 class ShopCommandCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.shop = ShopCommandGroup()
         SHOP_DATA.reload_limited_shop()
         update_shops.start()
-        self.bot.tree.add_command(self.shop)
+        self.bot.tree.add_command(ShopCommandGroup())
 
 async def setup(bot):
     await bot.add_cog(ShopCommandCog(bot))

@@ -5,9 +5,6 @@ from discord import app_commands
 import time
 
 from bot_utils import (
-    create_interaction,
-    get_member,
-    get_context_object,
     handle_logs,
     open_json,
     save_json

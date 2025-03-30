@@ -447,9 +447,7 @@ class WorkCommandGroup(app_commands.Group):
 class WorkCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-        self.work_group = WorkCommandGroup()
-        self.bot.tree.add_command(self.work_group)
+        self.bot.tree.add_command(WorkCommandGroup())
 
 async def setup(bot):
     await bot.add_cog(WorkCog(bot))

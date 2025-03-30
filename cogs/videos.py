@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 
 from bot_utils import (
-    handle_logs
+    handle_logs,
 )
 
 import asyncio, tempfile, io, random, os
@@ -249,7 +249,7 @@ class VideoCog(commands.Cog):
         except Exception as e:
             await handle_logs(ctx, e)
 
-    @video.command(name="mute")
+    @video.command(name="mute") 
     async def mute_video(self, ctx: commands.Context, video: discord.Attachment = None, link: str = None, ephemeral: bool = True):
         await ctx.defer(ephemeral=ephemeral)
 

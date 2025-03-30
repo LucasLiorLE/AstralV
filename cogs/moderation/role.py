@@ -1,8 +1,7 @@
+from shutil import ExecError
 import discord
 from discord.ext import commands
 from discord import app_commands
-
-import asyncio
 
 from bot_utils import (
     get_role_hierarchy,
@@ -12,8 +11,9 @@ from bot_utils import (
 from .utils import (
     store_modlog,
     check_moderation_info,
-    dm_moderation_embed,
 )
+
+import asyncio
 
 class RoleCommandGroup(app_commands.Group):
     def __init__(self):
@@ -37,6 +37,10 @@ class RoleCommandGroup(app_commands.Group):
     @app_commands.command(name="add")
     async def role_add(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+            
             if not get_role_hierarchy(interaction.user, role):
                 embed = self._create_error_embed(f"You cannot assign the role `{role.name}` because it is higher than your highest role.")
                 return await interaction.response.send_message(embed=embed)
@@ -63,6 +67,10 @@ class RoleCommandGroup(app_commands.Group):
     @app_commands.command(name="remove")
     async def role_remove(self, interaction: discord.Interaction, member: discord.Member, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+            
             if not get_role_hierarchy(interaction.user, role):
                 embed = self._create_error_embed(f"You cannot remove the role `{role.name}` because it is higher than your highest role.")
                 return await interaction.response.send_message(embed=embed)
@@ -132,6 +140,10 @@ class RoleCommandGroup(app_commands.Group):
     @app_commands.command(name="bots")
     async def role_bots(self, interaction: discord.Interaction, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+            
             if not get_role_hierarchy(interaction.user, role):
                 embed = self._create_error_embed(f"You cannot assign the role `{role.name}` because it is higher than your highest role.")
                 return await interaction.response.send_message(embed=embed)
@@ -153,6 +165,10 @@ class RoleCommandGroup(app_commands.Group):
     @app_commands.command(name="all")
     async def role_all(self, interaction: discord.Interaction, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+            
             if not get_role_hierarchy(interaction.user, role):
                 embed = self._create_error_embed(f"You cannot assign the role `{role.name}` because it is higher than your highest role.")
                 return await interaction.response.send_message(embed=embed)
@@ -174,17 +190,28 @@ class RoleCommandGroup(app_commands.Group):
 
     @app_commands.command(name="cancel")
     async def role_cancel(self, interaction: discord.Interaction, role: discord.Role):
-        task_id = f"{interaction.guild.id}:{role.id}"
-        if task_id in self.active_tasks:
-            self.active_tasks[task_id] = False
-            embed = self._create_success_embed(f"Cancelling mass role operation for role `{role.name}`...")
-        else:
-            embed = self._create_error_embed("No active mass role operation found for this role.")
-        await interaction.response.send_message(embed=embed)
+        try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+                
+            task_id = f"{interaction.guild.id}:{role.id}"
+            if task_id in self.active_tasks:
+                self.active_tasks[task_id] = False
+                embed = self._create_success_embed(f"Cancelling mass role operation for role `{role.name}`...")
+            else:
+                embed = self._create_error_embed("No active mass role operation found for this role.")
+            await interaction.response.send_message(embed=embed)
+        except Exception as e:
+            await handle_logs(interaction, e)
 
     @app_commands.command(name="removeall")
     async def role_removeall(self, interaction: discord.Interaction, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+            
             if not get_role_hierarchy(interaction.user, role):
                 embed = self._create_error_embed(f"You cannot remove the role `{role.name}` because it is higher than your highest role.")
                 return await interaction.response.send_message(embed=embed)
@@ -208,6 +235,10 @@ class RoleCommandGroup(app_commands.Group):
     @app_commands.command(name="humans")
     async def role_humans(self, interaction: discord.Interaction, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(interaction, "manage_roles", "moderator")
+            if not has_mod:
+                return await interaction.response.send_message(embed=embed)
+            
             if not get_role_hierarchy(interaction.user, role):
                 embed = self._create_error_embed(f"You cannot assign the role `{role.name}` because it is higher than your highest role.")
                 return await interaction.response.send_message(embed=embed)
@@ -260,6 +291,10 @@ class RoleCog(commands.Cog):
     @commands.command(name="role")
     async def role(self, ctx: commands.Context, member: discord.Member, role: discord.Role, reason: str = None):
         try:
+            has_mod, embed = check_moderation_info(ctx, "manage_roles", "moderator")
+            if not has_mod:
+                return await ctx.send(embed=embed)
+            
             if not get_role_hierarchy(ctx.author, role):
                 embed = discord.Embed(
                     title="Error",

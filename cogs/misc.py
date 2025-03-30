@@ -1,3 +1,4 @@
+from numpy import True_
 from bot_utils import (
     parse_duration,
     open_json,
@@ -136,11 +137,9 @@ async def end_giveaway(interaction: discord.Interaction, giveaway_id: str, serve
 
 class GiveawayGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="giveaway", description="Giveaway related commands")
+        super().__init__(name="giveaway", description="Giveaway related commands", guild_only=True)
         
         load_commands(self.commands, "giveaway")
-        for command in self.commands:
-            command.guild_only = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not interaction.guild:
@@ -149,7 +148,7 @@ class GiveawayGroup(app_commands.Group):
         return True
 
     @app_commands.command(name="reroll")
-    async def greroll(self, interaction: discord.Interaction, id: str, winners: int):
+    async def reroll(self, interaction: discord.Interaction, id: str, winners: int):
         await interaction.response.defer()
         try:
             server_id = str(interaction.guild_id)
@@ -186,7 +185,7 @@ class GiveawayGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="create")
-    async def ggiveaway(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
+    async def create(self, interaction: discord.Interaction, prize: str, duration: str, description: str = None, requirement: discord.Role = None, winners: int = 1):
         await interaction.response.defer()
         try:
             server_info = open_json("storage/server_info.json")
@@ -249,7 +248,7 @@ class AlertGroup(app_commands.Group):
         load_commands(self.commands, "alert")
 
     @app_commands.command(name="follow")
-    async def alert_follow(self, interaction: discord.Interaction):
+    async def follow(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         try:
             member_info = open_json("storage/member_info.json")
@@ -273,7 +272,7 @@ class AlertGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="send") 
-    async def alert_send(self, interaction: discord.Interaction, type: str, description: str):
+    async def send(self, interaction: discord.Interaction, type: str, description: str):
         await interaction.response.defer()
         try:
             if interaction.user.id not in botAdmins:
@@ -307,7 +306,7 @@ class AlertGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="check")
-    async def alert_check(self, interaction: discord.Interaction, id: str = None):
+    async def check(self, interaction: discord.Interaction, id: str = None):
         await interaction.response.defer(ephemeral=True)
         try:
             member_info = open_json("storage/member_info.json")
@@ -476,7 +475,7 @@ class PollGroup(app_commands.Group):
         super().__init__(name="poll", description="Create and manage polls", guild_only=False)
 
     @app_commands.command(name="create")
-    async def create_poll(self, interaction: discord.Interaction, question: str, options: str, duration: str):
+    async def create(self, interaction: discord.Interaction, question: str, options: str, duration: str):
         await interaction.response.defer()
         try:
             duration_timedelta = parse_duration(duration)
@@ -534,7 +533,7 @@ class PollGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="view")
-    async def view_poll(self, interaction: discord.Interaction, id: str):
+    async def view(self, interaction: discord.Interaction, id: str):
         await interaction.response.defer()
         try:
             bot_data = open_json("storage/bot_data.json")
@@ -581,7 +580,7 @@ class PollGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="extend")
-    async def extend_poll(self, interaction: discord.Interaction, id: str, duration: str):
+    async def extend(self, interaction: discord.Interaction, id: str, duration: str):
         await interaction.response.defer()
         try:
             bot_data = open_json("storage/bot_data.json")

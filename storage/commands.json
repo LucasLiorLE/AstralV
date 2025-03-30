@@ -1,0 +1,1177 @@
+{
+    "video": {
+        "speed": {
+            "description": "Change the speed of a video",
+            "parameters": {
+                "factor": "Speed multiplier (e.g., 0.5 for half speed, 2 for double speed)",
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "reverse": {
+            "description": "Reverse a video",
+            "parameters": {
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "mute": {
+            "description": "Remove audio from a video",
+            "parameters": {
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "sharpness": {
+            "description": "Adjust video sharpness",
+            "parameters": {
+                "factor": "Sharpness factor (1-5)",
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "random": {
+            "description": "Apply random effects to a video",
+            "parameters": {
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "amount": "Number of effects to apply (default: 3)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "crop": {
+            "description": "Crop a video",
+            "parameters": {
+                "x": "Starting X coordinate",
+                "y": "Starting Y coordinate",
+                "width": "Width of the crop",
+                "height": "Height of the crop",
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "trim": {
+            "description": "Trim a video",
+            "parameters": {
+                "start": "Start time in seconds",
+                "end": "End time in seconds",
+                "video": "Video file attachment (optional)",
+                "link": "Video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "concat": {
+            "description": "Concatenate two videos",
+            "parameters": {
+                "video1": "First video file attachment (optional)",
+                "video2": "Second video file attachment (optional)",
+                "link1": "First video URL (optional)",
+                "link2": "Second video URL (optional)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        }
+    },
+    "reminder": {
+        "add": {
+            "description": "Add a reminder",
+            "parameters": {
+                "duration": "Duration of the reminder (e.g., 1h30m)",
+                "reminder": "Reminder message"
+            }
+        },
+        "list": {
+            "description": "List all reminders"
+        },
+        "remove": {
+            "description": "Remove a reminder",
+            "parameters": {
+                "id": "id of the reminder to remove"
+            }
+        }
+    },
+    "afk": {
+        "description": "Set an AFK message",
+        "parameters": {
+            "reason": "AFK message (optional)"
+        }
+    },
+    "userphone": {
+        "create": {
+            "description": "Create a userphone room",
+            "parameters": {
+                "password": "An optional password for the room"
+            }
+        },
+        "join": {
+            "description": "Join a userphone room",
+            "parameters": {
+                "room_id": "Room ID",
+                "password": "Room password (if required)",
+                "anonymous": "Whether to join anonymously (default: false)"
+            }
+        },
+        "list": {
+            "description": "List all public userphone rooms"
+        },
+        "leave": {
+            "description": "Leave the current userphone room"
+        },
+        "anonymous": {
+            "description": "Toggle anonymous mode"
+        }
+    },
+    "string": {
+        "reverse": {
+            "description": "Reverse a string",
+            "parameters": {
+                "text": "String to reverse"
+            }
+        },
+        "upper": {
+            "description": "Convert a string to uppercase",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "lower": {
+            "description": "Convert a string to lowercase",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "title": {
+            "description": "Convert a string to title case",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "swapcase": {
+            "description": "Swap the case of a string",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "char": {
+            "description": "Get the characters based off their ASCII values",
+            "parameters": {
+                "numbers": "ASCII values separated by spaces"
+            }
+        },
+        "length": {
+            "description": "Get the length of a string",
+            "parameters": {
+                "text": "String to get the length of"
+            }
+        },
+        "replace": {
+            "description": "Replace a substring in a string",
+            "parameters": {
+                "text": "String to replace in",
+                "old": "Substring to replace",
+                "new": "Replacement substring"
+            }
+        },
+        "split": {
+            "description": "Split a string into a list of substrings",
+            "parameters": {
+                "text": "String to split",
+                "sep": "Separator (default: space)"
+            }
+        },
+        "ascii": {
+            "description": "Convert a string to ASCII values",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "binary": {
+            "description": "Convert a string to binary",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "hex": {
+            "description": "Convert a string to hexadecimal",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "octal": {
+            "description": "Convert a string to octal",
+            "parameters": {
+                "text": "String to convert"
+            }
+        },
+        "encode": {
+            "description": "Encode a string using a specified encoding",
+            "parameters": {
+                "text": "String to encode",
+                "encoding": "Encoding type"
+            }
+        }
+    },
+    "cgloves": {
+        "check": {
+            "description": "Check a user's badges in Slap Battles",
+            "parameters": {
+                "username": "A Roblox username",
+                "member": "A Discord member's connected account",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "compare": {
+            "description": "Compare two users' badges in Slap Battles",
+            "parameters": {
+                "username1": "The first Roblox username",
+                "member1": "The first member's connected account",
+                "username2": "The second Roblox username",
+                "member2": "The second member's connected account",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "search": {
+            "description": "Search if a user has a specific glove",
+            "parameters": {
+                "badge": "The badge to search for",
+                "user": "The Roblox username of the account"
+            }
+        }
+    },
+    "roblox": {
+        "connect": {
+            "description": "Connect your Roblox account to your Discord account",
+            "parameters": {
+                "username": "Your Roblox username"
+            }
+        },
+        "description": {
+            "description": "Get a user's Roblox description",
+            "parameters": {
+                "username": "A Roblox username",
+                "member": "A discord member's connected account",
+                "ephemeral": "Whether to send the response privately (default: false)"
+            }
+        },
+        "info": {
+            "description": "Get a user's Roblox information",
+            "parameters": {
+                "username": "A Roblox username",
+                "member": "A discord member's connected account",
+                "ephemeral": "Whether to send the response privately (default: false)"
+            }
+        },
+        "avatar": {
+            "description": "Get a user's Roblox avatar",
+            "parameters": {
+                "username": "A Roblox username",
+                "member": "A discord member's connected account",
+                "items": "Show the items on the avatar",
+                "ephemeral": "Whether to send the response privately (default: false)"
+            }
+        },
+        "friendswith": {
+            "description": "Check if two users have a friend connection on Roblox", 
+            "parameters": {
+                "username1": "The first Roblox username",
+                "username2": "The second Roblox username"
+            }
+        }
+    },
+    "osu": {
+        "profile": {
+            "description": "Get a user's osu! profile",
+            "parameters": {
+                "username": "A osu! username"
+            }
+        }
+    },
+    "giveaway": {
+        "reroll": {
+            "description": "Reroll a giveaway",
+            "parameters": {
+                "id": "The ID of the giveaway",
+                "winners": "The amount of winners to reroll"
+            }
+        },
+        "create": {
+            "description": "Create a giveaway",
+            "parameters": {
+                "prize": "The prize of the giveaway",
+                "duration": "The duration of the giveaway (e.g., 1h30m)",
+                "description": "The description of the giveaway",
+                "requirement": "A role requirement", 
+                "winners": "The amount of winners"
+            }
+        }
+    },
+    "alert": {
+        "follow": {
+            "description": "Follow/Unfollow new alerts"
+        },
+        "send": {
+            "description": "Send an alert",
+            "parameters": {
+                "type": "The type of alert",
+                "description": "The description of the alert"
+            }
+        },
+        "check": {
+            "description": "Check an alert",
+            "parameters": {
+                "id": "The ID of the alert (default: latest)"
+            }
+        }
+    },
+    "poll": {
+        "create": {
+            "description": "Create a poll",
+            "parameters": {
+                "question": "The question of the poll",
+                "options": "Questions split by commas (e.g., Option 1, Option 2)",
+                "duration": "The duration of the poll (e.g., 1h30m)"
+            }
+        },
+        "view": {
+            "description": "View the data of a poll",
+            "parameters": {
+                "id": "The ID of the poll to view"
+            }
+        },
+        "extend": {
+            "description": "Extend the duration of a poll",
+            "parameters": {
+                "id": "The ID of the poll",
+                "duration": "The duration to extend it by (e.g., 1h30m)"
+            }
+        }
+    },
+    "minecraft": {
+        "uuid": {
+            "description": "Get the UUID of a Minecraft player",
+            "parameters": {
+                "username": "The Minecraft username"
+            }
+        },
+        "avatar": {
+            "description": "Get the avatar of a Minecraft player",
+            "parameters": {
+                "username": "The Minecraft username"
+            }
+        }
+    },
+    "spongebob": {
+        "description": "Make a spongebob meme",
+        "parameters": {
+            "text": "The text on the meme"
+        }
+    },
+    "likehate": {
+        "description": "Make a likehate meme",
+        "parameters": {
+            "text1": "The text on the top",
+            "text2": "The text on the bottom"
+        }
+    },
+    "petpet": {
+        "description": "Pet an image :D",
+        "parameters": {
+            "member": "A Discord member's avatar",
+            "url": "An image URL",
+            "attachment": "An image attachment"
+        }
+    },
+    "dailystruggle": {
+        "description": "Make a daily struggle meme",
+        "parameters": {
+            "text1": "The text on the left",
+            "text2": "The text on the right"
+        }
+    },
+    "isthis": {
+        "description": "Make an is this meme",
+        "parameters": {
+            "question": "Is this a question",
+            "person": "This is you (not)",
+            "image": "An image URL",
+            "attachment": "An image attachment"
+        }
+    },
+    "custom": {
+        "description": "Generate a caption meme",
+        "parameters": {
+            "text": "The caption",
+            "link": "An image URL",
+            "attachment": "An image attachment",
+            "ephemeral": "Whether to send the response privately (default: true)"
+        }
+    },
+    "caption": {
+        "description": "Generate a caption meme",
+        "parameters": {
+            "text": "The caption",
+            "link": "An image URL",
+            "attachment": "An image attachment",
+            "layout": "Where the text is (default: top)",
+            "ephemeral": "Whether to send the response privately (default: true)"
+        }
+    },
+    "avatar": {
+        "get": {
+            "description": "Get the universal avatar of a user",
+            "parameters": {
+                "user": "The user to get the avatar of"
+            }
+        },
+        "server": {
+            "description": "Get the server avatar of a user",
+            "parameters": {
+                "user": "The user to get the server avatar of"
+            }
+        }
+    },
+    "help": {
+        "description": "Get help on a command",
+        "parameters": {
+            "command": "The command to get help on",
+            "ephemeral":"Whether to send the response privately (default: true)"
+        }
+    },
+    "level": {
+        "description": "Get the level of a user",
+        "parameters": {
+            "where": "Where to view (default: guild)"
+        }
+    },
+    "ping": {
+        "description": "Get the latency of the bot"
+    },
+    "info": {
+        "description": "Get information about the bot"
+    },
+    "serverinfo": {
+        "description": "Get information about a server"
+    },
+    "emojiinfo": {
+        "description": "Get information about an emoji",
+        "parameters": {
+            "emoji": "The emoji to get information about"
+        }
+    },
+    "roleinfo": {
+        "description": "Get information about a role",
+        "parameters": {
+            "role": "The role to get information about"
+        }
+    },
+    "userinfo": {
+        "description": "Get information about a user",
+        "parameters": {
+            "member": "The user to get information about"
+        }
+    },
+    "status": {
+        "description": "Get the status of a website",
+        "parameters": {
+            "website": "The website URL"
+        }
+    },
+    "define": {
+        "description": "Get the definition of a word (English)",
+        "parameters": {
+            "word": "The word to get the definition of"
+        }
+    },
+    "filedata": {
+        "parameters": {
+            "file": "The file to get the data of"
+        }
+    },
+    "image": {
+        "resize": {
+            "description": "Resize an image",
+            "parameters": {
+                "width": "The width to resize to",
+                "height": "The height to resize to",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "crop": {
+            "description": "Crop an image",
+            "parameters": {
+                "width": "The width to crop",
+                "height": "The height to crop to",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "rotate": {
+            "description": "Rotate an image",
+            "parameters": {
+                "angle": "The degrees to rotate the image",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "flip": {
+            "description": "Flip an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "invert": {
+            "description": "Invert the colors of an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "blur": {
+            "description": "Blur an image",
+            "parameters": {
+                "radius": "The amount to blur the image",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "brightness": {
+            "description": "Adjust the brightness of an image",
+            "parameters": {
+                "factor": "The brightness factor",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "contrast": {
+            "description": "Adjust the contrast of an image",
+            "parameters": {
+                "factor": "The contrast factor",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "grayscale": {
+            "description": "Convert an image to grayscale",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "sepia": {
+            "description": "Apply a sepia filter to an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "sharpen": {
+            "description": "Sharpen an image",
+            "parameters": {
+                "factor": "The amount to sharpen the image",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "pixelate": {
+            "description": "Pixelate an image",
+            "parameters": {
+                "factor": "The factor of the pixels",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "changeres": {
+            "description": "Change the resolution of an image",
+            "parameters": {
+                "factor": "The multiplier factor",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "watercolor": {
+            "description": "Apply a watercolor effect to an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "posterize": {
+            "description": "Posterize an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "solarize": {
+            "description": "Solarize an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "fisheye": {
+            "description": "Apply a fisheye effect to an image",
+            "parameters": {
+                "intensity": "The intensity of the fisheye effect (default: 2)",
+                "image": "An attached image",
+                "link": "An image URL",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "random": {
+            "description": "Apply random effects to an image",
+            "parameters": {
+                "image": "An attached image",
+                "link": "An image URL",
+                "amount": "Number of effects to apply (default: 3)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        }
+    }, 
+    "convert": {
+        "image": {
+            "description": "Convert an image to a different format",
+            "parameters": {
+                "image": "An attached image",
+                "format": "The format to convert to (e.g., png, jpg)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        },
+        "video": {
+            "description": "Convert a video to a different format",
+            "parameters": {
+                "video": "An attached video",
+                "format": "The format to convert to (e.g., mp4, avi)",
+                "ephemeral": "Whether to send the response privately (default: true)"
+            }
+        }
+    },
+    "hypixel": {
+        "profile": {
+            "description": "Get a user's Hypixel profile",
+            "parameters": {
+                "username": "A Minecraft username"
+            }
+        },
+        "skyblock": {
+            "profile": {
+                "description": "Get a user's Skyblock profile",
+                "parameters": {
+                    "username": "A Minecraft username",
+                    "profile_id": "The profile ID (1-5"
+                }
+            }
+        }
+    },
+    "gd": {
+        "profile": {
+            "description": "Get a user's Geometry Dash profile",
+            "parameters": {
+                "username": "A Geometry Dash username"
+            }
+        }
+    },
+    "say": {
+        "description": "Make the bot say something",
+        "parameters": {
+            "channel": "The channel to send the message to",
+            "message": "The message to send",
+            "attachment": "An optional attachment",
+            "reply": "The message to reply to",
+            "ephemeral": "Whether to send the response privately (default: true)"
+        }
+    },
+    "dm": {
+        "description": "Send a direct message to a user",
+        "parameters": {
+            "member": "The member to send the message to",
+            "message": "The message to send",
+            "attachment": "An optional attachment",
+            "ephemeral": "Whether to send the response privately (default: true)"
+        }
+    },
+    "dice": {
+        "description": "Roll a dice",
+        "parameters": {
+            "sides": "The number of sides on the dice (default: 6)",
+            "amount": "The amount of dice to roll (default: 1)"
+        }
+    },
+    "fact": {
+        "description": "Get a random fact",
+        "parameters": {
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "joke": {
+        "description": "Get a random joke",
+        "parameters": {
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "cat": {
+        "description": "Get a random cat image",
+        "parameters": {
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "dog": {
+        "description": "Get a random dog image",
+        "parameters": {
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "duck": {
+        "description": "Get a random duck image",
+        "parameters": {
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "quote": {
+        "description": "Get a random quote",
+        "parameters": {
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "meme": {
+        "description": "Get a random meme",
+        "parameters": {
+            "allow_spoilers": "Whether to allow spoilers (default: false)",
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "8ball": {
+        "description": "Ask the magic 8-ball a question",
+        "parameters": {
+            "question": "The question to ask",
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "xkcd": {
+        "description": "Get an XKCD comic",
+        "parameters": {
+            "comic_id": "The ID of the comic (default: random)",
+            "ephemeral": "Whether to send the response privately (default: false)"
+        }
+    },
+    "cr": {
+        "connect": {
+            "description": "Connect your Clash Royale account to your Discord account",
+            "parameters": {
+                "tag": "Your Clash Royale tag"
+            }
+        },
+        "profile": {
+            "description": "Get a Clash Royale account's info",
+            "parameters": {
+                "tag": "The Clash Royale tag",
+                "user": "A discord user's connected account"
+            }
+        },
+        "clan": {
+            "description": "Get a Clash Royale clan's info",
+            "parameters": {
+                "clantag": "The tag of the clan"
+            }
+        }
+    },
+    "btd6": {
+        "connect": {
+            "description": "Connect your BTD6 account to your Discord account",
+            "parameters": {
+                "oak_key": "https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API"
+            }
+        },
+        "racedata": {
+            "description": "Get information about a race",
+            "parameters": {
+                "race_id": "The ID of the race"
+            }
+        },
+        "racelb": {
+            "description": "Get leaderboard of a race",
+            "parameters": {
+                "race_id": "The ID of the race"
+            }
+        },
+        "races": {
+            "description": "Get the active races in BTD6"
+        },
+        "profile": {
+            "description": "Get a BTD6 account's info",
+            "parameters": {
+                "oak_key": "https://support.ninjakiwi.com/hc/en-us/articles/13438499873937-Open-Data-API"
+            }
+        }
+    },
+    "warn": {
+        "description": "Warn a member",
+        "parameters": {
+            "member": "The member to warn",
+            "reason": "The reason of the warning"
+        }
+    },
+    "warns": {
+        "description": "Get warnings for a member",
+        "parameters": {
+            "member": "The member to view the warns of",
+            "page": "The page to view (default: 1)"
+        }
+    },
+    "kick": {
+        "description": "Kick a member",
+        "parameters": {
+            "member": "The member to kick",
+            "reaon": "The reason to kick"
+        }
+    },
+    "ban": {
+        "description": "Ban a member",
+        "parameters": {
+            "user": "The user to ban",
+            "duration": "The duration of the ban (e.g., 1h30m)",
+            "reason": "The reason for the ban"
+        }
+    },
+    "unban": {
+        "description": "Unban a member",
+        "parameters": {
+            "user": "The user to unban",
+            "reason": "The reason to unban"
+        }
+    },
+    "set": {
+        "logs": {
+            "description": "Set the log channel",
+            "parameters": {
+                "option": "The log channel type",
+                "channel": "The channel to set the logs to"
+            }
+        },
+        "roles": {
+            "description": "Set the role types",
+            "parameters": {
+                "option": "The role type",
+                "role": "The role to set the type to"
+            }
+        }
+    },
+    "role": {
+        "add": {
+            "description": "Add a role to a member",
+            "parameters": {
+                "member": "The member to add the role",
+                "role": "The role to add",
+                "reason": "The reason to add the role"
+            }
+        },
+        "remove": {
+            "description": "Removes a role from a member",
+            "parameters": {
+                "member": "The member to remove the role",
+                "role": "The role to remove",
+                "reason": "The reason to remove the role"
+            }
+        },
+        "bots": {
+            "description": "Toggle roles for all bots",
+            "parameters": {
+                "role": "The role to toggle",
+                "reason": "The reason to toggle"
+            }
+        },
+        "all": {
+            "description": "Toggle roles for all members",
+            "parameters": {
+                "role": "The role to toggle",
+                "reason": "The reason to toggle"
+            }    
+        },
+        "cancel": {
+            "description": "Cancel toggling roles",
+            "parameters": {
+                "role": "The role to cancel"
+            }
+        },
+        "removeall": {
+            "description": "Remove all roles from all members",
+            "parameters": {
+                "role": "The role to remove",
+                "reason": "The reason to remove"
+            }
+        },
+        "humans": {
+            "description": "Toggle roles for all humans",
+            "parameters": {
+                "role": "The role to toggle",
+                "reason": "The reason to toggle"
+            }
+        }
+    },
+    "purge": {
+        "any": {
+            "description": "Purge any type of message",
+            "parameters": {
+                "amount": "The amount of messages to purge (default: 10)",
+                "reason": "The reason for the purge"
+            }
+        },
+        "user": {
+            "description": "Purge essages from a user",
+            "parameters": {
+                "member": "The member to purge the users from",
+                "amount": "The amount of messages to purge (default: 10)",
+                "reason": "The reason for the purge"
+            }
+        },
+        "embeds": {
+            "description": "Purge messages with embeds",
+            "parameters": {
+                "amount": "The amount of messages to purge (default: 10)",
+                "reason": "The reason for the purge"
+            }
+        },
+        "attachments": {
+            "description": "Purge messages with attachments",
+            "parameters": {
+                "amount": "The amount of messages to purge (default: 10)",
+                "reason": "The reason for the purge"
+            }
+        },
+        "text": {
+            "description": "Purge messages with text",
+            "parameters": {
+                "amount": "The amount of messages to purge (default: 10)",
+                "reason": "The reason for the purge"
+            }
+        }
+    },
+    "clean": {
+        "description": "Clean messages from bots",
+        "parameters": {
+            "amount": "The amount of messages to clean (default: 10)"
+        }
+    },
+    "note": {
+        "description": "Add a note to a member",
+        "parameters": {
+            "member": "The member to add the note to",
+            "note": "The note to add"
+        }
+    },
+    "notes": {
+        "description": "View the notes of a member",
+        "parameters": {
+            "member": "The member to view the notes of",
+            "page": "The page to view (default: 1)"
+        }
+    },
+    "mute": {
+        "description": "Timeout a member",
+        "parameters": {
+            "member": "The member to timeout",
+            "duration": "The duration of the timeout",
+            "reason": "The reason for the timeout"
+        }
+    },
+    "unmute": {
+        "description": "Unmute a member",
+        "parameters": {
+            "member": "The member to unmute",
+            "reason": "The reason for the unmute"
+        }
+    },
+    "snipe": {
+        "description": "Show recently deleted messages or reactions",
+        "parameters": {
+            "type": "The type of snipe to view (default: messages)",
+            "index": "Which snipe to view (default: 0)"
+        }
+    },
+    "work": {
+        "apply": {
+            "description": "Apply to a job",
+            "parameters": {
+                "job": "The job to apply to"
+            }
+        },
+        "list": {
+            "description": "List all the jobs"
+        },
+        "shift": {
+            "description": "Work your shift"
+        }
+    },
+    "daily": {
+        "description": "Claim your daily"
+    },
+    "weekly": {
+        "description": "Claim your weekly"
+    },
+    "monthly": {
+        "description": "Claim your monthly"
+    },
+    "shop": {
+        "view": {
+            "description": "View the shop"
+        },
+        "buy": {
+            "description": "Buy an item from the shop",
+            "parameters": {
+                "item": "The item to buy",
+                "amount": "The amount of items to buy"
+            }
+        }
+    },
+    "market": {
+        "post": {
+            "description": "Post an item on the market",
+            "parameters": {
+                "price": "The price to post",
+                "amount": "The amount of items to post",
+                "days": "The days it will be on sale (1-31)",
+                "item": "The item to post"
+            }
+        },
+        "view": {
+            "description": "View the market",
+            "parameters": {
+                "page": "The page to view (default: 1)",
+                "search": "An item to search"
+            }
+        },
+        "buy": {
+            "description": "Buy an item off the market",
+            "parameters": {
+                "listing_id": "The ID of the listing to buy",
+                "amount": "The amount to buy"
+            }
+        },
+        "edit": {
+            "description": "Edit your market listing",
+            "parameters": {
+                "listing_id": "The ID of the listing to edit",
+                "price": "The price to edit to"
+            }
+        },
+        "remove": {
+            "description": "Remove your market listing",
+            "parameters": {
+                "listing_id": "The ID of the listing to remove"
+            }
+        }
+    },
+    "fish": {
+        "profile": {
+            "description": "View your fishing profile"
+        },
+        "start": {
+            "description": "Start fishing"
+        }
+    },
+    "beg": {
+        "description": "Beg for coins"
+    },
+    "search": {
+        "description": "Search for coins"
+    },
+    "crime": {
+        "description": "Commit a crime for coins"
+    },
+    "hunt": {
+        "description": "Requires a rifle, hunt for animals"
+    },
+    "dig": {
+        "description": "Dig for coins, requires a shovel"
+    },
+    "deposit": {
+        "description": "Deposit coins into your bank",
+        "parameters": {
+            "amount": "The amount of coins to deposit"
+        }
+    },
+    "withdraw": {
+        "description": "Withdraw coins from your bank",
+        "parameters": {
+            "amount": "The amount of coins to withdraw"
+        }
+    },
+    "balance": {
+        "description": "Check your balance"
+    },
+    "inventory": {
+        "description": "View your inventory"
+    },
+    "tds": {
+        "calculate": {
+            "description": "Calculate the approximate time to achieve a TDS level",
+            "parameters": {
+                "current_level": "Your current level",
+                "current_exp": "Your current EXP",
+                "target_level": "Your target level",
+                "target_exp": "Your target EXP",
+                "target_date": "The date you want to get the level",
+                "games_per_day": "The games you'll play a day",
+                "gamemode": "The gamemode you will play (default: fallen)",
+                "vip": "If you have VIP or not",
+                "vip_plus": "If you have VIP+ or not",
+                "ephemeral":"Whether to send the response privately (default: false)"
+            }
+        }
+    },
+    "mee6": {
+        "calculate": {
+            "description": "Calculate the approximate time to achieve a mee6 level",
+            "parameters": {
+                "current_level": "Your current level",
+                "current_exp": "Your current EXP",
+                "target_level": "Your target level",
+                "target_exp": "Your target EXP",
+                "target_date": "The date you want to get the level",
+                "exp_per_day": "The EXP you will get per day",
+                "mee6_pro": "Whether or not you have mee6 pro",
+                "ephemeral":"Whether to send the response privately (default: false)"
+            }
+        },
+        "add": {
+            "description": "Add mee6 levels together",
+            "parameters": {
+                "levels": "The levels split by commas (e.g., 10,20,30)",
+                "exps": "The EXPs of the levels split by commas",
+                "ephemeral": "Whether to send the response privately (default: false)"
+            }
+        },
+        "plan": {
+            "description": "Plan out when you get a level",
+            "parameters": {
+                "current_level": "Your current level",
+                "target_level": "Your target level"
+            }
+        },
+        "show": {
+            "description": "Show your current plan"
+        }
+    }
+}

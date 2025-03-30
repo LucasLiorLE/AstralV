@@ -9,8 +9,8 @@ from discord.ui import Button, View
 import random
 
 from bot_utils import (
-    open_file,
-    save_file
+    open_json,
+    save_json
 )
 
 class QuizView(View):
@@ -153,7 +153,7 @@ class OppList(app_commands.Group):
         self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993, 1173963781706088451]
 
     async def user_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         if not data:
             return []
         
@@ -175,7 +175,7 @@ class OppList(app_commands.Group):
     async def list(self, interaction: discord.Interaction):
         await interaction.response.defer()
 
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         if not data:
             await interaction.followup.send("The opp list is empty!", ephemeral=True)
             return
@@ -193,7 +193,7 @@ class OppList(app_commands.Group):
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         existing_user = self.find_user(user, data)
         if existing_user:
             await interaction.response.send_message(f"{existing_user} is already in the opp list!", ephemeral=True)
@@ -209,7 +209,7 @@ class OppList(app_commands.Group):
             ],
             "current_version": 1
         }
-        save_file(self.file_path, data)
+        save_json(self.file_path, data)
         await interaction.response.send_message(f"Added {user} to the opp list.")
 
     @app_commands.command(name="remove", description="Remove someone from the opp list")
@@ -220,14 +220,14 @@ class OppList(app_commands.Group):
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         existing_user = self.find_user(user, data)
         if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
             return
 
         del data[existing_user]
-        save_file(self.file_path, data)
+        save_json(self.file_path, data)
         await interaction.response.send_message(f"Removed {existing_user} from the opp list.")
 
     @app_commands.command(name="edit", description="Edit someone's reason in the opp list")
@@ -238,7 +238,7 @@ class OppList(app_commands.Group):
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         existing_user = self.find_user(user, data)
         if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
@@ -252,7 +252,7 @@ class OppList(app_commands.Group):
             "version": new_version
         })
         user_data["current_version"] = new_version
-        save_file(self.file_path, data)
+        save_json(self.file_path, data)
         await interaction.response.send_message(f"Updated reason for {existing_user}.")
 
     @app_commands.command(name="view", description="View someone's opp list entry")
@@ -262,7 +262,7 @@ class OppList(app_commands.Group):
     )
     @app_commands.autocomplete(user=user_autocomplete)
     async def view(self, interaction: discord.Interaction, user: str, version: int = None):
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         existing_user = self.find_user(user, data)
         if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
@@ -297,7 +297,7 @@ class OppList(app_commands.Group):
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
-        data = open_file(self.file_path)
+        data = open_json(self.file_path)
         existing_user = self.find_user(user, data)
         if not existing_user:
             await interaction.response.send_message(f"{user} is not in the opp list!", ephemeral=True)
@@ -317,7 +317,7 @@ class OppList(app_commands.Group):
         items.insert(position-1, item)
         
         new_data = dict(items)
-        save_file(self.file_path, new_data)
+        save_json(self.file_path, new_data)
 
         embed = discord.Embed(title="Opp List Updated", color=discord.Color.green())
         opp_list = "\n".join(f"{i+1}. {name}" for i, (name, _) in enumerate(items))

@@ -1,8 +1,6 @@
 from bot_utils import (
     mc_fetchUUID,
     hypixelAPI,
-
-    load_commands,
     handle_logs,
 )
 
@@ -155,7 +153,6 @@ class HypixelView(View):
         profile_data = self.player.get("stats", {}).get("Arcade", {})
         embeds = []
         
-        # Main stats embed
         main_embed = discord.Embed(
             title="Arcade Stats",
             color=discord.Color.blurple(),
@@ -163,7 +160,6 @@ class HypixelView(View):
         )
         main_embed.add_field(name="Coins", value=f"{profile_data.get('coins', 0):,}", inline=False)
 
-        # Add Pixel Party stats
         pixel_party = profile_data.get("pixel_party", {})
         if pixel_party:
             main_embed.add_field(
@@ -174,7 +170,6 @@ class HypixelView(View):
             )
         embeds.append(main_embed)
 
-        # Create separate embed for dropper stats
         dropper = profile_data.get("dropper", {})
         if dropper:
             dropper_embed = discord.Embed(
@@ -197,7 +192,6 @@ class HypixelView(View):
             )
             embeds.append(dropper_embed)
 
-        # Create separate embed for party games stats
         stats_party_games = {
             re.sub(
                 r"(.*) (Deaths|Kills|Final Kills|Wins|Score|Time)$",
@@ -276,11 +270,10 @@ class HypixelView(View):
             value=f"Join Date: <t:{int(int(firstLogin) / 1000)}:F>\n"
             f"Last Login: <t:{int(int(lastLogin) / 1000)}:F>\n"
             f"Last Logout: <t:{int(int(lastLogout) / 1000)}:F>\n"
-            f"Most recent game: {recentGame.replace("_", " ").title()}",
+            f"Most recent game: {recentGame.replace('_', ' ').title()}",
             inline=False
         )
 
-        # Ignore why I stop using camel case it's how im feeling and I do these like 2 days apart
         exp = self.player.get("networkExp", 0)
         level_rewards = self.player.get("leveling", {}).get("claimedRewards", {})
         achievement_points = self.player.get("achievementPoints", 0)
@@ -314,7 +307,6 @@ class HypixelView(View):
             inline=False
         )
 
-        # This is "None" and not None because NoneType has no attribute for replace, while a string does
         current_click_effect = self.player.get("currentClickEffect", "None")
         particle_pack = self.player.get("particlePack", "None")
         current_gadget = self.player.get("currentGadget", "None")
@@ -322,10 +314,10 @@ class HypixelView(View):
 
         embed.add_field(
             name="Cosmetics",
-            value=f"Current click effect: {current_click_effect.replace("_", " ").title()}\n"
-            f"Particle pack: {particle_pack.replace("_", " ").title()}\n"
-            f"Current gadget: {current_gadget.replace("_", " ").title()}\n"
-            f"Current pet: {current_pet.replace("_", " ").title()}"
+            value=f"Current click effect: {current_click_effect.replace('_', ' ').title()}\n"
+            f"Particle pack: {particle_pack.replace('_', ' ').title()}\n"
+            f"Current gadget: {current_gadget.replace('_', ' ').title()}\n"
+            f"Current pet: {current_pet.replace('_', ' ').title()}"
         )
 
         return embed
@@ -334,8 +326,8 @@ class HypixelView(View):
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class HypixelCommandsGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="hypixel", description="Base Hypixel commands", guild_only=False)
-        load_commands(self.commands, "hypixel")
+        super().__init__(name="hypixel", description="Base Hypixel commands", guild_only=False)        
+        self.skyblock_group = SkyblockCommandsGroup(name="skyblock", description="Hypixel skyblock commands", parent=self)
 
     @app_commands.command(name="profile", description="Get a player's Hypixel stats.")
     @app_commands.describe(username="Their Minecraft username.")
@@ -469,7 +461,7 @@ class SkyblockView(View):
         tokens = mining.get("token", 0)
         tokens_spent = mining.get("tokens_spent", 0)
 
-        mithril = mining.get("powder_mithril", 0)  # Use current amount instead of total
+        mithril = mining.get("powder_mithril", 0)
         gemstone = mining.get("powder_gemstone_total", 0)
         glacite = mining.get("powder_glacite_total", 0)
 
@@ -505,7 +497,7 @@ class SkyblockView(View):
     def create_farm_embed(self):
         embed = discord.Embed(
             title="Farming Stats",
-            color=discord.Color.from_rgb(165, 42, 42), # 0xA52A2A, thinking of getting a darker color
+            color=discord.Color.from_rgb(165, 42, 42),
             timestamp=datetime.now(timezone.utc)
         )
 
@@ -882,11 +874,8 @@ class SkyblockView(View):
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class SkyblockCommandsGroup(app_commands.Group):
-    def __init__(self):
-        super().__init__(name="sb", description="Hypixel skyblock commands", guild_only=False)
-        
-        load_commands(self.commands, "sb")
-
+    def __init__(self, name: str, description: str, parent: HypixelCommandsGroup):
+        super().__init__(name=name, description=description, guild_only=False, parent=parent)
 
     @app_commands.command(name="profile", description="Get a Hypixel Skyblock account's data")
     @app_commands.describe(
@@ -933,7 +922,6 @@ class HypixelCog(commands.Cog):
         self.bot = bot
         
         self.bot.tree.add_command(HypixelCommandsGroup())
-        self.bot.tree.add_command(SkyblockCommandsGroup())
 
 async def setup(bot):
     await bot.add_cog(HypixelCog(bot))

@@ -6,8 +6,6 @@ import time
 from datetime import datetime, timezone
 
 from bot_utils import (
-    get_member,
-    create_interaction,
     get_context_object,
     handle_logs,
     open_json,

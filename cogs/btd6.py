@@ -1,7 +1,6 @@
 from bot_utils import (
     open_json,
     save_json,
-    load_commands,
     handle_logs,
 )
 
@@ -17,7 +16,6 @@ from aiohttp import ClientSession
 class BloonsTD6CommandGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="btd6", description="Bloons Tower Defense 6 related commands", guild_only=False)
-        load_commands(self.commands, "btd6")
 
     @app_commands.command(name="connect")
     async def btd6connect(self, interaction: discord.Interaction, oak_key: str = None):
@@ -49,7 +47,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
                 await interaction.followup.send("Success! Your BTD6 (Maybe someone else's) was successfully linked.")
         except Exception as e:
             await handle_logs(interaction, e)
-
         
     @app_commands.command(name="racedata")
     async def btd6racedata(self, interaction: discord.Interaction, race_id: str):
@@ -146,7 +143,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
     @app_commands.command(name="races")
     async def btd6races(self, interaction: discord.Interaction):
         await interaction.response.defer()
-
         try:
             async with ClientSession() as session:
                 async with session.get("https://data.ninjakiwi.com/btd6/races") as response:
@@ -267,7 +263,6 @@ class BloonsTD6CommandGroup(app_commands.Group):
 class BloonsTD6Cog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
         self.bot.tree.add_command(BloonsTD6CommandGroup())
 
 async def setup(bot):

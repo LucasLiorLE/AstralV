@@ -1,6 +1,6 @@
 from .file_handler import (
-    open_file,
-    save_file
+    open_json,
+    save_json
 )
 
 import discord
@@ -336,21 +336,21 @@ def get_member_cooldown(user_id: discord.User, command: str = None, exp: bool = 
     current_time = int(time.time())
     user_id = str(user_id)
     
-    member_info = open_file("storage/member_info.json")
+    member_info = open_json("storage/member_info.json")
 
 
     user_data = member_info.setdefault(user_id, {})
     if exp:
         user_exp = user_data.setdefault("EXP", {})
         exp_cooldown = user_exp.setdefault("cooldown", 0)
-        save_file("storage/member_info.json", member_info)
+        save_json("storage/member_info.json", member_info)
 
         return current_time - exp_cooldown
     
     if command:
         commands = user_data.setdefault("commands", {})
         command_data = commands.setdefault(command, {"cooldown": 0})
-        save_file("storage/member_info.json", member_info)
+        save_json("storage/member_info.json", member_info)
         
         return current_time - command_data["cooldown"]
 
@@ -373,7 +373,7 @@ def check_command_cooldown(user_id: str, command_name: str, cooldown_seconds: in
             is_on_cooldown, remaining_time = check_command_cooldown(interaction.user.id, "test", 10)
         ```
     """
-    member_info = open_file("storage/member_info.json")
+    member_info = open_json("storage/member_info.json")
     current_time = int(time.time())
     
     if str(user_id) not in member_info:
@@ -393,7 +393,7 @@ def check_command_cooldown(user_id: str, command_name: str, cooldown_seconds: in
 
 def update_command_cooldown(user_id: str, command_name: str):
     """Update the command cooldown timestamp"""
-    member_info = open_file("storage/member_info.json")
+    member_info = open_json("storage/member_info.json")
     current_time = int(time.time())
     
     if str(user_id) not in member_info:
@@ -409,10 +409,10 @@ def update_command_cooldown(user_id: str, command_name: str):
     user_data["commands"][command_name]["uses"] += 1
     user_data["commands"][command_name]["cooldown"] = current_time
     
-    save_file("storage/member_info.json", member_info)
+    save_json("storage/member_info.json", member_info)
     
 async def get_command_help_embed(command_name: str) -> discord.Embed:
-    command_help = open_file("storage/command_help.json")
+    command_help = open_json("storage/command_help.json")
 
     command_data = command_help.get("moderation", {}).get(command_name)
     if not command_data:
@@ -525,4 +525,3 @@ async def send_cooldown(ctx_or_interaction: Union[commands.Context, discord.Inte
             await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
     else:
         await ctx_or_interaction.send(embed=embed)
-

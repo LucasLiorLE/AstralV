@@ -142,12 +142,8 @@ class MessageLogs(commands.Cog):
             "message_id": reaction.message.id
         })
 
-    @commands.hybrid_command(name="snipe", description="Show recently deleted messages or reactions")
+    @commands.hybrid_command(name="snipe")
     @commands.guild_only()
-    @app_commands.describe(
-        type="Type of snipe to view",
-        index="Which snipe to view (0 is most recent)"
-    )
     @app_commands.choices(type=[
         app_commands.Choice(name="Messages", value="messages"),
         app_commands.Choice(name="Reactions", value="reactions"),
