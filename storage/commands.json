@@ -1173,5 +1173,22 @@
         "show": {
             "description": "Show your current plan"
         }
+    },
+    "calculator": {
+        "help": {
+            "description": "Shows you the calculator help screen"
+        },
+        "basic": {
+            "description": "For basic calculations that don't use variables",
+            "parameters": {
+                "equation": "The equation to solve"
+            }
+        },
+        "advanced": {
+            "description": "Accpets variables and some other symbols",
+            "parameters": {
+                "equation": "The equation to solve"
+            }
+        }
     }
 }

@@ -3,7 +3,6 @@ from bot_utils import (
     parse_duration,
     open_json,
     save_json,
-    load_commands,
     handle_logs, 
 )
 
@@ -139,8 +138,6 @@ class GiveawayGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="giveaway", description="Giveaway related commands", guild_only=True)
         
-        load_commands(self.commands, "giveaway")
-
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if not interaction.guild:
             await interaction.response.send_message("Giveaway commands can only be used within a server!", ephemeral=True)
@@ -245,7 +242,6 @@ class AlertGroup(app_commands.Group):
     def __init__(self, bot):
         super().__init__(name="alert", description="Used for updates, and allows you to follow along!")
         self.bot = bot
-        load_commands(self.commands, "alert")
 
     @app_commands.command(name="follow")
     async def follow(self, interaction: discord.Interaction):
