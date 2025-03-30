@@ -102,7 +102,10 @@ class HelpView(View):
             name="Graphing Functions",
             value=(
                 "Plot mathematical functions using:\n"
-                "`/calculator graph equation:x^2 xmin:-10 xmax:10`\n\n"
+                "`/calculator graph equation:x^2 mode:y xmin:-10 xmax:10 ymin:-5 ymax:5`\n\n"
+                "**Modes:**\n"
+                "• y - Regular cartesian (y = f(x))\n"
+                "• r - Polar coordinates (r = f(x))\n\n"
                 "**Supported functions:**\n"
                 "• Basic operations (+, -, *, /, ^)\n"
                 "• Trig - Degrees (dsin, dcos, dtan)\n"
@@ -115,10 +118,9 @@ class HelpView(View):
         embed.add_field(
             name="Examples",
             value=(
-                "```• dsin(x)\n"
-                "• rtan(x)\n"
-                "• 2*x^2 + 3*x + 1\n"
-                "• arcsin(x/2)```"
+                "```• Regular: equation:2*x^2+3 mode:y\n"
+                "• Polar: equation:2*cos(3*x) mode:r\n"
+                "• With bounds: equation:sin(x) ymin:-2 ymax:2```"
             ),
             inline=False
         )
@@ -294,14 +296,28 @@ class CalculatorCommandGroup(app_commands.Group):
             await handle_logs(interaction, e)
 
     @app_commands.command(name="graph")
-    @app_commands.describe(
-        equation="The equation to graph (use x as variable)",
-        xmin="Minimum x value (default: -10.0)",
-        xmax="Maximum x value (default: 10.0)"
+    @app_commands.choices(
+        mode=[
+            app_commands.Choice(name="Polar", value="r"),
+            app_commands.Choice(name="Cartesian", value="y")
+        ]
     )
-    async def graph(self, interaction: discord.Interaction, equation: str, xmin: float = -10.0, xmax: float = 10.0):
+    async def graph(
+        self, 
+        interaction: discord.Interaction, 
+        equation: str, 
+        mode: str = 'y',
+        xmin: float = -10.0, 
+        xmax: float = 10.0,
+        ymin: float = None,
+        ymax: float = None
+    ):
         await interaction.response.defer()
         try:
+            if mode not in ['y', 'r']:
+                await interaction.followup.send("Mode must be either 'y' for regular graphs or 'r' for polar graphs.")
+                return
+            
             if not is_safe_expression(equation):
                 await interaction.followup.send("Expression contains unsafe operations.")
                 return
@@ -314,9 +330,14 @@ class CalculatorCommandGroup(app_commands.Group):
                     return
                 equation = str(list(result.values())[-1])
             
-            graph_data = create_graph(equation, (xmin, xmax))
+            y_range = (ymin, ymax) if ymin is not None and ymax is not None else None
+            graph_data = create_graph(equation, (xmin, xmax), y_range, mode)
+            
             file = File(fp=graph_data, filename='graph.png')
-            embed = discord.Embed(title="Function Graph")
+            embed = discord.Embed(
+                title="Function Graph",
+                description=f"{'y' if mode == 'y' else 'r'} = {equation}"
+            )
             embed.set_image(url="attachment://graph.png")
             await interaction.followup.send(file=file, embed=embed)
             
@@ -324,10 +345,6 @@ class CalculatorCommandGroup(app_commands.Group):
             await interaction.followup.send(f"Error: {str(e)}")
 
     @app_commands.command(name="derivative")
-    @app_commands.describe(
-        equation="The equation to differentiate (use x as variable)",
-        order="Order of derivative (default: 1)"
-    )
     async def derivative(self, interaction: discord.Interaction, equation: str, order: int = 1):
         await interaction.response.defer()
         try:
@@ -348,11 +365,6 @@ class CalculatorCommandGroup(app_commands.Group):
             await interaction.followup.send(f"Error: {str(e)}")
 
     @app_commands.command(name="integral")
-    @app_commands.describe(
-        equation="The equation to integrate (use x as variable)",
-        lower="Lower bound",
-        upper="Upper bound"
-    )
     async def integral(self, interaction: discord.Interaction, equation: str, lower: float, upper: float):
         await interaction.response.defer()
         try:

@@ -1189,6 +1189,32 @@
             "parameters": {
                 "equation": "The equation to solve"
             }
+        },
+        "graph": {
+            "description": "Graph an equation",
+            "parameters": {
+                "equation": "The equation to graph (use x as variable)",
+                "mode": "Graph mode (default: Cartesian)",
+                "xmin": "Minimum x value (default: -10.0)",
+                "xmax": "Maximum x value (default: 10.0)",
+                "ymin": "Minimum y value",
+                "ymax": "Maximum y value"
+            }
+        },
+        "derivative": {
+            "description": "Calculates the derivative of an equation",
+            "parameters": {
+                "equation": "The equation to differentiate (x as variable)",
+                "order": "The order of derivative (default: 1)"
+            }
+        },
+        "integral": {
+            "description": "Calculates the definite integral of an equation",
+            "parameters": {
+                "equation": "The equation to integrate (x as variable)",
+                "lower": "The lower bound",
+                "upper": "The upper bound"
+            }
         }
     }
 }

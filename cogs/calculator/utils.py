@@ -399,47 +399,39 @@ if __name__ == "__main__":
 	print("Final variables:", variables)
 
 
-def create_graph(expr: str, x_range=(-10, 10), resolution=1000) -> io.BytesIO:
-	"""Create a graph from the given expression"""
+def create_graph(expr: str, x_range=(-10, 10), y_range=None, mode='y') -> io.BytesIO:
+	"""Create a graph from the given expression
+	mode: 'y' for regular cartesian, 'r' for polar coordinates
+	"""
 	plt.clf()
-	x = np.linspace(x_range[0], x_range[1], resolution)
 	
 	try:
-		expr = re.sub(r'(\d+)([a-zA-Z])', r'\1*\2', expr)
-		
-		expr = expr.replace('dsin', 'np.sin')
-		expr = expr.replace('dcos', 'np.cos')
-		expr = expr.replace('dtan', 'np.tan')
-		expr = expr.replace('rsin', 'np.sin')
-		expr = expr.replace('rcos', 'np.cos')
-		expr = expr.replace('rtan', 'np.tan')
-		if any(f in expr for f in ['dsin', 'dcos', 'dtan']):
-			expr = re.sub(r'(np\.[a-z]+)\(([^)]+)\)', 
-						 lambda m: f"{m.group(1)}({m.group(2)}*np.pi/180)", 
-						 expr)
-		expr = expr.replace('^', '**')
-		expr = expr.replace('abs', 'np.abs')
-		expr = expr.replace('sin', 'np.sin')
-		expr = expr.replace('cos', 'np.cos')
-		expr = expr.replace('tan', 'np.tan')
-		expr = expr.replace('arcsin', 'np.arcsin')
-		expr = expr.replace('arccos', 'np.arccos')
-		expr = expr.replace('arctan', 'np.arctan')
-		expr = expr.replace('asin', 'np.arcsin')
-		expr = expr.replace('acos', 'np.arccos')
-		expr = expr.replace('atan', 'np.arctan')
-		expr = expr.replace('sqrt', 'np.sqrt')
-		expr = expr.replace('log', 'np.log')
-		expr = expr.replace('e^', 'np.exp')
-		
-		y = eval(expr, {'x': x, 'np': np})
-		
-		plt.plot(x, y, 'b-', label=f'y = {expr}')
+		if mode == 'r':
+			theta = np.linspace(0, 2*np.pi, 1000)
+			expr_polar = expr.replace('x', 'theta')
+			context = {'theta': theta, 'np': np}
+			r = eval(expr_polar, context)
+			
+			x = r * np.cos(theta)
+			y = r * np.sin(theta)
+			plt.plot(x, y, 'b-', label=f'r = {expr}')
+			
+			plt.axis('equal')
+		else:
+			x = np.linspace(x_range[0], x_range[1], 1000)
+			expr = re.sub(r'(\d+)([a-zA-Z])', r'\1*\2', expr)
+						
+			y = eval(expr, {'x': x, 'np': np})
+			plt.plot(x, y, 'b-', label=f'y = {expr}')
+
 		plt.grid(True)
 		plt.axhline(y=0, color='k', linestyle='-', alpha=0.3)
 		plt.axvline(x=0, color='k', linestyle='-', alpha=0.3)
 		plt.legend()
-		
+
+		if y_range:
+			plt.ylim(y_range)
+
 		buf = io.BytesIO()
 		plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
 		buf.seek(0)
