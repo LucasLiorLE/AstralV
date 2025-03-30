@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-
+from discord import app_commands, ButtonStyle, File
+from discord.ui import View, Button, button
 from bot_utils import (
     handle_logs
 )
@@ -13,9 +13,168 @@ from .utils import (
     check_for_abs,
     is_safe_expression,
     process_radicals,
-    process_factorial
+    process_factorial,
+    create_graph,
+    symbolic_derivative,
+    definite_integral
 )
+import numpy as np
+class HelpView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.current_page = "basic"
+        
+    def create_basic_embed(self):
+        embed = discord.Embed(title="Calculator Help - Basic Operations")
+        embed.add_field(
+            name="Basic math symbols:",
+            value=(
+                "Addition `+` (1 + 1)\n"
+                "Subtraction `-` (1 - 1)\n"
+                "Multiplication `*` (2 \* 2)\n"
+                "Division `/` (4 / 2)"
+            )
+        )
+        embed.add_field(
+            name="Other math symbols:",
+            value=(
+                "Power `**` or ^ (2^2)\n"
+                "Radicals `&` (3&2, 3rd root of 2)\n"
+                "Modulo `%` (10 % 2)\n"
+                "Abs `|| ||` (\||-1\||)\n"
+                "Factorial `!` (4!)"
+            )
+        )
+        embed.add_field(
+            name="Trigonometric Functions",
+            value=(
+                "Degree Mode (90°):\n"
+                "`dsin(90)` → 1\n"
+                "`dcos(90)` → 0\n"
+                "`dtan(45)` → 1\n\n"
+                "Radian Mode (π):\n"
+                "`rsin(pi/2)` → 1\n"
+                "`rcos(pi)` → -1\n"
+                "`rtan(pi/4)` → 1"
+            ),
+            inline=False
+        )
+        return embed
+        
+    def create_advanced_embed(self):
+        embed = discord.Embed(title="Calculator Help - Advanced Operations")
+        embed.add_field(
+            name="Advanced math symbols:",
+            value=(
+                "Variable Assignment `#`\n"
+                "Variable Calling `@`\n"
+                "Productation `?`\n"
+                "Summation `$`\n"
+                "New Line `;`"
+            )
+        )
+        embed.add_field(
+            name="Trigonometric Functions",
+            value=(
+                "**Degree Mode:**\n"
+                "`dsin, dcos, dtan`\n"
+                "**Radian Mode:**\n"
+                "`rsin, rcos, rtan`\n"
+                "**Inverse Functions:**\n"
+                "`arcsin/asin, arccos/acos, arctan/atan`"
+            )
+        )
+        embed.add_field(
+            name="Examples",
+            value=(
+                "```• (dsin(90))#x\n"
+                "• (1+1+1+1)#x; $@x,4,#k,(@k*2)\n"
+                "• rsin(pi/2)^2 + rcos(pi/2)^2\n"
+                "• arcsin(0.5)#angle```"
+            ),
+            inline=False
+        )
+        return embed
+        
+    def create_graph_embed(self):
+        embed = discord.Embed(title="Calculator Help - Graphing")
+        embed.add_field(
+            name="Graphing Functions",
+            value=(
+                "Plot mathematical functions using:\n"
+                "`/calculator graph equation:x^2 xmin:-10 xmax:10`\n\n"
+                "**Supported functions:**\n"
+                "• Basic operations (+, -, *, /, ^)\n"
+                "• Trig - Degrees (dsin, dcos, dtan)\n"
+                "• Trig - Radians (rsin, rcos, rtan)\n"
+                "• Inverse trig (arcsin, arccos, arctan)\n"
+                "• Others (sqrt, abs, log, e^)\n"
+                "• Advanced operations (summation, etc)"
+            )
+        )
+        embed.add_field(
+            name="Examples",
+            value=(
+                "```• dsin(x)\n"
+                "• rtan(x)\n"
+                "• 2*x^2 + 3*x + 1\n"
+                "• arcsin(x/2)```"
+            ),
+            inline=False
+        )
+        return embed
 
+    def create_calculus_embed(self):
+        embed = discord.Embed(title="Calculator Help - Calculus")
+        embed.add_field(
+            name="Derivative",
+            value=(
+                "Calculate derivatives:\n"
+                "`/calculator derivative equation:x^2 order:1`\n"
+                "• Supports all math functions\n"
+                "• Order specifies nth derivative"
+            )
+        )
+        embed.add_field(
+            name="Integral",
+            value=(
+                "Calculate definite integrals:\n"
+                "`/calculator integral equation:x^2 lower:0 upper:1`\n"
+                "• Supports all math functions\n"
+                "• Evaluates between lower and upper bounds"
+            )
+        )
+        embed.add_field(
+            name="Examples",
+            value=(
+                "```• derivative: sin(x)\n"
+                "• derivative: x^3 order:2\n"
+                "• integral: x^2 lower:0 upper:1\n"
+                "• integral: sin(x) lower:0 upper:pi```"
+            ),
+            inline=False
+        )
+        return embed
+
+    @button(label="Basic", style=ButtonStyle.secondary)
+    async def basic_button(self, interaction: discord.Interaction, button: Button):
+        self.current_page = "basic"
+        await interaction.response.edit_message(embed=self.create_basic_embed(), view=self)
+        
+    @button(label="Advanced", style=ButtonStyle.secondary)
+    async def advanced_button(self, interaction: discord.Interaction, button: Button):
+        self.current_page = "advanced"
+        await interaction.response.edit_message(embed=self.create_advanced_embed(), view=self)
+        
+    @button(label="Graphing", style=ButtonStyle.secondary)
+    async def graph_button(self, interaction: discord.Interaction, button: Button):
+        self.current_page = "graph"
+        await interaction.response.edit_message(embed=self.create_graph_embed(), view=self)
+
+    @button(label="Calculus", style=ButtonStyle.secondary)
+    async def calculus_button(self, interaction: discord.Interaction, button: Button):
+        self.current_page = "calculus"
+        await interaction.response.edit_message(embed=self.create_calculus_embed(), view=self)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -63,63 +222,9 @@ class CalculatorCommandGroup(app_commands.Group):
     @app_commands.command(name="help")
     async def help(self, interaction: discord.Interaction):
         try:
-            embed = discord.Embed(
-                title="Calculator Help"
-            )
-            embed.add_field(
-                name="Basic math symbols:",
-                value=(
-                    "Addition `+` (1 + 1)\n"
-                    "Subtraction `-` (1 - 1)\n"
-                    "Multiplication `*` (2 \* 2)\n"
-                    "Division `/` (4 / 2)"
-                )
-            )
-            embed.add_field(
-                name="Other math symbols:",
-                value=(
-                    "Power `**` or ^ (2^2)\n"
-                    "Radicals `&` (3&2, 3rd root of 2)\n"
-                    "Modulo `%` (10 % 2)\n"
-                    "Abs `|| ||` (\||-1\||)\n"
-                    "Factorial `!` (4!)"
-                )
-            )
-            embed.add_field(
-                name="Advanced math symbols:",
-                value=(
-                "Variable Assignment `#`\n"
-                "Variable Calling `@`\n"
-                "Productation `?`\n"
-                "Summation `$`\n"
-                "New Line `;`\n\n"
-
-                "Examples:\n"
-                "```#5 assigns 5 to x\n"
-                "@x calls value of x\n"
-                "?1,@x products numbers 1 through 5\n"
-                "$1,@x sums numbers 1 through 5\n\n"
-                "(1+1+1+1)#x; $@x,4,#k,(@k*2)\n"
-                "x = 1 + 1 + 1 + 1, which is 4, so x is 4\n"
-                "Summation lower bound = @x, which is 4\n"
-                "Summation upper bound is 4\n"
-                "The output variable is k\n"
-                "Iterate k in the loop, in this summation, it's just k*2\n"
-                "So basically in here UB and LB are the same\n"
-                "4*2 = 8 = k. The output is k, which is 8```"
-                )
-            )
-            embed.add_field(
-                name="Notes:",
-                value=(
-                    "Python expressions also work\n"
-                    "round(5.2) returns 5\n"
-                    "Can also use abs(), and a lot more!\n"
-                    "Basic math symbols only work in /calculator basic\n"
-                    "Advanced math symbols only work in /calculator advanced"
-                )
-            )
-            await interaction.response.send_message(embed=embed)
+            view = HelpView()
+            embed = view.create_basic_embed()
+            await interaction.response.send_message(embed=embed, view=view)
         except Exception as e:
             await handle_logs(interaction, e)
 
@@ -187,6 +292,82 @@ class CalculatorCommandGroup(app_commands.Group):
                 
         except Exception as e:
             await handle_logs(interaction, e)
+
+    @app_commands.command(name="graph")
+    @app_commands.describe(
+        equation="The equation to graph (use x as variable)",
+        xmin="Minimum x value (default: -10.0)",
+        xmax="Maximum x value (default: 10.0)"
+    )
+    async def graph(self, interaction: discord.Interaction, equation: str, xmin: float = -10.0, xmax: float = 10.0):
+        await interaction.response.defer()
+        try:
+            if not is_safe_expression(equation):
+                await interaction.followup.send("Expression contains unsafe operations.")
+                return
+            
+            if any(char in equation for char in ['#', '@', '$', '?', ';']):
+                functions = split_equation(equation)
+                result, _ = self.calculate(functions)
+                if isinstance(result, str) and result.startswith("Error"):
+                    await interaction.followup.send(result)
+                    return
+                equation = str(list(result.values())[-1])
+            
+            graph_data = create_graph(equation, (xmin, xmax))
+            file = File(fp=graph_data, filename='graph.png')
+            embed = discord.Embed(title="Function Graph")
+            embed.set_image(url="attachment://graph.png")
+            await interaction.followup.send(file=file, embed=embed)
+            
+        except Exception as e:
+            await interaction.followup.send(f"Error: {str(e)}")
+
+    @app_commands.command(name="derivative")
+    @app_commands.describe(
+        equation="The equation to differentiate (use x as variable)",
+        order="Order of derivative (default: 1)"
+    )
+    async def derivative(self, interaction: discord.Interaction, equation: str, order: int = 1):
+        await interaction.response.defer()
+        try:
+            if not is_safe_expression(equation):
+                return await interaction.followup.send("Expression contains unsafe operations.")
+            
+            deriv = symbolic_derivative(equation, order=order)
+            x_vals = np.linspace(-2, 2, 5)
+            results = [f"x={x:.2f}: {deriv(x):.4f}" for x in x_vals]
+            
+            embed = discord.Embed(
+                title=f"Derivative of order {order}",
+                description=f"Expression: `{equation}`\n\nSample values:\n" + "\n".join(results)
+            )
+            await interaction.followup.send(embed=embed)
+            
+        except Exception as e:
+            await interaction.followup.send(f"Error: {str(e)}")
+
+    @app_commands.command(name="integral")
+    @app_commands.describe(
+        equation="The equation to integrate (use x as variable)",
+        lower="Lower bound",
+        upper="Upper bound"
+    )
+    async def integral(self, interaction: discord.Interaction, equation: str, lower: float, upper: float):
+        await interaction.response.defer()
+        try:
+            if not is_safe_expression(equation):
+                return await interaction.followup.send("Expression contains unsafe operations.")
+            
+            result = definite_integral(equation, lower, upper)
+            embed = discord.Embed(
+                title="Definite Integral",
+                description=f"Expression: `{equation}`\nBounds: [{lower}, {upper}]\nResult: {result:.6f}"
+            )
+            await interaction.followup.send(embed=embed)
+            
+        except Exception as e:
+            await interaction.followup.send(f"Error: {str(e)}")
 
 class CalculatorCog(commands.Cog):
     def __init__(self, bot):
