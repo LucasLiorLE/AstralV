@@ -16,9 +16,12 @@ from .utils import (
     process_factorial
 )
 
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class CalculatorCommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="calculator", description="Calculations...")
+        super().__init__(name="calculator", description="Calculations...", guild_only=False)
 
     def format_steps(self, equation, vars_history):
         steps = []
