@@ -87,7 +87,6 @@ class GeometryDashCommandGroup(app_commands.Group):
 class GeometryDashCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
         self.bot.tree.add_command(GeometryDashCommandGroup())
 
 async def setup(bot):

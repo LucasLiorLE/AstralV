@@ -1216,5 +1216,46 @@
                 "upper": "The upper bound"
             }
         }
+    },
+    "fun": {
+        "trivia": {
+            "description": "Get a random trivia question!"
+        },
+        "truth": {
+            "description": "Get a random question that must be answered truthfully",
+            "parameters": {
+                "rating": "Question rating"
+            }
+        },
+        "dare": {
+            "description": "Get a random dare",
+            "parameters": {
+                "rating": "Question rating"
+            }
+        },
+        "tod": {
+            "description": "Get a random truth or dare question",
+            "parameters": {
+                "rating": "Question rating"
+            }
+        },
+        "wyr": {
+            "description": "Get a random would you rather question",
+            "parameters": {
+                "rating": "Question rating"
+            }
+        },
+        "nhie": {
+            "description": "Get a random never have I ever",
+            "parameters": {
+                "rating": "Question rating"
+            }
+        },
+        "paranoia": {
+            "description": "Get a random paranoia question",
+            "parameters": {
+                "rating": "Question rating"
+            }
+        }
     }
 }

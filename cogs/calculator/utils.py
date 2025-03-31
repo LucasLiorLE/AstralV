@@ -400,28 +400,58 @@ if __name__ == "__main__":
 
 
 def create_graph(expr: str, x_range=(-10, 10), y_range=None, mode='y') -> io.BytesIO:
-	"""Create a graph from the given expression
-	mode: 'y' for regular cartesian, 'r' for polar coordinates
-	"""
+	"""Create a graph from the given expression"""
 	plt.clf()
 	
 	try:
+		expr = expr.replace('^', '**')
+		
 		if mode == 'r':
 			theta = np.linspace(0, 2*np.pi, 1000)
 			expr_polar = expr.replace('x', 'theta')
-			context = {'theta': theta, 'np': np}
-			r = eval(expr_polar, context)
 			
+			context = {
+				'theta': theta, 
+				'np': np,
+				'sin': np.sin,
+				'cos': np.cos,
+				'tan': np.tan,
+				'sqrt': np.sqrt,
+				'abs': np.abs,
+				'log': np.log,
+				'pi': np.pi,
+				'e': np.e
+			}
+			
+			r = eval(expr_polar, context)
 			x = r * np.cos(theta)
 			y = r * np.sin(theta)
 			plt.plot(x, y, 'b-', label=f'r = {expr}')
-			
 			plt.axis('equal')
 		else:
 			x = np.linspace(x_range[0], x_range[1], 1000)
 			expr = re.sub(r'(\d+)([a-zA-Z])', r'\1*\2', expr)
-						
-			y = eval(expr, {'x': x, 'np': np})
+			
+			context = {
+				'x': x,
+				'np': np,
+				'sin': np.sin,
+				'cos': np.cos,
+				'tan': np.tan,
+				'sqrt': np.sqrt,
+				'abs': np.abs,
+				'log': np.log,
+				'pi': np.pi,
+				'e': np.e,
+				'arcsin': np.arcsin,
+				'arccos': np.arccos,
+				'arctan': np.arctan,
+				'asin': np.arcsin,
+				'acos': np.arccos,
+				'atan': np.arctan
+			}
+			
+			y = eval(expr, context)
 			plt.plot(x, y, 'b-', label=f'y = {expr}')
 
 		plt.grid(True)

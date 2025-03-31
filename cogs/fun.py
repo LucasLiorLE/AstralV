@@ -7,14 +7,366 @@ from bot_utils import (
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord.ui import Button, View
 
 import random
 from datetime import datetime, timezone
 from aiohttp import ClientSession
 
+class TriviaView(View):
+    def __init__(self, correct_answer: str, question: str):
+        super().__init__(timeout=60)
+        self.correct_answer = correct_answer
+        self.question = question
+        self.used = []
+        self.winner_found = False
+        self.message = None
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+        embed = discord.Embed(
+            title="Time's Up!",
+            description=f"No one answered in time. The correct answer was: {self.correct_answer}",
+            color=discord.Color.red()
+        )
+        
+        await self.message.edit(view=self)
+        await self.message.reply(embed=embed)
+
+    async def handle_click(self, interaction: discord.Interaction, button: Button):
+        if self.winner_found:
+            await interaction.response.send_message("This question has already been answered!", ephemeral=True)
+            return
+
+        user_id = interaction.user.id
+        if user_id in self.used:
+            await interaction.response.send_message("You already answered this question.", ephemeral=True)
+            return
+        
+        self.used.append(user_id)
+
+        if button.label == self.correct_answer:
+            self.winner_found = True
+            for item in self.children:
+                item.disabled = True
+            
+            embed = discord.Embed(
+                title="Correct Answer!",
+                description=self.question,
+                color=discord.Color.green()
+            )
+            embed.add_field(name="Answer", value=self.correct_answer)
+            embed.add_field(name="Winner", value=interaction.user.mention)
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(embed=embed)
+            self.stop()
+        else:
+            await interaction.response.send_message("Wrong answer!", ephemeral=True)
+
+class QuestionView(View):
+    def __init__(self, question_type: str = None, rating: str = "pg13"):
+        super().__init__()
+        self.question_type = question_type
+        self.rating = rating
+
+    async def get_question(self, type_override: str = None):
+        question_type = type_override or self.question_type
+        if not question_type:
+            question_type = random.choice(["truth", "dare", "wyr", "nhie", "paranoia"])
+        
+        url = f"https://api.truthordarebot.xyz/v1/{question_type.lower()}?rating={self.rating}"
+        async with ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    return await response.json()
+                return None
+
+    async def handle_response(self, interaction: discord.Interaction, question_type: str = None):
+        data = await self.get_question(question_type)
+        if data:
+            colors = {
+                "TRUTH": discord.Color.blue(),
+                "DARE": discord.Color.red(),
+                "WYR": discord.Color.purple(),
+                "NHIE": discord.Color.gold(),
+                "PARANOIA": discord.Color.orange()
+            }
+            titles = {
+                "TRUTH": "Truth",
+                "DARE": "Dare",
+                "WYR": "Would You Rather",
+                "NHIE": "Never Have I Ever",
+                "PARANOIA": "Paranoia"
+            }
+            embed = discord.Embed(
+                title=f"{titles[data['type']]} ({data['rating']})",
+                description=data['question'],
+                color=colors[data['type']]
+            )
+            embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+            for item in self.children:
+                item.disabled = True
+            await interaction.response.edit_message(view=self)
+            new_view = QuestionView(self.question_type, self.rating)
+            await interaction.followup.send(embed=embed, view=new_view)
+        else:
+            await interaction.response.send_message("Failed to fetch a question.", ephemeral=True)
+
+    @discord.ui.button(label="Truth", style=discord.ButtonStyle.primary)
+    async def truth_button(self, interaction: discord.Interaction, button: Button):
+        await self.handle_response(interaction, "truth")
+
+    @discord.ui.button(label="Dare", style=discord.ButtonStyle.danger)
+    async def dare_button(self, interaction: discord.Interaction, button: Button):
+        await self.handle_response(interaction, "dare")
+
+    @discord.ui.button(label="Would You Rather", style=discord.ButtonStyle.secondary)
+    async def wyr_button(self, interaction: discord.Interaction, button: Button):
+        await self.handle_response(interaction, "wyr")
+
+    @discord.ui.button(label="Never Have I Ever", style=discord.ButtonStyle.secondary)
+    async def nhie_button(self, interaction: discord.Interaction, button: Button):
+        await self.handle_response(interaction, "nhie")
+
+    @discord.ui.button(label="Paranoia", style=discord.ButtonStyle.secondary)
+    async def paranoia_button(self, interaction: discord.Interaction, button: Button):
+        await self.handle_response(interaction, "paranoia")
+
+    @discord.ui.button(label="Random", style=discord.ButtonStyle.success)
+    async def random_button(self, interaction: discord.Interaction, button: Button):
+        await self.handle_response(interaction)
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+class FunCommandGroup(app_commands.Group):
+    def __init__(self):
+        super().__init__(name="fun", description="Fun commands to mess around with!", guild_only=False)
+
+    rating_choices = [
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ]
+
+    @app_commands.command(name="trivia")
+    async def trivia(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            async with ClientSession() as session:
+                async with session.get("https://opentdb.com/api.php?amount=1") as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        if data["response_code"] == 0:
+                            result = data["results"][0]
+                            
+                            def clean_text(text):
+                                replacements = {
+                                    "&quot;": '"',
+                                    "&#039;": "'",
+                                    "&amp;": "&",
+                                    "&lt;": "<",
+                                    "&gt;": ">",
+                                    "&apos;": "'",
+                                }
+                                for old, new in replacements.items():
+                                    text = text.replace(old, new)
+                                return text
+                            
+                            question = clean_text(result["question"])
+                            correct = clean_text(result["correct_answer"])
+                            incorrect = [clean_text(ans) for ans in result["incorrect_answers"]]
+                            
+                            embed = discord.Embed(
+                                title=f"Trivia Question ({result['category']})",
+                                description=question,
+                                color=get_member_color(interaction, 0x3498db)
+                            )
+                            embed.add_field(name="Difficulty", value=result["difficulty"].capitalize())
+                            embed.set_footer(text=f"Time limit: 60 seconds | Requested by {interaction.user.display_name}")
+                            
+                            view = TriviaView(correct, question)
+                            
+                            all_answers = [correct] + incorrect
+                            random.shuffle(all_answers)
+                            
+                            for answer in all_answers:
+                                button = Button(label=answer, style=discord.ButtonStyle.primary)
+                                button.callback = lambda i=interaction, b=button: view.handle_click(i, b)
+                                view.add_item(button)
+                            
+                            await interaction.followup.send(embed=embed, view=view)
+                            view.message = await interaction.original_response()
+                        else:
+                            await interaction.followup.send("Failed to fetch trivia question. Try again later.")
+                    else:
+                        await interaction.followup.send("Failed to connect to trivia API. Try again later.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="truth")
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ])
+    async def truth(self, interaction: discord.Interaction, rating: str = "pg13"):
+        await interaction.response.defer()
+        try:
+            url = f"https://api.truthordarebot.xyz/v1/truth?rating={rating}"
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        embed = discord.Embed(
+                            title=f"Truth ({data['rating']})",
+                            description=data['question'],
+                            color=discord.Color.blue()
+                        )
+                        embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+                        view = QuestionView("TRUTH", rating)
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send("Failed to fetch a truth question.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="dare")
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ])
+    async def dare(self, interaction: discord.Interaction, rating: str = "pg13"):
+        await interaction.response.defer()
+        try:
+            url = f"https://api.truthordarebot.xyz/v1/dare?rating={rating}"
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        embed = discord.Embed(
+                            title=f"Dare ({data['rating']})",
+                            description=data['question'],
+                            color=discord.Color.red()
+                        )
+                        embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+                        view = QuestionView("DARE", rating)
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send("Failed to fetch a dare question.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="tod")
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ])
+    async def truth_or_dare(self, interaction: discord.Interaction, rating: str = "pg13"):
+        await interaction.response.defer()
+        try:
+            endpoint = "truth" if random.random() < 0.5 else "dare"
+            url = f"https://api.truthordarebot.xyz/v1/{endpoint}?rating={rating}"
+            
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        color = discord.Color.blue() if data['type'] == "TRUTH" else discord.Color.red()
+                        embed = discord.Embed(
+                            title=f"{data['type'].capitalize()} ({data['rating']})",
+                            description=data['question'],
+                            color=color
+                        )
+                        embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+                        view = QuestionView(None, rating)
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send("Failed to fetch a question.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="wyr")
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ])
+    async def would_you_rather(self, interaction: discord.Interaction, rating: str = "pg13"):
+        await interaction.response.defer()
+        try:
+            url = f"https://api.truthordarebot.xyz/v1/wyr?rating={rating}"
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        embed = discord.Embed(
+                            title=f"Would You Rather ({data['rating']})",
+                            description=data['question'],
+                            color=discord.Color.purple()
+                        )
+                        embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+                        view = QuestionView("WYR", rating)
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send("Failed to fetch a question.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="nhie")
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ])
+    async def never_have_i_ever(self, interaction: discord.Interaction, rating: str = "pg13"):
+        await interaction.response.defer()
+        try:
+            url = f"https://api.truthordarebot.xyz/v1/nhie?rating={rating}"
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        embed = discord.Embed(
+                            title=f"Never Have I Ever ({data['rating']})",
+                            description=data['question'],
+                            color=discord.Color.gold()
+                        )
+                        embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+                        view = QuestionView("NHIE", rating)
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send("Failed to fetch a question.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="paranoia")
+    @app_commands.choices(rating=[
+        app_commands.Choice(name="PG (Family Friendly)", value="pg"),
+        app_commands.Choice(name="PG-13 (Teen)", value="pg13")
+    ])
+    async def paranoia(self, interaction: discord.Interaction, rating: str = "pg13"):
+        await interaction.response.defer()
+        try:
+            url = f"https://api.truthordarebot.xyz/v1/paranoia?rating={rating}"
+            async with ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        embed = discord.Embed(
+                            title=f"Paranoia ({data['rating']})",
+                            description=data['question'],
+                            color=discord.Color.orange()
+                        )
+                        embed.set_footer(text=f"ID: {data['id']} | Requested by {interaction.user.display_name}")
+                        view = QuestionView("PARANOIA", rating)
+                        await interaction.followup.send(embed=embed, view=view)
+                    else:
+                        await interaction.followup.send("Failed to fetch a question.")
+        except Exception as e:
+            await handle_logs(interaction, e)
+
 class FunCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bot.tree.add_command(FunCommandGroup())
     
     def check_moderation_info(self, ctx_or_interaction, permission_name: str, minimum_role: str) -> tuple[bool, discord.Embed]:
         try:
