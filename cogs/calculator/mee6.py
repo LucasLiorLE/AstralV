@@ -224,9 +224,8 @@ class Mee6CommandGroup(app_commands.Group):
         except Exception as error:
             await handle_logs(interaction, error)
 
-    @app_commands.command(name="plan")
-    async def plan(self, interaction: discord.Interaction, 
-                  current_level: int, target_level: int):
+    @app_commands.command(name="update")
+    async def update(self, interaction: discord.Interaction, level: int, exp: int):
         await interaction.response.defer()
         try:
             member_info = load_member_info()
@@ -235,27 +234,20 @@ class Mee6CommandGroup(app_commands.Group):
             if user_id not in member_info:
                 member_info[user_id] = {"EXP": {"total": 0, "cooldown": 0}}
             
-            member_info[user_id]["MEE6Plan"] = {
-                "enabled": True,
-                "start_level": current_level,
-                "target_level": target_level,
-                "last_update": datetime.now().timestamp(),
-                "history": [{
-                    "timestamp": datetime.now().timestamp(),
-                    "level": current_level,
-                    "exp": 0
-                }]
-            }
+            if "MEE6Plan" not in member_info[user_id]:
+                member_info[user_id]["MEE6Plan"] = {
+                    "enabled": True,
+                    "history": []
+                }
+            
+            member_info[user_id]["MEE6Plan"]["history"].append({
+                "timestamp": datetime.now().timestamp(),
+                "level": level,
+                "exp": exp
+            })
             
             save_member_info(member_info)
-            
-            await interaction.followup.send(
-                "Level tracking enabled! I will DM you daily to ask for your current level and EXP."
-            )
-            
-            await interaction.user.send(
-                "What is your current level and EXP? Please enter level, EXP (ex. 100, 4000)"
-            )
+            await interaction.followup.send("Progress updated! Use `/mee6 show` to see your progress.")
             
         except Exception as error:
             await handle_logs(interaction, error)
@@ -268,10 +260,9 @@ class Mee6CommandGroup(app_commands.Group):
             user_id = str(interaction.user.id)
             
             if user_id not in member_info or "MEE6Plan" not in member_info[user_id]:
-                return await interaction.followup.send("No tracking plan set! Use `/mee6 plan` first.")
+                return await interaction.followup.send("No tracking data! Use `/mee6 update` first.")
             
-            plan = member_info[user_id]["MEE6Plan"]
-            history = plan["history"]
+            history = member_info[user_id]["MEE6Plan"]["history"]
             
             if len(history) < 2:
                 return await interaction.followup.send("Not enough data yet. Please provide at least two updates!")
@@ -287,27 +278,9 @@ class Mee6CommandGroup(app_commands.Group):
             
             embed = discord.Embed(title="MEE6 Level Progress", color=discord.Color.blue())
             embed.add_field(name="Current Progress", value=
-                f"Starting Level: {plan['start_level']}\n"
+                f"Starting Level: {first['level']}\n"
                 f"Current Level: {last['level']}\n"
-                f"Target Level: {plan['target_level']}\n"
                 f"Daily EXP Rate: {daily_rate:,}", inline=False)
-            
-            milestones = [25, 50, 75, 100, 125, 150]
-            predictions = []
-            current_total_exp = self.calculate_exp(last["level"]) + last["exp"]
-            
-            for milestone in milestones:
-                if milestone <= last["level"]:
-                    continue
-                    
-                target_exp = self.calculate_exp(milestone)
-                exp_needed = target_exp - current_total_exp
-                days_needed = exp_needed / daily_rate
-                completion_date = datetime.now() + timedelta(days=days_needed)
-                predictions.append(f"Level {milestone}: <t:{int(completion_date.timestamp())}:D>")
-            
-            if predictions:
-                embed.add_field(name="Estimated Achievement Dates", value="\n".join(predictions), inline=False)
             
             await interaction.followup.send(embed=embed)
             
@@ -318,56 +291,6 @@ class Mee6Cog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.tree.add_command(Mee6CommandGroup())
-        self.check_updates.start()
-
-    @tasks.loop(hours=24)
-    async def check_updates(self):
-        try:
-            member_info = load_member_info()
-            now = datetime.now().timestamp()
-            
-            for user_id, data in member_info.items():
-                if "MEE6Plan" in data and data["MEE6Plan"]["enabled"]:
-                    last_update = data["MEE6Plan"]["last_update"]
-                    if now - last_update >= 24 * 3600:
-                        try:
-                            user = await self.bot.fetch_user(int(user_id))
-                            await user.send("What is your current level and EXP? Please enter level, EXP (ex. 100, 4000)")
-                        except:
-                            continue
-                            
-        except Exception as error:
-            print(f"Error in check_updates: {error}")
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot or not isinstance(message.channel, discord.DMChannel):
-            return
-            
-        try:
-            member_info = load_member_info()
-            user_id = str(message.author.id)
-            
-            if user_id not in member_info or "MEE6Plan" not in member_info[user_id]:
-                return
-                
-            try:
-                level, exp = map(int, message.content.split(','))
-            except:
-                return
-                
-            member_info[user_id]["MEE6Plan"]["history"].append({
-                "timestamp": datetime.now().timestamp(),
-                "level": level,
-                "exp": exp
-            })
-            member_info[user_id]["MEE6Plan"]["last_update"] = datetime.now().timestamp()
-            
-            save_member_info(member_info)
-            await message.channel.send("Progress updated! Use `/mee6 show` to see your progress.")
-            
-        except Exception as error:
-            print(f"Error in on_message: {error}")
 
 async def setup(bot):
     await bot.add_cog(Mee6Cog(bot))
