@@ -438,7 +438,7 @@
         "description": "Get help on a command",
         "parameters": {
             "command": "The command to get help on",
-            "ephemeral":"Whether to send the response privately (default: true)"
+            "ephemeral": "Whether to send the response privately (default: true)"
         }
     },
     "level": {
@@ -1137,7 +1137,20 @@
                 "gamemode": "The gamemode you will play (default: fallen)",
                 "vip": "If you have VIP or not",
                 "vip_plus": "If you have VIP+ or not",
-                "ephemeral":"Whether to send the response privately (default: false)"
+                "ephemeral": "Whether to send the response privately (default: false)"
+            }
+        },
+        "update": {
+            "description": "Update your level process",
+            "parameters": {
+                "level": "Your current level",
+                "exp": "Your current exp"
+            }
+        },
+        "show": {
+            "description": "Show your current plan",
+            "parameters": {
+                "target_level": "The level you want to achieve"
             }
         }
     },
@@ -1152,7 +1165,7 @@
                 "target_date": "The date you want to get the level",
                 "exp_per_day": "The EXP you will get per day",
                 "mee6_pro": "Whether or not you have mee6 pro",
-                "ephemeral":"Whether to send the response privately (default: false)"
+                "ephemeral": "Whether to send the response privately (default: false)"
             }
         },
         "add": {
@@ -1163,15 +1176,18 @@
                 "ephemeral": "Whether to send the response privately (default: false)"
             }
         },
-        "plan": {
-            "description": "Plan out when you get a level",
+        "update": {
+            "description": "Update your level process",
             "parameters": {
-                "current_level": "Your current level",
-                "target_level": "Your target level"
+                "level": "Your current level",
+                "exp": "Your current exp"
             }
         },
         "show": {
-            "description": "Show your current plan"
+            "description": "Show your current plan",
+            "parameters": {
+                "target_level": "The level you want to achieve"
+            }
         }
     },
     "calculator": {

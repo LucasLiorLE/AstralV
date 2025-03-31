@@ -235,9 +235,12 @@ class Mee6CommandGroup(app_commands.Group):
             await handle_logs(interaction, error)
 
     @app_commands.command(name="show")
-    async def show(self, interaction: discord.Interaction):
+    async def show(self, interaction: discord.Interaction, target_level: int = None):
         await interaction.response.defer()
         try:
+            if target_level is not None and not is_valid_value(target_level, 1, 500):
+                return await interaction.followup.send("Target level must be between 1 and 500!", ephemeral=True)
+                
             member_info = load_member_info()
             user_id = str(interaction.user.id)
             
@@ -262,7 +265,59 @@ class Mee6CommandGroup(app_commands.Group):
                 f"Current Level: {last['level']}\n"
                 f"Daily EXP Rate: {daily_rate:,}", inline=False)
 
-            milestones = [15, 25, 30, 40, 69, 100]
+            now = datetime.now().timestamp()
+            seven_days_ago = now - (7 * 24 * 3600)
+            thirty_days_ago = now - (30 * 24 * 3600)
+            
+            daily_rates = []
+            for i in range(len(history) - 1):
+                curr = history[i]
+                next_entry = history[i + 1]
+                days_between = (next_entry["timestamp"] - curr["timestamp"]) / (24 * 3600)
+                if days_between > 0:
+                    exp_gained = (self.calculate_exp(next_entry["level"]) + next_entry["exp"]) - (self.calculate_exp(curr["level"]) + curr["exp"])
+                    daily_rates.append((next_entry["timestamp"], exp_gained / days_between))
+
+            recent_rates_7 = [rate for timestamp, rate in daily_rates if timestamp >= seven_days_ago]
+            recent_rates_30 = [rate for timestamp, rate in daily_rates if timestamp >= thirty_days_ago]
+
+            stats_info = ""
+            if recent_rates_7:
+                stats_info += f"Last 7 days:\n"
+                stats_info += f"• Highest: {max(recent_rates_7):,.0f} exp/day\n"
+                stats_info += f"• Average: {sum(recent_rates_7)/len(recent_rates_7):,.0f} exp/day\n"
+                stats_info += f"• Lowest: {min(recent_rates_7):,.0f} exp/day\n\n"
+            
+            if recent_rates_30:
+                stats_info += f"Last 30 days:\n"
+                stats_info += f"• Highest: {max(recent_rates_30):,.0f} exp/day\n"
+                stats_info += f"• Average: {sum(recent_rates_30)/len(recent_rates_30):,.0f} exp/day\n"
+                stats_info += f"• Lowest: {min(recent_rates_30):,.0f} exp/day"
+
+            if stats_info:
+                embed.add_field(name="Detailed Statistics", value=stats_info, inline=False)
+
+            if target_level:
+                if target_level <= last["level"]:
+                    embed.add_field(name="Target Level Status", 
+                                  value=f"You have already achieved level {target_level}!", 
+                                  inline=False)
+                else:
+                    current_total_exp = self.calculate_exp(last["level"]) + last["exp"]
+                    target_exp = self.calculate_exp(target_level)
+                    exp_needed = target_exp - current_total_exp
+                    days_needed = exp_needed / daily_rate if daily_rate > 0 else float('inf')
+                    eta = datetime.now() + timedelta(days=days_needed) if days_needed != float('inf') else None
+                    
+                    status = f"Level {target_level}: "
+                    if eta:
+                        status += f"<t:{int(eta.timestamp())}:R>"
+                    else:
+                        status += "Unknown"
+                    
+                    embed.add_field(name="Target Level Status", value=status, inline=False)
+
+            milestones = [15, 25, 30, 40, 69, 100, 125, 150]
             milestone_text = ""
             current_total_exp = self.calculate_exp(last["level"]) + last["exp"]
             
@@ -282,6 +337,9 @@ class Mee6CommandGroup(app_commands.Group):
 
             if milestone_text:
                 embed.add_field(name="Milestone ETAs", value=milestone_text, inline=False)
+            
+            if days < 7:
+                embed.set_footer(text="⚠️ Limited data: ETAs may be inaccurate due to short tracking period", icon_url=interaction.user.avatar.url)
             
             await interaction.followup.send(embed=embed)
             
