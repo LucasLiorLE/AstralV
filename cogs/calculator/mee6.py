@@ -261,6 +261,27 @@ class Mee6CommandGroup(app_commands.Group):
                 f"Starting Level: {first['level']}\n"
                 f"Current Level: {last['level']}\n"
                 f"Daily EXP Rate: {daily_rate:,}", inline=False)
+
+            milestones = [15, 25, 30, 40, 69, 100]
+            milestone_text = ""
+            current_total_exp = self.calculate_exp(last["level"]) + last["exp"]
+            
+            for milestone in milestones:
+                if milestone <= last["level"]:
+                    continue
+                milestone_exp = self.calculate_exp(milestone)
+                exp_needed = milestone_exp - current_total_exp
+                days_needed = exp_needed / daily_rate if daily_rate > 0 else float('inf')
+                eta = datetime.now() + timedelta(days=days_needed) if days_needed != float('inf') else None
+                
+                milestone_text += f"Level {milestone}: "
+                if eta:
+                    milestone_text += f"<t:{int(eta.timestamp())}:R>\n"
+                else:
+                    milestone_text += "Unknown\n"
+
+            if milestone_text:
+                embed.add_field(name="Milestone ETAs", value=milestone_text, inline=False)
             
             await interaction.followup.send(embed=embed)
             
