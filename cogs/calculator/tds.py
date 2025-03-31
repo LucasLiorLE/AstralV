@@ -15,6 +15,9 @@ from .utils import (
     save_member_info
 )
 
+import matplotlib.pyplot as plt
+import io
+
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class TDSCommandGroup(app_commands.Group):
@@ -191,14 +194,24 @@ class TDSCommandGroup(app_commands.Group):
             member_info = load_member_info()
             user_id = str(interaction.user.id)
 
+            if user_id not in member_info:
+                member_info[user_id] = {}
+
             if "TDSPlan" not in member_info[user_id]:
                 member_info[user_id]["TDSPlan"] = {
                     "enabled": True,
                     "history": []
                 }
             
+            now = datetime.now().timestamp()
+            hundred_days_ago = now - (100 * 24 * 3600)
+            member_info[user_id]["TDSPlan"]["history"] = [
+                entry for entry in member_info[user_id]["TDSPlan"]["history"]
+                if entry["timestamp"] >= hundred_days_ago
+            ]
+            
             member_info[user_id]["TDSPlan"]["history"].append({
-                "timestamp": datetime.now().timestamp(),
+                "timestamp": now,
                 "level": level,
                 "exp": exp
             })
@@ -243,6 +256,7 @@ class TDSCommandGroup(app_commands.Group):
             now = datetime.now().timestamp()
             seven_days_ago = now - (7 * 24 * 3600)
             thirty_days_ago = now - (30 * 24 * 3600)
+            hundred_days_ago = now - (100 * 24 * 3600)
             
             daily_rates = []
             for i in range(len(history) - 1):
@@ -255,6 +269,7 @@ class TDSCommandGroup(app_commands.Group):
 
             recent_rates_7 = [rate for timestamp, rate in daily_rates if timestamp >= seven_days_ago]
             recent_rates_30 = [rate for timestamp, rate in daily_rates if timestamp >= thirty_days_ago]
+            recent_rates_100 = [rate for timestamp, rate in daily_rates if timestamp >= hundred_days_ago]
 
             stats_info = ""
             if recent_rates_7:
@@ -267,10 +282,31 @@ class TDSCommandGroup(app_commands.Group):
                 stats_info += f"Last 30 days:\n"
                 stats_info += f"• Highest: {max(recent_rates_30):,.2f} exp/day\n"
                 stats_info += f"• Average: {sum(recent_rates_30)/len(recent_rates_30):,.2f} exp/day\n"
-                stats_info += f"• Lowest: {min(recent_rates_30):,.2f} exp/day"
+                stats_info += f"• Lowest: {min(recent_rates_30):,.2f} exp/day\n\n"
+
+            if recent_rates_100:
+                stats_info += f"Last 100 days:\n"
+                stats_info += f"• Highest: {max(recent_rates_100):,.2f} exp/day\n"
+                stats_info += f"• Average: {sum(recent_rates_100)/len(recent_rates_100):,.2f} exp/day\n"
+                stats_info += f"• Lowest: {min(recent_rates_100):,.2f} exp/day"
 
             if stats_info:
                 embed.add_field(name="Detailed Statistics", value=stats_info, inline=False)
+
+            current_total_exp = sum(self.calculate_exp(i) for i in range(last["level"])) + last["exp"]
+            future_estimates = ""
+            periods = [(7, "7 days"), (30, "30 days"), (100, "100 days"), (365, "1 year")]
+            
+            for days_ahead, label in periods:
+                future_exp = current_total_exp + (daily_rate * days_ahead)
+                future_level = 1
+                while sum(self.calculate_exp(i) for i in range(future_level + 1)) <= future_exp:
+                    future_level += 1
+                remaining_exp = future_exp - sum(self.calculate_exp(i) for i in range(future_level))
+                future_estimates += f"{label}: Level {future_level} + {remaining_exp:,.2f} exp\n"
+
+            if future_estimates:
+                embed.add_field(name="Estimated Progress", value=future_estimates, inline=False)
 
             if target_level:
                 if target_level <= last["level"]:
@@ -316,7 +352,35 @@ class TDSCommandGroup(app_commands.Group):
             if days < 7:
                 embed.set_footer(text="⚠️ Limited data: ETAs may be inaccurate due to short tracking period", icon_url=interaction.user.avatar.url)
             
-            await interaction.followup.send(embed=embed)
+            plt.clf()
+            fourteen_days_ago = now - (14 * 24 * 3600)
+            recent_history = [(h["timestamp"], sum(self.calculate_exp(i) for i in range(h["level"])) + h["exp"]) 
+                            for h in history 
+                            if h["timestamp"] >= fourteen_days_ago]
+            
+            graph_file = None
+            if len(recent_history) >= 2:
+                timestamps, exp_values = zip(*recent_history)
+                dates = [datetime.fromtimestamp(ts) for ts in timestamps]
+                
+                plt.figure(figsize=(10, 5))
+                plt.plot(dates, exp_values, 'b-', marker='o')
+                plt.gcf().autofmt_xdate()
+                plt.grid(True, linestyle='--', alpha=0.7)
+                plt.title('EXP Progress - Last 14 Days')
+                plt.ylabel('Total EXP')
+                
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png')
+                buf.seek(0)
+                
+                graph_file = discord.File(buf, filename='exp_graph.png')
+                embed.set_image(url="attachment://exp_graph.png")
+            
+            if graph_file:
+                await interaction.followup.send(embed=embed, file=graph_file)
+            else:
+                await interaction.followup.send(embed=embed)
             
         except Exception as error:
             await handle_logs(interaction, error)
