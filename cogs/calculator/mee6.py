@@ -1,33 +1,18 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
 
 from datetime import datetime, timedelta
-import json
-import os
-from pathlib import Path
 
 from bot_utils import (
     handle_logs
 )
 
-MEMBER_INFO_PATH = Path(__file__).parents[2] / "storage" / "member_info.json"
-
-def load_member_info():
-    with open(MEMBER_INFO_PATH, 'r') as f:
-        return json.load(f)
-
-def save_member_info(data):
-    with open(MEMBER_INFO_PATH, 'w') as f:
-        json.dump(data, f, indent=4)
-
-def is_valid_value(value: int, min_val: int, max_val: int) -> bool:
-    if value is None:
-        return True
-    try:
-        return min_val <= value <= max_val
-    except TypeError:
-        return False
+from .utils import (
+    is_valid_value,
+    load_member_info,
+    save_member_info
+)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -230,10 +215,7 @@ class Mee6CommandGroup(app_commands.Group):
         try:
             member_info = load_member_info()
             user_id = str(interaction.user.id)
-            
-            if user_id not in member_info:
-                member_info[user_id] = {"EXP": {"total": 0, "cooldown": 0}}
-            
+         
             if "MEE6Plan" not in member_info[user_id]:
                 member_info[user_id]["MEE6Plan"] = {
                     "enabled": True,
@@ -270,11 +252,9 @@ class Mee6CommandGroup(app_commands.Group):
             first = history[0]
             last = history[-1]
             days = (last["timestamp"] - first["timestamp"]) / (24 * 3600)
-            if days < 1:
-                return await interaction.followup.send("Please wait at least 24 hours for progress tracking.")
             
             total_exp_gained = self.calculate_exp(last["level"]) + last["exp"] - (self.calculate_exp(first["level"]) + first["exp"])
-            daily_rate = int(total_exp_gained / days)
+            daily_rate = int(total_exp_gained / days) if days > 0 else total_exp_gained
             
             embed = discord.Embed(title="MEE6 Level Progress", color=discord.Color.blue())
             embed.add_field(name="Current Progress", value=

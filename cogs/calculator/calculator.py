@@ -322,6 +322,10 @@ class CalculatorCommandGroup(app_commands.Group):
                 await interaction.followup.send("Expression contains unsafe operations.")
                 return
             
+            equation = equation.replace('^', '**')
+            equation = check_for_abs(equation)
+            equation = process_radicals(equation)
+            
             if any(char in equation for char in ['#', '@', '$', '?', ';']):
                 functions = split_equation(equation)
                 result, _ = self.calculate(functions)

@@ -1,3 +1,24 @@
+from pathlib import Path
+import json 
+
+MEMBER_INFO_PATH = Path(__file__).parents[2] / "storage" / "member_info.json"
+
+def load_member_info():
+    with open(MEMBER_INFO_PATH, 'r') as f:
+        return json.load(f)
+
+def save_member_info(data):
+    with open(MEMBER_INFO_PATH, 'w') as f:
+        json.dump(data, f, indent=4)
+
+def is_valid_value(value: int, min_val: int, max_val: int) -> bool:
+    if value is None:
+        return True
+    try:
+        return min_val <= value <= max_val
+    except TypeError:
+        return False
+
 import re, math, io
 import matplotlib.pyplot as plt
 import numpy as np
@@ -89,15 +110,15 @@ def is_safe_expression(expr: str) -> bool:
 
 def check_for_abs(expr: str) -> str:
 	"""
-	Check for absolute value notation (||x||) and replace with abs(x)
+	Check for absolute value notation (|x|) and replace with abs(x)
 	"""
-	pattern = r'\|\|(.*?)\|\|'
-	while '||' in expr:
-		match = re.search(pattern, expr)
+	pattern = r'\|(.*?)\|'
+	while '|' in expr:
+		match = re.search(pattern, expr) 
 		if not match:
 			break
 		content = match.group(1)
-		expr = expr.replace(f"||{content}||", f"abs({content})")
+		expr = expr.replace(f"|{content}|", f"abs({content})")
 	return expr
 
 def factorial(n: float) -> float:
@@ -135,18 +156,38 @@ def process_factorial(expr: str) -> str:
 	return re.sub(pattern, calc_multi_factorial, expr)
 
 def process_radicals(expr: str) -> str:
-	"""
-	Process radical expressions of the form n&x (nth root of x)
-	or &x (square root of x).
-	
-	Examples:
-		"3&27" -> "pow(27, 1/3)"  # cube root of 27
-		"&9" -> "pow(9, 1/2)"     # square root of 9
-		"2*&9" -> "2*pow(9, 1/2)" # 2 times square root of 9
-	"""
-	expr = re.sub(r'(\d+)&(\d+(?:\.\d+)?)', lambda m: f"pow({m.group(2)}, 1/{m.group(1)})", expr)
-	expr = re.sub(r'(?<![\d])&(\d+(?:\.\d+)?)', lambda m: f"pow({m.group(1)}, 1/2)", expr)
-	return expr
+    """
+    Process radical expressions of the form n&x (nth root of x)
+    or &x (square root of x).
+    
+    Examples:
+        "3&27" -> "pow(27, 1/3)"      # cube root of 27
+        "&9" -> "pow(9, 1/2)"         # square root of 9
+        "2*&9" -> "2*pow(9, 1/2)"     # 2 times square root of 9
+        "&abs(x)" -> "pow(abs(x), 1/2)" # square root of absolute value
+    """
+    while '&' in expr:
+        match = re.search(r'((\d+)?&)([a-zA-Z0-9_()\[\]]+)', expr)
+        if not match:
+            break
+            
+        full_match = match.group(0)
+        root_degree = match.group(2) or '2'
+        operand = match.group(3)
+        
+        if operand.startswith('('):
+            paren_count = 1
+            for i, c in enumerate(operand[1:], 1):
+                if c == '(': paren_count += 1
+                elif c == ')': paren_count -= 1
+                if paren_count == 0:
+                    operand = operand[1:i]
+                    break
+        
+        replacement = f"pow({operand}, 1/{root_degree})"
+        expr = expr.replace(full_match, replacement)
+    
+    return expr
 
 def resolve_vars(expr: str, variables: dict) -> str:
 	"""
@@ -383,89 +424,97 @@ if __name__ == "__main__":
 	equation = "(1+1+1+1)#x; ?@x,8,#k,(2)"
 
 	expressions = split_equation(equation)
-	print("Split expressions:", expressions)
 	
 	for expr in expressions:
 		if '#' in expr and not expr.startswith('$') and not expr.startswith('?'):
 			result = process_assignment(expr, variables)
-			print(f"Processed assignment {expr} -> {result}")
 		elif expr.startswith('$'):
 			result = process_summation(expr, variables)
-			print(f"Processed summation {expr} -> {result}")
 		elif expr.startswith('?'):
 			result = process_productation(expr, variables)
-			print(f"Processed productation {expr} -> {result}")
 
-	print("Final variables:", variables)
-
+def clean_expression(expr: str) -> str:
+    """Clean up expression and ensure balanced parentheses"""
+    expr = expr.replace(' ', '')
+    while '(()' in expr or '())' in expr:
+        expr = expr.replace('()', '')
+    open_count = expr.count('(')
+    close_count = expr.count(')')
+    if open_count > close_count:
+        expr += ')' * (open_count - close_count)
+    return expr
 
 def create_graph(expr: str, x_range=(-10, 10), y_range=None, mode='y') -> io.BytesIO:
-	"""Create a graph from the given expression"""
-	plt.clf()
-	
-	try:
-		expr = expr.replace('^', '**')
-		
-		if mode == 'r':
-			theta = np.linspace(0, 2*np.pi, 1000)
-			expr_polar = expr.replace('x', 'theta')
-			
-			context = {
-				'theta': theta, 
-				'np': np,
-				'sin': np.sin,
-				'cos': np.cos,
-				'tan': np.tan,
-				'sqrt': np.sqrt,
-				'abs': np.abs,
-				'log': np.log,
-				'pi': np.pi,
-				'e': np.e
-			}
-			
-			r = eval(expr_polar, context)
-			x = r * np.cos(theta)
-			y = r * np.sin(theta)
-			plt.plot(x, y, 'b-', label=f'r = {expr}')
-			plt.axis('equal')
-		else:
-			x = np.linspace(x_range[0], x_range[1], 1000)
-			expr = re.sub(r'(\d+)([a-zA-Z])', r'\1*\2', expr)
-			
-			context = {
-				'x': x,
-				'np': np,
-				'sin': np.sin,
-				'cos': np.cos,
-				'tan': np.tan,
-				'sqrt': np.sqrt,
-				'abs': np.abs,
-				'log': np.log,
-				'pi': np.pi,
-				'e': np.e,
-				'arcsin': np.arcsin,
-				'arccos': np.arccos,
-				'arctan': np.arctan,
-				'asin': np.arcsin,
-				'acos': np.arccos,
-				'atan': np.arctan
-			}
-			
-			y = eval(expr, context)
-			plt.plot(x, y, 'b-', label=f'y = {expr}')
+    """Create a graph from the given expression"""
+    plt.clf()
+    
+    try:
+        expr = clean_expression(expr)
+        expr = expr.replace('^', '**')
+        
+        if mode == 'r':
+            theta = np.linspace(0, 2*np.pi, 1000)
+            expr_polar = expr.replace('x', 'theta')
+            expr_polar = check_for_abs(expr_polar)
+            expr_polar = process_radicals(expr_polar)
+            
+            context = {
+                'theta': theta, 
+                'np': np,
+                'sin': np.sin,
+                'cos': np.cos,
+                'tan': np.tan,
+                'sqrt': np.sqrt,
+                'abs': np.abs,
+                'log': np.log,
+                'pi': np.pi,
+                'e': np.e,
+                'pow': pow
+            }
+            
+            r = eval(expr_polar, {"__builtins__": {}}, context)
+            x = r * np.cos(theta)
+            y = r * np.sin(theta)
+            plt.plot(x, y, 'b-', label=f'r = {expr}')
+            plt.axis('equal')
+        else:
+            x = np.linspace(x_range[0], x_range[1], 1000)
+            expr = re.sub(r'(\d+)([a-zA-Z])', r'\1*\2', expr)
+            
+            context = {
+                'x': x,
+                'np': np,
+                'sin': np.sin,
+                'cos': np.cos,
+                'tan': np.tan,
+                'sqrt': np.sqrt,
+                'abs': np.abs,
+                'log': np.log,
+                'pi': np.pi,
+                'e': np.e,
+                'arcsin': np.arcsin,
+                'arccos': np.arccos,
+                'arctan': np.arctan,
+                'asin': np.arcsin,
+                'acos': np.arccos,
+                'atan': np.arctan
+            }
+            
+            y = eval(expr, context)
+            plt.plot(x, y, 'b-', label=f'y = {expr}')
 
-		plt.grid(True)
-		plt.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-		plt.axvline(x=0, color='k', linestyle='-', alpha=0.3)
-		plt.legend()
+        plt.grid(True)
+        plt.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+        plt.axvline(x=0, color='k', linestyle='-', alpha=0.3)
+        plt.legend()
 
-		if y_range:
-			plt.ylim(y_range)
+        if y_range:
+            plt.ylim(y_range)
 
-		buf = io.BytesIO()
-		plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
-		buf.seek(0)
-		return buf
-		
-	except Exception as e:
-		raise ValueError(f"Error creating graph: {str(e)}")
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=300, bbox_inches='tight')
+        buf.seek(0)
+        return buf
+        
+    except Exception as e:
+        raise ValueError(str(e))

@@ -9,13 +9,11 @@ from bot_utils import (
     handle_logs
 )
 
-def is_valid_value(value: int, min_val: int, max_val: int) -> bool:
-    if value is None:
-        return True
-    try:
-        return min_val <= value <= max_val
-    except TypeError:
-        return False
+from .utils import (
+    is_valid_value,
+    load_member_info,
+    save_member_info
+)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -183,6 +181,64 @@ class TDSCommandGroup(app_commands.Group):
 
             await interaction.followup.send(embed=embed)
 
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    @app_commands.command(name="update")
+    async def update(self, interaction: discord.Interaction, level: int, exp: float):
+        await interaction.response.defer()
+        try:
+            member_info = load_member_info()
+            user_id = str(interaction.user.id)
+
+            if "TDSPlan" not in member_info[user_id]:
+                member_info[user_id]["TDSPlan"] = {
+                    "enabled": True,
+                    "history": []
+                }
+            
+            member_info[user_id]["TDSPlan"]["history"].append({
+                "timestamp": datetime.now().timestamp(),
+                "level": level,
+                "exp": exp
+            })
+            
+            save_member_info(member_info)
+            await interaction.followup.send("Progress updated! Use `/tds show` to see your progress.")
+            
+        except Exception as error:
+            await handle_logs(interaction, error)
+
+    @app_commands.command(name="show")
+    async def show(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        try:
+            member_info = load_member_info()
+            user_id = str(interaction.user.id)
+            
+            if user_id not in member_info or "TDSPlan" not in member_info[user_id]:
+                return await interaction.followup.send("No tracking data! Use `/tds update` first.")
+            
+            history = member_info[user_id]["TDSPlan"]["history"]
+            
+            if len(history) < 2:
+                return await interaction.followup.send("Not enough data yet. Please provide at least two updates!")
+            
+            first = history[0]
+            last = history[-1]
+            days = (last["timestamp"] - first["timestamp"]) / (24 * 3600)
+            
+            total_exp_gained = self.calculate_exp(last["level"]) + last["exp"] - (self.calculate_exp(first["level"]) + first["exp"])
+            daily_rate = total_exp_gained / days if days > 0 else total_exp_gained
+            
+            embed = discord.Embed(title="TDS Level Progress", color=discord.Color.blue())
+            embed.add_field(name="Current Progress", value=
+                f"Starting Level: {first['level']}\n"
+                f"Current Level: {last['level']}\n"
+                f"Daily EXP Rate: {daily_rate:,.2f}", inline=False)
+            
+            await interaction.followup.send(embed=embed)
+            
         except Exception as error:
             await handle_logs(interaction, error)
 
