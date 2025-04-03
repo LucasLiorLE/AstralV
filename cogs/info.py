@@ -565,5 +565,68 @@ class InfoCog(commands.Cog):
 		except Exception as error:
 			await handle_logs(interaction, error)
 
+	@app_commands.command(name="pokemon")
+	async def pokemon(self, interaction: discord.Interaction, pokemon: str):
+		await interaction.response.defer()
+		try:
+			async with ClientSession() as session:
+				async with session.get(f"https://pokeapi.co/api/v2/pokemon/{pokemon.lower()}") as response:
+					if response.status != 200:
+						await interaction.followup.send(f"Pokemon '{pokemon}' not found.", ephemeral=True)
+						return
+					data = await response.json()
+
+			pokemon_name = data['name'].capitalize()
+			pokemon_id = data['id']
+			types = [t['type']['name'].capitalize() for t in data['types']]
+			abilities = [a['ability']['name'].replace('-', ' ').title() for a in data['abilities']]
+			height = data['height'] / 10
+			weight = data['weight'] / 10
+			stats = {}
+			for stat in data['stats']:
+				stat_name = stat['stat']['name'].replace('-', ' ').title()
+				stats[stat_name] = stat['base_stat']
+			
+			color = {
+				'Normal': 0xA8A878,
+				'Fire': 0xF08030,
+				'Water': 0x6890F0,
+				'Electric': 0xF8D030,
+				'Grass': 0x78C850,
+				'Ice': 0x98D8D8,
+				'Fighting': 0xC03028,
+				'Poison': 0xA040A0,
+				'Ground': 0xE0C068,
+				'Flying': 0xA890F0,
+				'Psychic': 0xF85888,
+				'Bug': 0xA8B820,
+				'Rock': 0xB8A038,
+				'Ghost': 0x705898,
+				'Dragon': 0x7038F8,
+				'Dark': 0x705848,
+				'Steel': 0xB8B8D0,
+				'Fairy': 0xEE99AC
+			}
+
+			embed = discord.Embed(
+				title=f"#{pokemon_id} - {pokemon_name}",
+				color=color.get(types[0], 0xAAAAAA)
+			)
+
+			embed.set_thumbnail(url=data['sprites']['other']['official-artwork']['front_default'])
+
+			embed.add_field(name="Types", value=" | ".join(types), inline=False)
+			embed.add_field(name="Abilities", value=" | ".join(abilities), inline=False)
+			embed.add_field(name="Height", value=f"{height}m", inline=True)
+			embed.add_field(name="Weight", value=f"{weight}kg", inline=True)
+			
+			stats_text = "\n".join([f"{name}: {value}" for name, value in stats.items()])
+			embed.add_field(name="Base Stats", value=f"```\n{stats_text}\n```", inline=False)
+
+			await interaction.followup.send(embed=embed)
+
+		except Exception as error:
+			await handle_logs(interaction, error)
+
 async def setup(bot):
 	await bot.add_cog(InfoCog(bot))

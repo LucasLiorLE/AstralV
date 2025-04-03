@@ -173,6 +173,7 @@ class PurgeCommandGroup(app_commands.Group):
             )
         except Exception as e:
             await handle_logs(interaction, e)
+            
 class PurgeCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot

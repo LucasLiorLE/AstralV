@@ -487,8 +487,15 @@
         }
     },
     "filedata": {
+        "description": "Get the information of a file",
         "parameters": {
             "file": "The file to get the data of"
+        }
+    },
+    "pokemon": {
+        "description": "Get information about a pokemon",
+        "parameters": {
+            "pokemon": "The pokemon's name"
         }
     },
     "image": {

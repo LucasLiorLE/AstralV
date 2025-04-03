@@ -77,7 +77,6 @@ class VideoCog(commands.Cog):
                 pass
 
     async def video_reverse(self, video_data: io.BytesIO) -> io.BytesIO:
-        
         temp_input = None
         temp_output = None
         
@@ -92,19 +91,43 @@ class VideoCog(commands.Cog):
             
             cmd = [
                 'ffmpeg',
+                '-hwaccel', 'auto',
                 '-i', temp_input,
                 '-vf', 'reverse',
                 '-af', 'areverse',
-                '-preset', 'ultrafast',
+                '-c:v', 'h264_nvenc',
+                '-preset', 'p1',
+                '-tune', 'fastdecode',
+                '-b:v', '2M',
                 '-y',
                 temp_output
             ]
             
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            try:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+            except:
+                cmd = [
+                    'ffmpeg',
+                    '-i', temp_input,
+                    '-vf', 'reverse',
+                    '-af', 'areverse',
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-tune', 'fastdecode',
+                    '-threads', '0',
+                    '-b:v', '2M',
+                    '-y',
+                    temp_output
+                ]
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
             
             await process.communicate()
             

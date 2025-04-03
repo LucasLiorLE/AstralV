@@ -16,6 +16,7 @@
 #    - Role command group
 #    - Level calculation rework
 #    - Help command & commands.json entirely reworked (Took more than a day im dying)
+#    - Pokemon command
 #
 # Other notes:
 #    - Attempt to fix status upon disconnect
@@ -27,7 +28,7 @@
 #    - Make auto mute a server set function. (2.4.0)
 #    - Make a more efficient storage system using sql and json (2.6.0)
 #
-# This was last updated: 3/26/2025 2:06 AM
+# This was last updated: 4/3/2025 12:32 AM
 
 import os, random, math, asyncio
 # import asyncpraw
@@ -64,7 +65,7 @@ from bot_utils import (
 # config
 botAdmins = [721151215010054165]
 botMods = [721151215010054165]
-botTesters = [721151215010054165, 776139231583010846]
+botTesters = [721151215010054165, 776139231583010846, 872706663474429993, 1173963781706088451]
 
 # Bot status management
 class StatusManager:

@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord.ui import View, Button, button
 
 import math
 from datetime import datetime, timedelta
@@ -17,6 +18,91 @@ from .utils import (
 
 import matplotlib.pyplot as plt
 import io
+
+class ConfirmView(View):
+    def __init__(self):
+        super().__init__(timeout=30)
+        self.value = None
+
+    @button(label="Yes", style=discord.ButtonStyle.green)
+    async def confirm(self, interaction: discord.Interaction, button: Button):
+        self.value = True
+        await interaction.response.defer()
+        self.stop()
+
+    @button(label="No", style=discord.ButtonStyle.red)
+    async def cancel(self, interaction: discord.Interaction, button: Button):
+        self.value = False
+        await interaction.response.defer()
+        self.stop()
+
+    async def on_timeout(self):
+        self.value = False
+        self.stop()
+
+class HistoryDeleteView(View):
+    def __init__(self, member_info, user_id):
+        super().__init__(timeout=60)
+        self.member_info = member_info
+        self.user_id = user_id
+        
+        select = discord.ui.Select(
+            placeholder="Select entries to delete",
+            min_values=1,
+            options=[
+                discord.SelectOption(label="Loading...", value="loading", description="Please wait...")
+            ]
+        )
+        select.callback = self.delete_select
+        self.add_item(select) 
+        
+        history = member_info[user_id]["TDSPlan"]["history"]
+        options = []
+        for i, entry in enumerate(reversed(history)):
+            timestamp = datetime.fromtimestamp(entry["timestamp"])
+            options.append(
+                discord.SelectOption(
+                    label=f"{timestamp.strftime('%m/%d/%Y %H:%M')}",
+                    value=str(len(history) - 1 - i),
+                    description=f"Level {entry['level']} + {entry['exp']} exp"
+                )
+            )
+        
+        if options:
+            select.options = options
+            select.max_values = len(options)
+        else:
+            select.options = [
+                discord.SelectOption(label="No entries", value="none", description="No history to delete")
+            ]
+            select.disabled = True
+
+    async def delete_select(self, interaction: discord.Interaction):
+        view = ConfirmView()
+        await interaction.response.send_message(
+            f"Are you sure you want to delete {len(interaction.data['values'])} selected entries?", 
+            view=view, 
+            ephemeral=True
+        )
+        
+        await view.wait()
+        if view.value:
+            history = self.member_info[self.user_id]["TDSPlan"]["history"]
+            indices = [int(i) for i in interaction.data["values"]]
+            
+            self.member_info[self.user_id]["TDSPlan"]["history"] = [
+                entry for i, entry in enumerate(history)
+                if i not in indices
+            ]
+            
+            save_member_info(self.member_info)
+            await interaction.followup.send(f"Deleted {len(indices)} entries from your history.", ephemeral=True)
+            self.stop()
+        else:
+            await interaction.followup.send("Delete operation cancelled.", ephemeral=True)
+
+    async def on_timeout(self):
+        self.stop()
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -254,10 +340,7 @@ class TDSCommandGroup(app_commands.Group):
                 f"Daily EXP Rate: {daily_rate:,.2f}", inline=False)
 
             now = datetime.now().timestamp()
-            seven_days_ago = now - (7 * 24 * 3600)
-            thirty_days_ago = now - (30 * 24 * 3600)
-            hundred_days_ago = now - (100 * 24 * 3600)
-            
+
             daily_rates = []
             for i in range(len(history) - 1):
                 curr = history[i]
@@ -266,32 +349,6 @@ class TDSCommandGroup(app_commands.Group):
                 if days_between > 0:
                     exp_gained = (self.calculate_exp(next_entry["level"]) + next_entry["exp"]) - (self.calculate_exp(curr["level"]) + curr["exp"])
                     daily_rates.append((next_entry["timestamp"], exp_gained / days_between))
-
-            recent_rates_7 = [rate for timestamp, rate in daily_rates if timestamp >= seven_days_ago]
-            recent_rates_30 = [rate for timestamp, rate in daily_rates if timestamp >= thirty_days_ago]
-            recent_rates_100 = [rate for timestamp, rate in daily_rates if timestamp >= hundred_days_ago]
-
-            stats_info = ""
-            if recent_rates_7:
-                stats_info += f"Last 7 days:\n"
-                stats_info += f"• Highest: {max(recent_rates_7):,.2f} exp/day\n"
-                stats_info += f"• Average: {sum(recent_rates_7)/len(recent_rates_7):,.2f} exp/day\n"
-                stats_info += f"• Lowest: {min(recent_rates_7):,.2f} exp/day\n\n"
-            
-            if recent_rates_30:
-                stats_info += f"Last 30 days:\n"
-                stats_info += f"• Highest: {max(recent_rates_30):,.2f} exp/day\n"
-                stats_info += f"• Average: {sum(recent_rates_30)/len(recent_rates_30):,.2f} exp/day\n"
-                stats_info += f"• Lowest: {min(recent_rates_30):,.2f} exp/day\n\n"
-
-            if recent_rates_100:
-                stats_info += f"Last 100 days:\n"
-                stats_info += f"• Highest: {max(recent_rates_100):,.2f} exp/day\n"
-                stats_info += f"• Average: {sum(recent_rates_100)/len(recent_rates_100):,.2f} exp/day\n"
-                stats_info += f"• Lowest: {min(recent_rates_100):,.2f} exp/day"
-
-            if stats_info:
-                embed.add_field(name="Detailed Statistics", value=stats_info, inline=False)
 
             current_total_exp = sum(self.calculate_exp(i) for i in range(last["level"])) + last["exp"]
             future_estimates = ""
@@ -378,9 +435,11 @@ class TDSCommandGroup(app_commands.Group):
                 embed.set_image(url="attachment://exp_graph.png")
             
             if graph_file:
-                await interaction.followup.send(embed=embed, file=graph_file)
+                delete_view = HistoryDeleteView(member_info, user_id)
+                await interaction.followup.send(embed=embed, file=graph_file, view=delete_view)
             else:
-                await interaction.followup.send(embed=embed)
+                delete_view = HistoryDeleteView(member_info, user_id)
+                await interaction.followup.send(embed=embed, view=delete_view)
             
         except Exception as error:
             await handle_logs(interaction, error)

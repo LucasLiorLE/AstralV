@@ -6,12 +6,16 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, View
+from datetime import datetime, timezone
 import random
 
 from bot_utils import (
     open_json,
-    save_json
+    save_json,
+    handle_logs,
+    logs
 )
+from main import botTesters
 
 class QuizView(View):
     def __init__(self, correct_answers, question, timeout):
@@ -93,11 +97,51 @@ class RevealView(View):
         view.message = await interaction.original_response()
         self.stop()
 
-class Quiz(commands.Cog):
+class CustomCommandCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
         self.bot.tree.add_command(OppList())
+
+    @app_commands.command(name="error_test", description="Demonstrates intentional error generation")
+    async def error_test(self, interaction: discord.Interaction):
+        error_list = []
+        try:
+            print(error_list[0]) 
+        except Exception as e:
+            await handle_logs(interaction, e)
+
+    @app_commands.command(name="error", description="Allows you to view a certain error.")
+    async def view_error(self, interaction: discord.Interaction, error_id: int):
+        await interaction.response.defer()
+
+        if interaction.user.id not in botTesters:
+            await interaction.followup.send("You do not have permission to use this command.")
+            return
+
+        for log_type, log_entries in logs.items():
+            for entry in log_entries:
+                if entry["ID"] == error_id:
+                    error_message = entry.get("Message", "No error message available.")
+                    
+                    embed = discord.Embed(
+                        title=f"Error ID: {error_id}",
+                        color=discord.Color.red(),
+                        timestamp=datetime.now(timezone.utc)
+                    )
+                    embed.add_field(name="Type", value=log_type.capitalize(), inline=False)
+                    
+                    chunks = [error_message[i:i + 1024] for i in range(0, len(error_message), 1024)]
+                    for idx, chunk in enumerate(chunks):
+                        embed.add_field(
+                            name=f"Error (Part {idx + 1})" if len(chunks) > 1 else "Error",
+                            value=chunk,
+                            inline=False
+                        )
+                    
+                    await interaction.followup.send(embed=embed)
+                    return
+
+        await interaction.followup.send(f"No error found with ID {error_id}", ephemeral=True)
 
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
@@ -140,6 +184,28 @@ class Quiz(commands.Cog):
         view = RevealView(quiz_data)
         await interaction.response.send_message("Click the button below to reveal the quiz:", view=view, ephemeral=True)
 
+    @app_commands.allowed_installs(guilds=True, users=True)
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.command(name="ccp", description="Ping a user and send a message.")
+    @app_commands.describe(choice="Select whether to increase or decrease the Social Credit Score", user="The user to mention",)
+    @app_commands.choices(
+        choice=[
+            app_commands.Choice(name="Increase", value="increase"),
+            app_commands.Choice(name="Decrease", value="decrease"),
+        ]
+    )
+    async def ccp(self, interaction: discord.Interaction, choice: str, user: discord.User):
+        if choice == "increase":
+            message = f"{user.mention} (我们的) Good work citizen, and glory to the CCP! Remember to redeem your food units after 12:00 P.M."
+        elif choice == "decrease":
+            message = (
+                f"{user.mention} (我们的) :arrow_double_down: Your Social Credit Score has decreased "
+                ":arrow_double_down:. Please refrain from making more of these comments or we will have "
+                "to send a Reeducation Squad to your location. Thank you! Glory to the CCP! :flag_cn: (我们的)"
+            )
+
+        await interaction.response.send_message(message)
+
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class OppList(app_commands.Group):
@@ -150,7 +216,6 @@ class OppList(app_commands.Group):
             guild_only=False
         )
         self.file_path = "storage/customs/opp_list.json"
-        self.opp_editors = [721151215010054165, 776139231583010846, 872706663474429993, 1173963781706088451]
 
     async def user_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         data = open_json(self.file_path)
@@ -189,7 +254,7 @@ class OppList(app_commands.Group):
     @app_commands.command(name="add", description="Add someone to the opp list")
     @app_commands.describe(user="The user to add", reason="Reason for adding")
     async def add(self, interaction: discord.Interaction, user: str, reason: str):
-        if interaction.user.id not in self.opp_editors:
+        if interaction.user.id not in botTesters:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
@@ -216,7 +281,7 @@ class OppList(app_commands.Group):
     @app_commands.describe(user="The user to remove")
     @app_commands.autocomplete(user=user_autocomplete)
     async def remove(self, interaction: discord.Interaction, user: str):
-        if interaction.user.id not in self.opp_editors:
+        if interaction.user.id not in botTesters:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
@@ -234,7 +299,7 @@ class OppList(app_commands.Group):
     @app_commands.describe(user="The user to edit", reason="New reason")
     @app_commands.autocomplete(user=user_autocomplete)
     async def edit(self, interaction: discord.Interaction, user: str, reason: str):
-        if interaction.user.id not in self.opp_editors:
+        if interaction.user.id not in botTesters:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
@@ -293,7 +358,7 @@ class OppList(app_commands.Group):
     @app_commands.describe(user="The user to reorder", position="New position (1-based)")
     @app_commands.autocomplete(user=user_autocomplete)
     async def reorder(self, interaction: discord.Interaction, user: str, position: int):
-        if interaction.user.id not in self.opp_editors:
+        if interaction.user.id not in botTesters:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
@@ -326,4 +391,4 @@ class OppList(app_commands.Group):
         await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
-    await bot.add_cog(Quiz(bot))
+    await bot.add_cog(CustomCommandCog(bot))
