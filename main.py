@@ -17,6 +17,8 @@
 #    - Level calculation rework
 #    - Help command & commands.json entirely reworked (Took more than a day im dying)
 #    - Pokemon command
+#    - cgloves search overhaul!
+#    - Hunger games commands!!
 #
 # Other notes:
 #    - Attempt to fix status upon disconnect
@@ -25,10 +27,9 @@
 #         - Was too use to bridge_commands from pycord
 # 
 # TODO/FIX:
-#    - Make auto mute a server set function. (2.4.0)
-#    - Make a more efficient storage system using sql and json (2.6.0)
+#    - Make a more efficient storage system using sql and json (no fuck you im too lazy and it's a small bot anyways)
 #
-# This was last updated: 4/3/2025 12:32 AM
+# This was last updated: 4/5/2025 11:46 PM
 
 import os, random, math, asyncio
 # import asyncpraw

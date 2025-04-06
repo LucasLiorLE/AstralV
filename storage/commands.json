@@ -700,6 +700,27 @@
             }
         }
     },
+    "hg": {
+        "start": {
+            "description": "Start a Hunger Games",
+            "parameters": {
+                "players": "Mention or player IDs seperated by spaces",
+                "amount": "The amount of players per district"
+            }
+        },
+        "kill": {
+            "description": "Kill a player",
+            "parameters": {
+                "player": "The player to kill"
+            }
+        },
+        "revive": {
+            "description": "Revive a player",
+            "parameters": {
+                "player": "The player to revive"
+            }
+        }
+    },
     "say": {
         "description": "Make the bot say something",
         "parameters": {

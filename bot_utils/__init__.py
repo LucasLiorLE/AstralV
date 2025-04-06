@@ -8,7 +8,7 @@ from .utils import *
 VERSION = {
     'major': 2,
     'minor': 4,
-    'patch': 22,
+    'patch': 23,
 }
 
 __version__ = f"{VERSION['major']}.{VERSION['minor']}.{VERSION['patch']}"
