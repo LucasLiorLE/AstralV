@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 
 import time
+from datetime import datetime, timedelta
 
 from bot_utils import (
     handle_logs,
@@ -41,18 +41,100 @@ class WarnCommands(commands.Cog):
         guild_id = str(ctx.guild.id)
 
         server_info.setdefault("warnings", {}).setdefault(guild_id, {}).setdefault(str(member.id), {})
-        case_numbers = [int(x) for x in server_info["warnings"][guild_id][str(member.id)].keys()]
-        next_case = str(max(case_numbers + [0]) + 1)
-
-        server_info["warnings"][guild_id][str(member.id)][next_case] = {
+        warnings = server_info["warnings"][guild_id][str(member.id)]
+        
+        warning_count = len(warnings)
+        
+        next_case = str(max([int(x) for x in warnings.keys()] + [0]) + 1)
+        warnings[next_case] = {
             "reason": reason,
             "moderator": str(ctx.author.id),
             "time": int(time.time())
         }
+        
+        auto_settings = server_info.get("moderation", {}).get("warnings", [])
+        if warning_count < len(auto_settings):
+            punishment = auto_settings[warning_count]
+            
+            try:
+                if punishment.get("mute", 0) > 0:
+                    duration = timedelta(seconds=punishment["mute"])
+                    until = discord.utils.utcnow() + duration
+                    
+                    try:
+                        await member.timeout(until, reason=f"Auto-mute: Reached warning {warning_count + 1}")
+                        
+                        hours, remainder = divmod(duration.total_seconds(), 3600)
+                        minutes, seconds = divmod(remainder, 60)
+                        human_readable_time = f"{int(hours)} hour(s) {int(minutes)} minute(s) {int(seconds)} second(s)"
+                        
+                        await dm_moderation_embed(ctx, member, "muted", 
+                            f"Auto-mute: Reached warning {warning_count + 1}", 
+                            human_readable_time)
+                        
+                        await store_modlog(
+                            modlog_type="Mute",
+                            moderator=ctx.guild.me,
+                            user=member,
+                            reason=f"Auto-mute: Reached warning {warning_count + 1}",
+                            arguments=f"Muted for {human_readable_time}",
+                            server_id=ctx.guild.id,
+                            bot=self.bot
+                        )
+                    except discord.Forbidden:
+                        await ctx.send("I don't have permission to mute members.")
+                    except Exception as e:
+                        await ctx.send(f"Error applying auto-mute: {str(e)}")
+
+                elif punishment.get("kick", False):
+                    await member.kick(reason=f"Auto-kick: Reached warning {warning_count + 1}")
+                    await dm_moderation_embed(ctx, member, "kick", f"Auto-kick: Reached warning {warning_count + 1}")
+                    await store_modlog(
+                        modlog_type="Kick",
+                        moderator=ctx.guild.me,
+                        user=member,
+                        reason=f"Auto-kick: Reached warning {warning_count + 1}",
+                        server_id=ctx.guild.id,
+                        bot=self.bot
+                    )
+                
+                elif punishment.get("ban", 0) != 0:
+                    ban_duration = punishment["ban"]
+                    
+                    await ctx.guild.ban(member, reason=f"Auto-ban: Reached warning {warning_count + 1}")
+                    await dm_moderation_embed(ctx, member, "banned", f"Auto-ban: Reached warning {warning_count + 1}")
+                    
+                    if ban_duration > 0:
+                        if 'tempbans' not in server_info:
+                            server_info['tempbans'] = {}
+                        if guild_id not in server_info['tempbans']:
+                            server_info['tempbans'][guild_id] = {}
+                            
+                        server_info['tempbans'][guild_id][str(member.id)] = {
+                            'expires': int(time.time()) + ban_duration
+                        }
+                        
+                        expire_time = datetime.now() + timedelta(seconds=ban_duration)
+                        reason = f"Auto-ban: Reached warning {warning_count + 1} (Temporary: until {expire_time.strftime('%Y-%m-%d %H:%M:%S')})"
+                    else:
+                        reason = f"Auto-ban: Reached warning {warning_count + 1} (Permanent)"
+                    
+                    await store_modlog(
+                        modlog_type="Ban",
+                        moderator=ctx.guild.me,
+                        user=member,
+                        reason=reason,
+                        server_id=ctx.guild.id,
+                        bot=self.bot
+                    )
+            
+            except discord.Forbidden:
+                await ctx.send("I don't have permission to perform the auto-moderation action.")
+            except Exception as e:
+                await ctx.send(f"Error performing auto-moderation: {str(e)}")
+
         save_json("storage/server_info.json", server_info)
-
         await dm_moderation_embed(ctx, member, "warn", reason)
-
         await store_modlog(
             modlog_type="Warn",
             moderator=ctx.author,
@@ -61,6 +143,8 @@ class WarnCommands(commands.Cog):
             server_id=ctx.guild.id,
             bot=self.bot
         )
+        
+        await ctx.send(f"Successfully warned {member.mention}")
 
     @commands.hybrid_command(name="warn")
     async def warn(self, ctx, member: discord.Member, *, reason: str):

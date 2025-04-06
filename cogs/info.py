@@ -285,9 +285,9 @@ class InfoCog(commands.Cog):
 			embed = discord.Embed(title="Bot Info", description="This bot is developed by LucasLiorLE.", color=0x808080)
 			embed.add_field(name="Version", value=f"v{__version__} ({__status__})")
 			embed.add_field(name="Server Count", value=len(self.bot.guilds))
-			embed.add_field(name="Library", value="Discord.py")
+			embed.add_field(name="Library", value="Discord.py (Python)")
 			embed.add_field(name="Uptime", value=uptime_str)
-			embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 310+ hours\nOver 10k lines of code.")
+			embed.add_field(name="Other", value="Made by LucasLiorLE\nEstimated time: 400+ hours")
 			embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
 
 			view = View()
@@ -296,6 +296,8 @@ class InfoCog(commands.Cog):
 			view.add_item(website)
 			github = Button(label="GitHub Repo", url="https://github.com/LucasLiorLE/AstralV")
 			view.add_item(github)
+			add = Button(label="Add Bot", url="https://discord.com/oauth2/authorize?client_id=733021769073557604")
+			view.add_item(add)
 
 			await interaction.response.send_message(embed=embed, view=view)
 		except Exception as error:
@@ -579,7 +581,7 @@ class InfoCog(commands.Cog):
 			pokemon_name = data['name'].capitalize()
 			pokemon_id = data['id']
 			types = [t['type']['name'].capitalize() for t in data['types']]
-			abilities = [a['ability']['name'].replace('-', ' ').title() for a in data['abilities']]
+			abilities = [f"[{a['ability']['name'].replace('-', ' ').title()}]({a['ability']['url']})" for a in data['abilities']]
 			height = data['height'] / 10
 			weight = data['weight'] / 10
 			stats = {}
