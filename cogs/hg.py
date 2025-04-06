@@ -144,9 +144,11 @@ class HungerGamesView(discord.ui.View):
 
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 class HungerGamesCommandGroup(app_commands.Group):
     def __init__(self):
-        super().__init__(name="hg", description="Hunger game commands")
+        super().__init__(name="hg", description="Hunger game commands", guild_only=False)
         self.player_data = {}
         self.game_state = {}
 
