@@ -144,326 +144,619 @@
         "crUltimateChampion": 1313368859100713084
     },
     "cgloves": {
-        "Witch": [
-            2129002959
-        ],
-        "MEGAROCK": [
-            2124807768
-        ],
-        "Plague": [
-            2124819262
-        ],
-        "Hallow Jack": [
-            2124836318
-        ],
-        "[REDACTED]": [
-            2124847850
-        ],
-        "bus": [
-            2124858899
-        ],
-        "Mitten": [
-            2124875920
-        ],
-        "Phase": [
-            2124886261
-        ],
-        "Warp": [
-            2124914780
-        ],
-        "Bomb": [
-            2124919840
-        ],
-        "Bubble": [
-            2124854307,
-            2124925929
-        ],
-        "Jet": [
-            2124930374
-        ],
-        "Shard": [
-            2124938910
-        ],
-        "potato": [
-            2124938910
-        ],
-        "CULT": [
-            2125850245
-        ],
-        "bob": [
-            2125950512
-        ],
-        "buddies": [
-            2124760928
-        ],
-        "Moon": [
-            2124760895
-        ],
-        "Link": [
-            2124760254
-        ],
-        "Jupiter": [
-            2126334003
-        ],
-        "Spy": [
-            2126450753
-        ],
-        "Detonator": [
-            2126589561
-        ],
-        "Rage": [
-            2127132894
-        ],
-        "Trap": [
-            2127567042
-        ],
-        "Orbit": [
-            2127703232
-        ],
-        "Hybrid": [
-            2127861437
-        ],
-        "Slapple": [
-            2128012376
-        ],
-        "Disarm": [
-            2128233612
-        ],
-        "Dominance": [
-            2127816588
-        ],
-        "Chain": [
-            2128557186
-        ],
-        "Rattlebones": [
-            2128772719
-        ],
-        "Charge": [
-            2129104684
-        ],
-        "Tycoon": [
-            2129212145
-        ],
-        "Confusion": [
-            2129474790
-        ],
-        "Glitch": [
-            2129568267
-        ],
-        "Snowball": [
-            2129648848
-        ],
-        "Elude": [
-            2129871858
-        ],
-        "RNG": [
-            2130031244
-        ],
-        "fish": [
-            2130032297
-        ],
-        "Moyai": [
-            2130155314
-        ],
-        "Obby": [
-            2130463063
-        ],
-        "Voodoo": [
-            2132544202
-        ],
-        "Goofy": [
-            2133016756
-        ],
-        "Leash": [
-            2136607413
-        ],
-        "Flamarang": [
-            2140855364
-        ],
-        "Kinetic": [
-            2141386326
-        ],
-        "Berserk": [
-            2141784233
-        ],
-        "Kraken": [
-            2145381761
-        ],
-        "Counter": [
-            2146130728
-        ],
-        "Sparky": [
-            2142826462
-        ],
-        "Boogie": [
-            2143034526
-        ],
-        "Recall": [
-            2143973603
-        ],
-        "Quake": [
-            2144766764
-        ],
-        "Psycho": [
-            2145165421
-        ],
-        "Hammer": [
-            2146540403
-        ],
-        "rob": [
-            2147429609
-        ],
-        "Rhythm": [
-            2148234934
-        ],
-        "Rojo": [
-            2148480065
-        ],
-        "Hitman": [
-            2148934270,
-            2124760907
-        ],
-        "Retro": [
-            2149637240
-        ],
-        "Null": [
-            2150485950
-        ],
-        "Lure": [
-            2151266964
-        ],
-        "Tinkerer": [
-            2152295593
-        ],
-        "Necromancer": [
-            2152906832
-        ],
-        "Alchemist": [
-            2153473254
-        ],
-        "Druid": [
-            2153911928
-        ],
-        "Jester": [
-            2500227230783997
-        ],
-        "Scythe": [
-            3318257806017965
-        ],
-        "Santa": [
-            2895206704788569
-        ],
-        "Iceskate": [
-            2906002612987222
-        ],
-        "Blasphemy": [
-            3335299217032061
-        ],
-        "Pan": [
-            4404799574333856
-        ],
-        "Admin": [
-            1840188608156642
-        ],
-        "Joust": [
-            1662954021427606
-        ],
-        "Firework": [
-            2628581469266954
-        ],
-        "Run": [
-            1579276416564374
-        ],
-        "Glovel": [
-            128402905805563
-        ],
-        "Divebomb": [
-            342573645147372
-        ],
-        "Lamp": [
-            490455814138437
-        ],
-        "Knockoff": [
-            1962623816699442
-        ],
-        "Frostbite": [
-            1286358044443937
-        ],
-        "Plank": [
-            4031317971987872
-        ],
-        "Spoonful": [
-            2236076719770808
-        ],
-        "the schlob": [
-            1354956782555226
-        ],
-        "Siphon": [
-            187186758930457
-        ],
-        "Wrench": [
-            2240434593038483
-        ],
-        "Hunter": [
-            3483144763925839
-        ],
-        "Relude": [
-            154204790800271
-        ],
-        "Avatar": [
-            4414076328730650
-        ],
-        "Water": [
-            2193861648156971
-        ],
-        "Fan": [
-            2657379023348335
-        ],
-        "Boxer": [
-            1223765330375569
-        ],
-        "MATERIALIZE": [
-            4256352459948010
-        ],
-        "Bind": [
-            3199562682373814
-        ],
-        "Poltergeist": [
-            868768988664040
-        ],
-        "Clock": [
-            2035627575374951
-        ],
-        "United Tag Glove": [
-            2223110832777636
-        ],
-        "Pillow": [
-            4390302507334168
-        ],
-        "Angler": [
-            2117833544213343
-        ],
-        "Jerry": [
-            182408299845710
-        ],
-        "Snowroller": [
-            3726156327470282
-        ],
-        "Draw4": [
-            2460702219299014
-        ],
-        "Mouse": [
-            2146300368310575
-        ],
-        "Hexa": [
-            2090213992277846
-        ],
-        "Metaverse": [
-            1060832194529561
-        ],
-        "Swordfighter": [
-            1788920058870613
-        ]
+        "Witch": {
+            "badges": [2129002959],
+            "name": "Witch Brew",
+            "description": "[ONLY OBTAINABLE DURING HALLOWEEN] Make the ultimate sacrifice, and take a sip of the forbidden brew.",
+            "obtainment": "Drink the Witch Brew potion dropped by Witch, and you will be given the badge.",
+            "image": "https://tr.rbxcdn.com/180DAY-98e277b1e2561f75adcc57515b70ad71/150/150/Image/Webp/noFilter",
+            "overview": "Witch is a limited Slap Royale exclusive glove added on October 15, 2022. It's a black glove with the plastic texture and a cauldron decal. It can only be obtained during Halloween by drinking a Witch's Brew item dropped by a Witch user.",
+            "ability": {
+                "description": "When activated, you will receive one of the following potions. Under normal circumstances, each potion has a 25% chance of being brewed. During Halloween, due to the addition of the Witch Brew to obtain this glove, each potion has a 20% chance of being brewed.\n- Strength Brew (Increases your power by 5) - Dark Red Color\n- Frog Brew (Increases your jump power by 5) - Blue Color\n- Speed Brew (Increases your speed by 1) - Green Color\n- Health Brew (Heals 20 HP and increases your Max HP by 10) - Red Color\n- Witch Brew - Pink Color\n\nAll brews besides the Witch Brew will increase stats. Upon drinking the Witch Brew, the user will obtain the Witch Brew badge, and their health will drain to 0, killing them.",
+                "cooldowns": {
+                    "Brew a random empowering potion": 90
+                }
+            },
+            "tooltips": {
+                "default": "Brew a random empowering potion on ability use."
+            },
+            "stats": {
+                "power": 40,
+                "speed": 14
+            },
+            "VIP": null
+        },
+        "MEGAROCK": {
+            "badges": [2124807768],
+            "name": "WHY",
+            "description": "be a rock for 10 hours straight... WHY WOULD ANYONE DO THIS?",
+            "obtainment": "MEGAROCK is acquired by possessing the WHY badge, achieved by staying in Diamond's ability for 10 hours straight. This timer starts after obtaining the really? badge, so it's actually 10 hours and 15 minutes.",
+            "image": "https://tr.rbxcdn.com/180DAY-ffc92c5c083c80ef88498530506671b7/150/150/Image/Webp/noFilter",
+            "overview": "MEGAROCK is a badge-required glove, requiring the WHY badge. It was released on August 20, 2021. Visually, this glove's appearance consists of a stone-like texture with a pattern of sliced diamonds.",
+            "ability": {
+                "description": "The ability is called \"MEGAROCKMODE.\" The ability encases the player in a large rock while a randomly chosen song plays. This rock can't be pushed, isn't influenced by gravity, and isn't affected by most gloves. Players who touch it will die and transform into stone (sometimes delayed,) causing the rock to grow a bit larger. The rock only grows when a player who hasn't died to the rock yet gets absorbed. When the ability is activated, there is a 2? second startup before it is able to kill players. The rock can absorb a maximum of 31? players.\nThe gloves that can affect you within the rock are Swapper, Recall, Mail, Rhythm, and Counter.\nNote: The MEGAROCK may look shorter upon activating it because a part of it is below the island.",
+                "cooldowns": {
+                    "MEGAROCKMODE": 0.5
+                }
+            },
+            "tooltips": {
+                "default": "MEGAROCK WOOOOOOOO"
+            },
+            "stats": {
+                "power": 30,
+                "speed": 13
+            },
+            "VIP": true
+        },
+        "Plague": {
+            "badges": [2124819262],
+            "name": "Infected",
+            "description": "Become infected by the plague.",
+            "obtainment": "This glove is obtained through the Infected badge. To get the badge, all you need is to be under plague's poison effect, which can be given by Zombie, Alchemist, Shotgun, Roguelike, Draw4 and most commonly, Plague itself.",
+            "image": "https://tr.rbxcdn.com/180DAY-1e47a53406907bd11830fea727918f4b/150/150/Image/Webp/noFilter",
+            "overview": "Plague is a badge glove added on September 4th, 2021. It requires the Infected badge. It has a light green color with a pattern of black biohazard symbols.",
+            "ability": {
+                "description": "Plague's ability, \"Infect,\" works by slapping another player to infect them. Once infected, their health starts to decrease gradually, and they will have green particle effects. The health of the infected player decreases by 2 every 0.33 seconds, and it takes about 15 seconds to fully kill them. However, whenever a player's health falls, it will recover by 1 each second, which can slightly slow down the health loss (though this might be adjusted).\nThe infected player can remove the infection by slapping someone else, passing the effect to that player instead.\nPlague also has a passive ability that makes them immune to the infection. If an infected player slaps Plague, the infection will be removed without spreading.",
+                "cooldowns": {
+                    "Infect": "Passive"
+                }
+            },
+            "tooltips": {
+                "default": "Patient zero: \"Spooks_init\""
+            },
+            "stats": {
+                "power": 41,
+                "speed": 16
+            },
+            "VIP": true
+        },
+        "Hallow Jack": {
+            "badges": [2124836318],
+            "name": "Jack's will",
+            "description": "[ONLY OBTAINABLE DURING HALLOWEEN]\nJack's gravestone. Beware, for his remains are not always there. To placate him, you must offer 10 souls. His gravestone appears on the map with a 10% chance every 10 minutes (not in VIP servers).",
+            "obtainment": "To obtain this badge, you must gain 10 or more kills with Killstreak (which can also be purchased for <:Robux:1358178318372835438> 22), and then click on a grave that appears behind the tree facing the Cube of Death on the North Island. The grave has a 10% chance to spawn every 10 minutes. If you click the grave with the requirements, your screen will zoom into the grave as its face starts to glow a white color. After this, you will be rewarded the badge, albeit dying in the process. If you click the grave without the requirements, text on the screen will appear saying \"YOU ARE NOT WORTHY.\" You will die after this.",
+            "image": "https://tr.rbxcdn.com/180DAY-96bf3e3683a6e7f31aca9a0afcc79a2c/150/150/Image/Webp/noFilter",
+            "overview": "Hallow Jack was added on October 2, 2021 and is the 6th badge-required glove in Slap Battles. It requires Jack's Will badge. The glove has an all-orange texture adorned with thorns, vines and a vibrant green glow. The glove is smaller than usual and rests on a Jack-o-Lantern with bright green inside.",
+            "ability": {
+                "description": "Hallow Jack's ability is \"Jack-O-Lantern.\" Upon activating the ability, the user will raise the glove up whilst enlarging a carved pumpkin head, then throws it forward after a second. Upon striking anyone with this pumpkin, they are ragdolled for a second. Their screen will become tinted green while pulsing in and out, and they will hear laughing then a low-pitched Halloween theme. On the Hallow Jack user's screen, the struck player will have an orange symbol on them. This is to signify that the player is \"marked.\" When the Hallow Jack user slaps the \"marked\" player, it will deal increased knockback to the player (70.) Other Hallow Jack users can slap the marked player and still deal increased knockback. The mark vanishes after about 11 seconds.",
+                "cooldowns": {
+                    "Jack-O-Lantern": 15
+                }
+            },
+            "tooltips": {
+                "default": "Jack's will."
+            },
+            "stats": {
+                "power": "54 (70 if affected by ability)",
+                "speed": 17
+            },
+            "VIP": false
+        },
+        "[REDACTED]": {
+            "badges": [2124847850],
+            "name": "Evaded",
+            "description": "Escape the pocket dimension with at least 5000 slaps.",
+            "obtainment": "To get the glove, a player must be taken by [REDACTED]'s ability and escape. <:Slaps:1358200940754239508> **5,000** slaps are required to obtain the badge.",
+            "image": "https://tr.rbxcdn.com/180DAY-496c7d9d77dda012b5fb77487c6d84af/150/150/Image/Webp/noFilter",
+            "overview": "[REDACTED] is a glove added on October 23, 2021 obtained through the Evaded badge. The glove's appearance consists of a black texture with smears of white and gray.",
+            "ability": {
+                "description": "[REDACTED]'s ability, \"Abduction,\" creates a round black portal from the sky and floats above catching and absorbing any person who gets nearby. It is fortified with red bricks. This takes the player to a place called the [REDACTED] Dimension. This dimension is still within the server. The black portal disappears 10 seconds later.",
+                "cooldowns": {
+                    "Abduction": 11,
+                    "Abduction (Mastered)": 9,
+                    "Muck (Mastered)": 6
+                }
+            },
+            "tooltips": {
+                "default": "First Glove Owner: \"Elias1187\""
+            },
+            "stats": {
+                "power": 51,
+                "speed": 15
+            },
+            "VIP": true,
+            "mastery": {
+                "obtainments": {
+                    "1": "Secure 6 people with 1 portal.",
+                    "2": "Contain a total of 1000 players.",
+                    "3": "Protect yourself by placing the portal 500 times."
+                },
+                "ability": "Mastered [REDACTED] summons a black-bricked portal that will slowly pull in nearby players with a vacuum like effect, the closer a player gets to the portal, the stronger the pull gets. Mastered [REDACTED]'s portal also spawns faster and has a shorter cooldown than the standard glove. Mastered [REDACTED]'s R ability \"Muck\" spawns a puddle of sludge at the feet of the user, that will slow down anyone that steps in it and prevents them from jumping. It also extinguishes OVERKILL."
+            }
+        },
+        "bus": {
+            "badges": [2124858899],
+            "name": "To the moon",
+            "description": "The way to get this badge is a secret. But you have to go to *space*.",
+            "obtainment": "To obtain bus, you need the Space glove. You must have the ability active while a bus hits you. Doing this will award you the badge.",
+            "image": "https://tr.rbxcdn.com/180DAY-b2cb6fa6dda2c699574e54cfc4791175/150/150/Image/Webp/noFilter",
+            "overview": "bus is a badge glove added on November 12, 2021, and received a Mastery on January 31, 2025. It requires you to possess the To the moon badge to use. Visually, it is a yellow glove with black diagonal stripes overlapping across it.",
+            "ability": {
+                "description": "bus's ability, \"Traffic accident,\" spawns a giant bus that comes driving from the end of the map where Moai Island is. The bus will deal heavy knockback to anybody hit by it. The ability targets the player closest to you, meaning it will go towards where that person was upon activating the ability. You can take knockback from your own bus. The bus despawns when it approaches the opposite end of the map.\nThe size of the bus is about 15 studs tall, 10 studs wide and 40 studs long. Its speed is about 100. For comparison, a player is 5 studs tall and has 20 speed.\nPlayers hit by the bus have a 1% to teleport to Blasphemy's cutscene, in which the cutscene grants them the Blasphemy glove and also is guaranteed to kill the player watching the cutscene, no matter what.",
+                "cooldowns": {
+                    "Traffic accident (Spawn)": 10,
+                    "Traffic accident (Cooldown)": 20,
+                    "Bus Ride (Mastered) (Spawn)": 5,
+                    "Bus Ride (Mastered) (Cooldown)": 10
+                }
+            },
+            "tooltips": {
+                "default": "look both ways smh"
+            },
+            "stats": {
+                "power": 50,
+                "speed": 16
+            },
+            "VIP": true,
+            "mastery": {
+                "obtainments": {
+                    "1": "Slap players 1000 times using the bus glove.",
+                    "2": "Own the \"G-Grandson..?\" badge.",
+                    "3": "Hit 750 players with the Traffic Accident ability."
+                },
+                "ability": "Mastered bus's \"Traffic Accident\" ability spawns a giant bus that comes speeding from a random direction. The bus will deal varying knockback to anybody hit by it, due to ping or other circumstances. The ability targets the player closest to the user, meaning it will go towards where that nearest person was upon activating the ability. Unlike the Standard Bus, the bus user themselves will not take knockback from their bus. The bus disappears after traveling across the map.\nPlayers hit by the Mastery bus have the same 1% chance to teleport to Blasphemy's cutscene, in which the cutscene grants them the Blasphemy glove and also is guaranteed to kill the player watching the cutscene, no matter what.\nMastered bus has a new R ability that allows the user to ride an identical, smaller bus for up to 4 seconds. If the bus user drives over another player, they will be squashed flat and significantly slowed down for a short duration, similarly to BONK. This bus is able to be driven over the void."
+            }
+        },
+        "Mitten": {
+            "badges": [2124875920],
+            "name": "Lucky Gift",
+            "description": "[ONLY OBTAINABLE DURING CHRISTMAS] You've opened a gift, this one appears to be a little more interesting...",
+            "obtainment": "During the Christmas event, which runs from late December to January, players can obtain the Lucky Gift badge. To get this badge, they need to receive a present airdrop from a Mitten user. There's a 1% chance that touching the present will reward the Lucky Gift badge.",
+            "image": "https://tr.rbxcdn.com/180DAY-aee16f5bafa10608d99c76ded45ae6d3/150/150/Image/Webp/noFilter",
+            "overview": "Mitten is a badge-required glove introduced on December 11, 2021. Its design features a candy cane handle and closely resembles a sparkling red stocking. It also emits transparent snowflakes. This festive appearance aligns with its holiday-themed motif.",
+            "ability": {
+                "description": "Mitten's ability, \"Airdrop,\" summons a flying sleigh behind the user at the edge of the map. The sleigh moves forward while playing Christmas music. After 5 seconds, it drops a red present in front of the user. To open it, the player must touch the present, causing it to disappear and reveal either a positive or negative outcome. Eventually, the presents will fade away on their own after a while.\nEach present can have a positive effect, shown by a green checkmark (✓), or a negative one, marked with a red cross (X). These indicators are only visible to the user, allowing them to decide whether to keep good gifts for themselves or use bad ones against opponents. The gifts are chosen randomly, based on RNG (Random Number Generation).",
+                "cooldowns": {
+                    "Airdrop": 5
+                }
+            },
+            "tooltips": {
+                "default": "TACTICAL present INCOMING"
+            },
+            "stats": {
+                "power": 50,
+                "speed": 16
+            },
+            "VIP": true
+        },
+        "Phase": {
+            "badges": [2124886261],
+            "name": "Unphased",
+            "description": "Collect a phase orb.",
+            "obtainment": "To get the \"Unphased\" badge, the player must touch a Phase Orb. Phase Orbs have a 5% chance of appearing on the main island every 10 minutes.",
+            "image": "https://tr.rbxcdn.com/180DAY-4037e0aad745074d0873fa9633036545/150/150/Image/Webp/noFilter",
+            "overview": "Phase is a badge glove added on December 23rd, 2021. It is obtained through the Unphased badge. It appears to be a purple glove emitting intense black particles.",
+            "ability": {
+                "description": "The ability is called \"Permeable.\" When activated, the user becomes a floating purple heart which emits black particles and a trail. The ability lasts for 6 seconds before immediately returning to the normal character. During the ability, the user has 30 walkspeed and is also invincible during this time. The user is also slippery, mostly when turning abruptly. When the ability is used, the cooldown already starts, and the ability ends when it’s about halfway done, so technically, there is around 8 seconds of cooldown.",
+                "cooldowns": {
+                    "Permeable": 14
+                }
+            },
+            "tooltips": {
+                "default": "IT'S NOT A PHASE MOM!"
+            },
+            "stats": {
+                "power": 50,
+                "speed": "16 (Actually 15)"
+            },
+            "VIP": false
+        },
+        "Warp": {
+            "badges": [2124914780],
+            "name": "Savior",
+            "description": "Save someone out of the goodness of your heart.",
+            "obtainment": "In order to obtain Warp, you must have the Savior badge. To earn this badge, you must use Swapper's ability on a player who is falling into the void before they die.",
+            "image": "https://tr.rbxcdn.com/180DAY-a8f4b408195ef190b46f93c733ca8437/150/150/Image/Webp/noFilter",
+            "overview": "Warp is a badge glove added on January 21, 2022. It is unlocked by obtaining the Savior badge. Its texture is a black canvas with small and swirly green stripes on it.",
+            "ability": {
+                "description": "The ability, \"Beam Ambush,\" lets the user slap a player and \"mark\" them with a green ring, only the Warp user can see the mark. On using the ability, the user will teleport behind the marked player (the marked player is the last player the user slaps), a green beam will flash from the location the user teleported from and where they teleported to. The green ring will remain if the Warp user dies but is just cosmetic and won't let them teleport; Slapping a player after respawning will remove the original mark and replace it with a fresh one, allowing for teleportation again.",
+                "cooldowns": {
+                    "Beam Ambush": 12
+                }
+            },
+            "tooltips":{
+                "default": "Hi, just wanted to swoop in."
+            },
+            "stats": {
+                "power": 50,
+                "speed": 16
+            },
+            "VIP": true
+        },
+        "Bomb": {
+            "badges": [2124919840],
+            "name": "Short fuse",
+            "description": "Warp location and die in the void immediately after doing so. (Resetting won't work, don't try it, you sneaky snitch)",
+            "obtainment": "To obtain Bomb, you must equip Warp and die within one second after you've used its ability. A good strategy is to warp to someone who has fallen off the island, or you can jump off the map and use the ability as you hit the death barrier, granting you the badge and glove. Another way is to teleport to a player with any one shot that is not God's Hand and immediately get killed by them.",
+            "image": "https://tr.rbxcdn.com/180DAY-db3ed42aa47b1fde1c6bd44d4e45f21a/150/150/Image/Webp/noFilter",
+            "overview": "Bomb is a badge glove added on January 29, 2022 along with the spin glove, and received a Mastery on February 21, 2025. It is obtained through the Short fuse badge. Visually, this glove is black with a diamond metal texture.",
+            "ability": {
+                "description": "Bomb's ability is called \"Detonation.\" Upon use, a 1 second animation will play where the user will pull out a bomb and throw it forward, and enlarges to about the size of a player's head. The bomb has about 30 speed (a player has 20 speed) and is unaffected by gravity. When the animation is finished, the bomb will continue moving straight forward and will not stop until the user detonates it by pressing or after 10 seconds when it detonates automatically. If a player was within 20 studs of the blast, they will be dealt around 50 knockback. The user is affected by the bomb if they are caught in the blast.\nThe bomb's knockback does not vary as distance increases, so players will take the same amount of knockback no matter how close they are to the bomb. However, players can go inside of the hitbox, so when it detonates, they will be pushed towards the ground and less outwards.\nNote: The bomb doesn't collide with anything. It will pass through it.(eg. Diamond's rock, MEGAROCK's rock, Normal arena's trees.)\n",
+                "cooldowns": {
+                    "Detonation": 10,
+                    "Detonation (Mastered)": 8,
+                    "Reversal Bomb (Mastered)": 8 
+                }
+            },
+            "tooltips": {
+                "default": "bombs infused with pixie dust? What a horrible idea."
+            },
+            "stats": {
+                "power": 50,
+                "speed": "15 (Actually 16)"
+            },
+            "VIP": true
+        },
+        "Bubble": {
+            "badges": [2124854307, 2124925929],
+            "name": "Harbringer of death & 250",
+            "description": "Reach 10 kills with Reaper.",
+            "obtainment": "It is obtained through the Harbinger of death and the 250 badges. Harbinger of death is obtained from getting 9 kills in one life using Reaper. 250 is obtained from getting 250 kills in one life using Killstreak. It's best to go into a Private Server and have an alt or a friend give you kills.",
+            "image": "https://static.wikia.nocookie.net/roblox-slap-battles/images/d/dc/BubbleBanner.png/revision/latest/scale-to-width-down/268?cb=20230626003241",
+            "overview": "Bubble is a badge glove added on February 5, 2022, requiring two badges. This originally replaced the pre-revamp Coil glove. This glove is plain cyan and a handle with the same color.",
+            "ability": {
+                "description": "The \"Capture\" ability allows the user to quickly create a bubble that floats ahead for 10 seconds before popping. The bubble is initially faster than a player, but slows down and eventually stops. If a player touches it, they become trapped inside and will float with the bubble until it pops.",
+                "cooldowns": {
+                    "Capture": 5
+                }
+            },
+            "tooltips": {
+                "default": "how did you create a bubble out of thin air????"
+            },
+            "stats": {
+                "power": 50,
+                "speed": 15
+            },
+            "VIP": true
+        },
+        "Jet": {
+            "badges": [2124930374],
+            "name": "Orb of flight",
+            "description": "Receive an airdrop from the funny slap-force-1.",
+            "obtainment": "Jet is obtained by touching a yellow orb, the \"Orb of Flight,\" that drops from a passing jet. This has a 10% chance to happen every 10 minutes, and only one player can get it. If the plane is closer to the ground, bigger, and slower than a Jet glove's ability, this signifies that the orb will drop. It takes about 10 seconds for the orb to land on the island.",
+            "image": "https://tr.rbxcdn.com/180DAY-99422b157026ddefcd4daf3319aff546/150/150/Image/Webp/noFilter",
+            "overview": "Jet is a badge glove that was introduced on May 28, 2022, though it was reworked from Pilot which was added on February 11, 2022. It is obtained by having the Orb of Flight badge. Visually, this glove has a black and red camouflage-like texture.",
+            "ability": {
+                "description": "The Jet glove’s ability, \"Airstrike,\" activates when the user presses \"E.\" The player closest to the user will be highlighted with a targeting reticle, visible only to the Jet user. After this, a jet flies overhead and launches a missile at the targeted player’s location, taking about 3 seconds to reach the ground and explode. The explosion's knockback and ragdoll duration decrease with distance, but players closer to the blast receive stronger knockback and longer ragdoll effects. The knockback in the center ranges from 50 to 100, and it tends to push players more downward than upward, making it look like they’re gliding along the ground.",
+                "cooldowns": {
+                    "Airstrike (Spawn)": 7,
+                    "Airstrike (Cooldown)": 18
+                }
+            },
+            "tooltips": {
+                "default": "tactical uhh missile strike??"
+            },
+            "stats": {
+                "power": 50,
+                "speed": 15
+            },
+            "VIP": false
+        },
+        "Shard": {
+            "badges": [2124938910],
+            "name": "Firefighter",
+            "description": "Extinguish 5 overkills in less than a minute (without dying)",
+            "obtainment": "To get the Firefighter badge, you need to extinguish an OVERKILL user 5 times in under a minute without dying. To extinguish an OVERKILL, you need to slap or use your ability on a player using one with gloves that can extinguish them, such as Snow or Ice. You do not have to extinguish 5 different OVERKILL users to get the badge.",
+            "image": "https://tr.rbxcdn.com/180DAY-87525da72c918f8cae04c2bac320e717/150/150/Image/Webp/noFilter",
+            "overview": "Shard is a badge glove added on February 19th, 2022. It is obtained through the Firefighter badge. Visually, this glove consists of a dark turquoise texture with smears of a dark cyan.",
+            "ability": {
+                "description": "The ability, \"Ice Shards,\" creates 3 floating ice shards in front of the user, which will gradually become opaquer. When the shards are no longer transparent, taking 1 second, they will quickly charge forward in the direction the user is facing, unaffected by gravity. Any player hit by these shards will be dealt about 30 power and temporarily slowed down to around 5 walkspeed for 5 seconds. For every player hit with the ability, they get <:Slaps:1358200940754239508> 1 (increases with multipliers).",
+                "cooldowns": {
+                    "Ice Shards": 6
+                }
+            },
+            "tooltips": {
+                "default": "anti-overkill moment"
+            },
+            "stats": {
+                "power": 50,
+                "speed": 16
+            },
+            "VIP": true
+        },
+        "potato": {
+            "badges": [2124938910]
+        },
+        "CULT": {
+            "badges": [2125850245]
+        },
+        "bob": {
+            "badges": [2125950512]
+        },
+        "buddies": {
+            "badges": [2124760928]
+        },
+        "Moon": {
+            "badges": [2124760895]
+        },
+        "Link": {
+            "badges": [2124760254]
+        },
+        "Jupiter": {
+            "badges": [2126334003]
+        },
+        "Spy": {
+            "badges": [2126450753]
+        },
+        "Detonator": {
+            "badges": [2126589561]
+        },
+        "Rage": {
+            "badges": [2127132894]
+        },
+        "Trap": {
+            "badges": [2127567042]
+        },
+        "Orbit": {
+            "badges": [2127703232]
+        },
+        "Hybrid": {
+            "badges": [2127861437]
+        },
+        "Slapple": {
+            "badges": [2128012376]
+        },
+        "Disarm": {
+            "badges": [2128233612]
+        },
+        "Dominance": {
+            "badges": [2127816588]
+        },
+        "Chain": {
+            "badges": [2128557186]
+        },
+        "Rattlebones": {
+            "badges": [2128772719]
+        },
+        "Charge": {
+            "badges": [2129104684]
+        },
+        "Tycoon": {
+            "badges": [2129212145]
+        },
+        "Confusion": {
+            "badges": [2129474790]
+        },
+        "Glitch": {
+            "badges": [2129568267]
+        },
+        "Snowball": {
+            "badges": [2129648848]
+        },
+        "Elude": {
+            "badges": [2129871858]
+        },
+        "RNG": {
+            "badges": [2130031244]
+        },
+        "fish": {
+            "badges": [2130032297]
+        },
+        "Moyai": {
+            "badges": [2130155314]
+        },
+        "Obby": {
+            "badges": [2130463063]
+        },
+        "Voodoo": {
+            "badges": [2132544202]
+        },
+        "Goofy": {
+            "badges": [2133016756]
+        },
+        "Leash": {
+            "badges": [2136607413]
+        },
+        "Flamarang": {
+            "badges": [2140855364]
+        },
+        "Kinetic": {
+            "badges": [2141386326]
+        },
+        "Berserk": {
+            "badges": [2141784233]
+        },
+        "Kraken": {
+            "badges": [2145381761]
+        },
+        "Counter": {
+            "badges": [2146130728]
+        },
+        "Sparky": {
+            "badges": [2142826462]
+        },
+        "Boogie": {
+            "badges": [2143034526]
+        },
+        "Recall": {
+            "badges": [2143973603]
+        },
+        "Quake": {
+            "badges": [2144766764]
+        },
+        "Psycho": {
+            "badges": [2145165421]
+        },
+        "Hammer": {
+            "badges": [2146540403]
+        },
+        "rob": {
+            "badges": [2147429609]
+        },
+        "Rhythm": {
+            "badges": [2148234934]
+        },
+        "Rojo": {
+            "badges": [2148480065]
+        },
+        "Hitman": {
+            "badges": [2148934270, 2124760907]
+        },
+        "Retro": {
+            "badges": [2149637240]
+        },
+        "Null": {
+            "badges": [2150485950]
+        },
+        "Lure": {
+            "badges": [2151266964]
+        },
+        "Tinkerer": {
+            "badges": [2152295593]
+        },
+        "Necromancer": {
+            "badges": [2152906832]
+        },
+        "Alchemist": {
+            "badges": [2153473254]
+        },
+        "Druid": {
+            "badges": [2153911928]
+        },
+        "Jester": {
+            "badges": [2500227230783997]
+        },
+        "Scythe": {
+            "badges": [3318257806017965]
+        },
+        "Santa": {
+            "badges": [2895206704788569]
+        },
+        "Iceskate": {
+            "badges": [2906002612987222]
+        },
+        "Blasphemy": {
+            "badges": [3335299217032061]
+        },
+        "Pan": {
+            "badges": [4404799574333856]
+        },
+        "Admin": {
+            "badges": [1840188608156642]
+        },
+        "Joust": {
+            "badges": [1662954021427606]
+        },
+        "Firework": {
+            "badges": [2628581469266954]
+        },
+        "Run": {
+            "badges": [1579276416564374]
+        },
+        "Glovel": {
+            "badges": [128402905805563]
+        },
+        "Divebomb": {
+            "badges": [342573645147372]
+        },
+        "Lamp": {
+            "badges": [490455814138437]
+        },
+        "Knockoff": {
+            "badges": [1962623816699442]
+        },
+        "Frostbite": {
+            "badges": [1286358044443937]
+        },
+        "Plank": {
+            "badges": [4031317971987872]
+        },
+        "Spoonful": {
+            "badges": [2236076719770808]
+        },
+        "the schlob": {
+            "badges": [1354956782555226]
+        },
+        "Siphon": {
+            "badges": [187186758930457]
+        },
+        "Wrench": {
+            "badges": [2240434593038483]
+        },
+        "Hunter": {
+            "badges": [3483144763925839]
+        },
+        "Relude": {
+            "badges": [154204790800271]
+        },
+        "Avatar": {
+            "badges": [4414076328730650]
+        },
+        "Water": {
+            "badges": [2193861648156971]
+        },
+        "Fan": {
+            "badges": [2657379023348335]
+        },
+        "Boxer": {
+            "badges": [1223765330375569]
+        },
+        "MATERIALIZE": {
+            "badges": [4256352459948010]
+        },
+        "Bind": {
+            "badges": [3199562682373814]
+        },
+        "Poltergeist": {
+            "badges": [868768988664040]
+        },
+        "Clock": {
+            "badges": [2035627575374951]
+        },
+        "United Tag Glove": {
+            "badges": [2223110832777636]
+        },
+        "Pillow": {
+            "badges": [4390302507334168]
+        },
+        "Angler": {
+            "badges": [2117833544213343]
+        },
+        "Jerry": {
+            "badges": [182408299845710]
+        },
+        "Snowroller": {
+            "badges": [3726156327470282]
+        },
+        "Draw4": {
+            "badges": [2460702219299014]
+        },
+        "Mouse": {
+            "badges": [2146300368310575]
+        },
+        "Hexa": {
+            "badges": [2090213992277846]
+        },
+        "Metaverse": {
+            "badges": [1060832194529561]
+        },
+        "Swordfighter": {
+            "badges": [1788920058870613]
+        },
+        "Tank": {
+            "badges": [99649310086892]
+        },
+        "Default": {
+            "name": "Default",
+            "overview": "Default is a slap costing glove, added on the game's release, costing  0 and being the glove given to players when they first join. This glove's texture is smooth plastic, its color being white, presumably being the placeholder glove. This is also the default glove for the Default Only Arena, the Slap Tournament, the removed Slap League, and The Null Zone.",
+            "ability": {
+                "description": "The ability \"Fart Blast\" provides the user with a small burst of speed while playing a Fart with reverb sound effect, accompanied by an expanded field of view. This sound is not audible to other people. It provides a second of 40 walkspeed, then it drops back to 20 walkspeed within the same timeframe",
+                "cooldowns": {
+                    "default": 3.5,
+                    "Jerry Bossfight": 7
+                }
+            },
+            "slaps": 0,
+            "tooltips": {
+                "default": "The glove that you were born with.",
+                "barzil": "I wonder where mortis got this from."
+            },
+            "stats": {
+                "power": 30,
+                "speed": 10
+            },
+            "image": "https://static.wikia.nocookie.net/roblox-slap-battles/images/2/2c/Default30Power.png/revision/latest/scale-to-width-down/268?cb=20240204141821"
+        }
     },
     "polls": {
 

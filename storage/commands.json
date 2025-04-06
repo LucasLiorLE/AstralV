@@ -883,6 +883,12 @@
                 "option": "The role type",
                 "role": "The role to set the type to"
             }
+        },
+        "auto": {
+            "description": "Set the auto moderation types (Toggles)",
+            "parameters": {
+                "setting": "The auto setting to set"
+            }
         }
     },
     "role": {
