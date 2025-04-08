@@ -11,46 +11,33 @@ from bot_utils import (
 
 def random_event(player, all_players=None):
     solo_events = [
-        ("accidentally fell into a trap and died.", True),
-        ("was struck by a falling tree.", True),
-        ("fell ill and couldn't survive.", True),
-        ("was caught in an explosion.", True),
-        ("got caught in a fire.", True),
-        ("was struck by lightning.", True),
-        ("starved to death.", True),
-        ("died from infected wounds.", True),
-        ("fell from a cliff.", True),
-        ("ate poisonous berries.", True),
-        ("found a shelter and stayed safe.", False),
-        ("gathered some berries and survived another day.", False),
-        ("found clean water to drink.", False),
-        ("built a small fire to stay warm.", False),
-        ("crafted a makeshift weapon.", False),
-        ("found some medical supplies.", False),
-        ("caught some fish from a nearby stream.", False),
-        ("set up clever traps around their camp.", False),
-        ("climbed a tree to scout the area.", False),
-        ("found a cave to hide in.", False),
-        ("treated their wounds with medicinal herbs.", False),
-        ("successfully hunted some small game.", False),
-        ("camouflaged their shelter.", False),
-        ("found a backpack with supplies.", False),
-        ("practiced their survival skills.", False),
-        ("built a rainwater collection system.", False),
-        ("created a comfortable sleeping spot.", False),
-        ("found some edible mushrooms.", False),
-        ("spotted a tribute but remained hidden.", False),
-        ("sharpened their weapons.", False),
-        ("set up an early warning system.", False),
-        ("found night vision goggles.", False),
-        ("discovered a source of fresh water.", False),
-        ("made new arrows for their bow.", False),
-        ("found warm clothing.", False),
-        ("created a successful snare.", False),
-        ("found some energy bars.", False),
-        ("got some much-needed rest.", False),
-        ("improved their shelter.", False),
-        ("found a first aid kit.", False)
+        ("was bitten by a venomous snake.", True), ("drank contaminated water and died.", True), ("walked into a minefield.", True),
+        ("was ambushed by wild animals.", True), ("froze to death overnight.", True), ("was fatally injured while running from danger.", True),
+        ("triggered their own trap.", True), ("fell into a hidden spike pit.", True), ("suffocated in a cave collapse.", True),
+        ("was swept away by a flash flood.", True), ("got caught in a landslide.", True), ("wandered into toxic gas and couldn't escape.", True),
+        ("ate spoiled food and died from food poisoning.", True), ("broke a leg and couldn't move before nightfall.", True), ("was stung repeatedly by killer insects.", True),
+        ("was mistaken for prey by a predator.", True), ("got crushed by a falling boulder.", True), ("died of heatstroke under the blazing sun.", True)
+        ("accidentally fell into a trap and died.", True), ("was struck by a falling tree.", True), ("fell ill and couldn't survive.", True), 
+        ("was caught in an explosion.", True), ("got caught in a fire.", True),("was struck by lightning.", True),("starved to death.", True),
+        ("died from infected wounds.", True), ("fell from a cliff.", True), ("ate poisonous berries.", True),
+
+        ("found a shelter and stayed safe.", False), ("gathered some berries and survived another day.", False), ("found clean water to drink.", False),
+        ("built a small fire to stay warm.", False), ("crafted a makeshift weapon.", False), ("found some medical supplies.", False),
+        ("caught some fish from a nearby stream.", False), ("set up clever traps around their camp.", False), ("climbed a tree to scout the area.", False),
+        ("found a cave to hide in.", False), ("treated their wounds with medicinal herbs.", False), ("successfully hunted some small game.", False),
+        ("camouflaged their shelter.", False), ("found a backpack with supplies.", False), ("practiced their survival skills.", False),
+        ("built a rainwater collection system.", False), ("created a comfortable sleeping spot.", False), ("found some edible mushrooms.", False),
+        ("spotted a tribute but remained hidden.", False), ("sharpened their weapons.", False), ("set up an early warning system.", False),
+        ("found night vision goggles.", False), ("discovered a source of fresh water.", False), ("made new arrows for their bow.", False),
+        ("found warm clothing.", False), ("created a successful snare.", False), ("found some energy bars.", False),
+        ("got some much-needed rest.", False), ("improved their shelter.", False), ("found a first aid kit.", False),
+        ("discovered a hidden stash of supplies.", False), ("camouflaged themselves with mud and leaves.", False), ("found a journal with survival tips.", False),
+        ("used vines to climb to safety.", False), ("made peace with nearby animals.", False), ("reinforced their shelter using stones and branches.", False),
+        ("boiled water to purify it.", False), ("made a slingshot for hunting.", False), ("stitched torn clothing for warmth.", False),
+        ("followed animal tracks to a water source.", False), ("hid in thick foliage during a storm.", False), ("found a working flashlight.", False),
+        ("learned to make fire without matches.", False), ("followed smoke to find a safe camp.", False), ("used tree bark to signal for help.", False),
+        ("tracked footprints and avoided danger.", False), ("made a hammock to sleep off the ground.", False) ("collected dew for drinking water.", False),
+        ("used charcoal as camouflage.", False), ("escaped a collapsing structure just in time.", False)
     ]
 
     if not all_players or len(all_players) < 2:
@@ -77,7 +64,7 @@ def generate_multi_player_event(player, all_players):
         ("shot an arrow at **{target}** but they escaped.", False),
         ("snuck up on **{target}** but they got away.", False),
         ("engaged **{target}** in combat but was defeated and died.", "self"),
-        ("and **{target}** fought, but neither survived.", "both")
+        ("and **{target}** fought, but neither survived.", "both"),
     ]
 
     cooperative_events = [
@@ -89,7 +76,10 @@ def generate_multi_player_event(player, all_players):
         ("worked with {target} to build a shelter.", False),
         ("and {target} shared information about other tributes.", False),
         ("and {target} found a good hiding spot.", False),
-        ("and {target} cuddle together for warmth", False)
+        ("and {target} cuddle together for warmth.", False),
+        ("sang songs together to keep spirits up.", False),
+        ("shared body heat with {target} during a cold night.", False),
+        ("shared a meal and stories with {target}.", False),
     ]
 
     if random.random() < 0.4:
@@ -291,7 +281,7 @@ class HungerGamesCommandGroup(app_commands.Group):
             for player, event in deaths:
                 death_texts.append(f"**{player.name}** {event}")
             
-            embed.add_field(name="☠️ Deaths ☠️", 
+            embed.add_field(name="☠️ Deaths", 
                           value="\n".join(death_texts), 
                           inline=False)
 
@@ -299,13 +289,12 @@ class HungerGamesCommandGroup(app_commands.Group):
 
         if len(players) == 1:
             winner = players[0]
-            embed.add_field(name="🏆 Game Over 🏆", 
+            embed.add_field(name="🏆 Game Over", 
                           value=f"**{winner.name}** is the winner of the Hunger Games!", 
                           inline=False)
             embed.set_thumbnail(url=winner.display_avatar.url)
             self.game_state[interaction.user.id]["game_over"] = True
-            await interaction.followup.send(embed=embed)
-            return
+            return await interaction.followup.send(embed=embed)
 
         embed.add_field(name="Next Event", value="Click the button to continue to the next event!", inline=False)
 
@@ -321,8 +310,7 @@ class HungerGamesCommandGroup(app_commands.Group):
             try:
                 user_ids = [int(p.strip('<@!>')) if p.startswith('<@') else int(p) for p in players.split()]
             except ValueError:
-                await interaction.response.send_message("Invalid player list format.", ephemeral=True)
-                return
+                return await interaction.response.send_message("Invalid player list format.", ephemeral=True)
 
             users = []
             for uid in user_ids:
@@ -334,12 +322,10 @@ class HungerGamesCommandGroup(app_commands.Group):
                     continue
 
             if amount <= 0:
-                await interaction.response.send_message("Amount must be greater than 0.", ephemeral=True)
-                return
+                return await interaction.response.send_message("Amount must be greater than 0.", ephemeral=True)
 
             if len(users) < amount:
-                await interaction.response.send_message("Not enough players for even one district.", ephemeral=True)
-                return
+                return await interaction.response.send_message("Not enough players for even one district.", ephemeral=True)
 
             random.shuffle(users)
             districts = [users[i:i + amount] for i in range(0, len(users), amount)]
@@ -376,13 +362,11 @@ class HungerGamesCommandGroup(app_commands.Group):
     async def kill(self, interaction: discord.Interaction, player: discord.User):
         try:
             if interaction.user.id not in self.game_state:
-                await interaction.response.send_message("No active game found.", ephemeral=True)
-                return
+                return await interaction.response.send_message("No active game found.", ephemeral=True)
 
             current_state = self.game_state[interaction.user.id]
             if player not in current_state["players"]:
-                await interaction.response.send_message("That player is not in the game.", ephemeral=True)
-                return
+                return await interaction.response.send_message("That player is not in the game.", ephemeral=True)
 
             current_state["players"].remove(player)
             embed = discord.Embed(title="Player Killed", 
@@ -405,13 +389,11 @@ class HungerGamesCommandGroup(app_commands.Group):
     async def revive(self, interaction: discord.Interaction, player: discord.User):
         try:
             if interaction.user.id not in self.game_state:
-                await interaction.response.send_message("No active game found.", ephemeral=True)
-                return
+                return await interaction.response.send_message("No active game found.", ephemeral=True)
 
             current_state = self.game_state[interaction.user.id]
             if player in current_state["players"]:
-                await interaction.response.send_message("That player is already alive.", ephemeral=True)
-                return
+                return await interaction.response.send_message("That player is already alive.", ephemeral=True)
 
             in_game = False
             for district in current_state["districts"]:
@@ -420,8 +402,7 @@ class HungerGamesCommandGroup(app_commands.Group):
                     break
 
             if not in_game:
-                await interaction.response.send_message("That player was never in this game.", ephemeral=True)
-                return
+                return await interaction.response.send_message("That player was never in this game.", ephemeral=True)
 
             current_state["players"].append(player)
             embed = discord.Embed(title="Player Revived", 

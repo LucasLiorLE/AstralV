@@ -56,7 +56,7 @@ class HistoryDeleteView(View):
         
         history = member_info[user_id]["MEE6Plan"]["history"]
         options = []
-        for i, entry in enumerate(reversed(history)):
+        for i, entry in enumerate(list(reversed(history))[:25]):
             timestamp = datetime.fromtimestamp(entry["timestamp"])
             options.append(
                 discord.SelectOption(

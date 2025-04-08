@@ -54,9 +54,13 @@ def open_json(filename: str) -> Dict[str, Any]:
     Returns:
         Dict(str, Any): Parsed JSON data as dictionary
     """
-    with open(filename, "r") as f:
-        file_data = json.load(f)
-    return file_data
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            file_data = json.load(f)
+        return file_data
+    except Exception as e:
+        print(e)
+        return None
 
 @deprecated("Scheduled for removal in a future version. Use save_json() instead.")
 def save_file(filename: str, data: JsonData) -> None:

@@ -15,7 +15,7 @@ from bot_utils import (
     handle_logs,
     logs
 )
-from main import botTesters
+from main import botTesters, botAdmins
 
 class QuizView(View):
     def __init__(self, correct_answers, question, timeout):
@@ -101,6 +101,7 @@ class CustomCommandCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.tree.add_command(OppList())
+        self.bot.tree.add_command(Rating())
 
     @app_commands.command(name="error_test", description="Demonstrates intentional error generation")
     async def error_test(self, interaction: discord.Interaction):
@@ -205,6 +206,297 @@ class CustomCommandCog(commands.Cog):
             )
 
         await interaction.response.send_message(message)
+
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+class Rating(app_commands.Group):
+    def __init__(self):
+        super().__init__(
+            name="ratings",
+            description="Ratings of users or games",
+            guild_only=False
+        )
+        self.file_path = "storage/customs/ratings.json"
+
+    async def item_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        data = open_json(self.file_path)
+        if not data:
+            return []
+        
+        items = list(data.keys())
+        return [
+            app_commands.Choice(name=item, value=item)
+            for item in items
+            if current.lower() in item.lower()
+        ][:25]
+
+    @app_commands.command(name="rate", description="Rate an item")
+    @app_commands.describe(
+        item="The thing to rate, can be a game, user, etc",
+        stars="The stars you would give it on a 1-10 scale",
+        rating="The rating, max of 1k characters"
+    )
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def rate(self, interaction: discord.Interaction, item: str, stars: int, rating: str):
+        if not 1 <= stars <= 10:
+            await interaction.response.send_message("Stars must be between 1 and 10!", ephemeral=True)
+            return
+
+        if len(rating) > 1000:
+            await interaction.response.send_message("Rating text must be 1000 characters or less!", ephemeral=True)
+            return
+
+        data = open_json(self.file_path)
+        if not data:
+            data = {}
+
+        if item not in data:
+            if interaction.user.id not in botTesters:
+                await interaction.response.send_message("This item hasn't been rated yet. Only bot testers can add new items!", ephemeral=True)
+                return
+            data[item] = {}
+
+        user_id = str(interaction.user.id)
+        if user_id in data[item]:
+            await interaction.response.send_message(f"You have already rated this item! Please use `/ratings edit` to edit it or `/ratings delete` to delete it!", ephemeral=True)
+            return
+
+        data[item][user_id] = {
+            "versions": [],
+            "current_version": 0
+        }
+
+        new_version = data[item][user_id]["current_version"] + 1
+        data[item][user_id]["versions"].append({
+            "stars": stars,
+            "rating": rating,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "version": new_version
+        })
+        data[item][user_id]["current_version"] = new_version
+
+        save_json(self.file_path, data)
+
+        total_stars = 0
+        count = 0
+        for user_ratings in data[item].values():
+            latest_version = next(v for v in user_ratings["versions"] if v["version"] == user_ratings["current_version"])
+            total_stars += latest_version["stars"]
+            count += 1
+        average_rating = total_stars / count if count > 0 else 0
+
+        embed = discord.Embed(
+            title=f"Rating Added - {item}",
+            color=discord.Color.green(),
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.add_field(name="Stars", value=f"{stars}/10", inline=True)
+        embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=True)
+        embed.add_field(name="Your Rating", value=rating, inline=False)
+        embed.set_footer(text=f"By {interaction.user}")
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="edit", description="Edit your rating for an item")
+    @app_commands.describe(
+        item="The item to edit your rating for",
+        stars="The new star rating (1-10)",
+        rating="The new rating text"
+    )
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def edit(self, interaction: discord.Interaction, item: str, stars: int, rating: str):
+        if not 1 <= stars <= 10:
+            await interaction.response.send_message("Stars must be between 1 and 10!", ephemeral=True)
+            return
+
+        if len(rating) > 5000:
+            await interaction.response.send_message("Rating text must be 5000 characters or less!", ephemeral=True)
+            return
+
+        data = open_json(self.file_path)
+        if not data or item not in data:
+            await interaction.response.send_message("This item doesn't exist!", ephemeral=True)
+            return
+
+        user_id = str(interaction.user.id)
+        if user_id not in data[item]:
+            await interaction.response.send_message("You haven't rated this item yet!", ephemeral=True)
+            return
+
+        new_version = data[item][user_id]["current_version"] + 1
+        data[item][user_id]["versions"].append({
+            "stars": stars,
+            "rating": rating,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "version": new_version
+        })
+        data[item][user_id]["current_version"] = new_version
+
+        save_json(self.file_path, data)
+
+        total_stars = 0
+        count = 0
+        for user_ratings in data[item].values():
+            latest_version = next(v for v in user_ratings["versions"] if v["version"] == user_ratings["current_version"])
+            total_stars += latest_version["stars"]
+            count += 1
+        average_rating = total_stars / count if count > 0 else 0
+
+        embed = discord.Embed(
+            title=f"Rating Updated - {item}",
+            color=discord.Color.blue(),
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.add_field(name="New Stars", value=f"{stars}/10", inline=True)
+        embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=True)
+        embed.add_field(name="Your New Rating", value=rating, inline=False)
+        embed.set_footer(text=f"By {interaction.user}")
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="view", description="View ratings for an item")
+    @app_commands.describe(
+        item="The item to view ratings for",
+        user="Filter ratings by a specific user",
+        version="View a specific version of a rating"
+    )
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def view(self, interaction: discord.Interaction, item: str, user: discord.User = None, version: int = None):
+        data = open_json(self.file_path)
+        if not data or item not in data:
+            await interaction.response.send_message("This item doesn't exist!", ephemeral=True)
+            return
+
+        embed = discord.Embed(
+            title=f"Ratings for {item}",
+            color=discord.Color.blue(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        if user:
+            user_id = str(user.id)
+            if user_id not in data[item]:
+                await interaction.response.send_message(f"{user} hasn't rated this item!", ephemeral=True)
+                return
+
+            user_data = data[item][user_id]
+            if version is None:
+                version = user_data["current_version"]
+
+            version_data = None
+            for v in user_data["versions"]:
+                if v["version"] == version:
+                    version_data = v
+                    break
+
+            if not version_data:
+                await interaction.response.send_message(f"Version {version} not found!", ephemeral=True)
+                return
+
+            embed.add_field(name="Stars", value=f"{version_data['stars']}/10", inline=True)
+            embed.add_field(name="Version", value=str(version), inline=True)
+            embed.add_field(name="Rating", value=version_data["rating"], inline=False)
+            embed.set_footer(text=f"By {user}")
+
+        else:
+            total_stars = 0
+            count = 0
+            ratings_text = []
+
+            for user_id, user_ratings in data[item].items():
+                latest_version = next(v for v in user_ratings["versions"] if v["version"] == user_ratings["current_version"])
+                total_stars += latest_version["stars"]
+                count += 1
+                
+                try:
+                    user = await interaction.client.fetch_user(int(user_id))
+                    user_name = user.display_name if user else "Unknown User"
+                except:
+                    discord_user = interaction.guild.get_member(int(user_id)) if interaction.guild else None
+                    user_name = discord_user.display_name if discord_user else "Unknown User"
+                
+                ratings_text.append(f"{user_name}: {latest_version['stars']}/10 - {latest_version['rating'][:100]}...")
+
+            average_rating = total_stars / count if count > 0 else 0
+            embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=False)
+            
+            if ratings_text:
+                embed.add_field(name="All Ratings", value="\n\n".join(ratings_text[:10]), inline=False)
+                if len(ratings_text) > 10:
+                    embed.set_footer(text=f"Showing 10 of {len(ratings_text)} ratings")
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="delete", description="Delete your rating for an item")
+    @app_commands.describe(item="The item to delete your rating for")
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def delete(self, interaction: discord.Interaction, item: str):
+        data = open_json(self.file_path)
+        if not data or item not in data:
+            await interaction.response.send_message("This item doesn't exist!", ephemeral=True)
+            return
+
+        user_id = str(interaction.user.id)
+        if user_id not in data[item]:
+            await interaction.response.send_message("You haven't rated this item!", ephemeral=True)
+            return
+
+        del data[item][user_id]
+
+        if not data[item]:
+            del data[item]
+
+        save_json(self.file_path, data)
+
+        embed = discord.Embed(
+            title="Rating Deleted",
+            description=f"Your rating for {item} has been deleted.",
+            color=discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        if item in data:
+            total_stars = 0
+            count = 0
+            for user_ratings in data[item].values():
+                latest_version = next(v for v in user_ratings["versions"] if v["version"] == user_ratings["current_version"])
+                total_stars += latest_version["stars"]
+                count += 1
+            average_rating = total_stars / count if count > 0 else 0
+            embed.add_field(name="New Average Rating", value=f"{average_rating:.1f}/10", inline=True)
+        else:
+            embed.add_field(name="Item Status", value="Item removed (no more ratings)", inline=True)
+
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="delete_item", description="[Admin] Delete an item and all its ratings")
+    @app_commands.describe(item="The item to completely delete")
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def delete_item(self, interaction: discord.Interaction, item: str):
+        if interaction.user.id not in botAdmins:
+            await interaction.response.send_message("Only bot admins can delete items!", ephemeral=True)
+            return
+
+        data = open_json(self.file_path)
+        if not data or item not in data:
+            await interaction.response.send_message("This item doesn't exist!", ephemeral=True)
+            return
+
+        rating_count = len(data[item])
+
+        del data[item]
+        save_json(self.file_path, data)
+
+        embed = discord.Embed(
+            title="Item Deleted",
+            description=f"The item '{item}' has been completely deleted.",
+            color=discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+        embed.add_field(name="Ratings Removed", value=str(rating_count), inline=True)
+        embed.set_footer(text=f"Deleted by {interaction.user}")
+
+        await interaction.response.send_message(embed=embed)
 
 @app_commands.allowed_installs(guilds=True, users=True)
 @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)

@@ -399,15 +399,41 @@ class CGlovesGroup(app_commands.Group):
                 return
 
             glove_data = gloves[badge]
-            embed = discord.Embed(
-                title=glove_data.get("name", badge),
-                color=0xDA8EE7
-            )
-
-            if "slaps" in glove_data:
-                embed.description = f"Cost: {glove_data['slaps']:,} slaps"
             
-            if 'badges' not in glove_data:
+            # For badge gloves, fetch badge info from Roblox API
+            if 'badges' in glove_data:
+                async with aiohttp.ClientSession() as session:
+                    badge_id = glove_data['badges'][0]  # Get first badge ID
+                    async with session.get(f"https://badges.roblox.com/v1/badges/{badge_id}") as response:
+                        if response.status == 200:
+                            badge_info = await response.json()
+                            embed = discord.Embed(
+                                title=badge_info.get("name", badge),
+                                description=badge_info.get("description", "No description available"),
+                                color=0xDA8EE7
+                            )
+                            
+                            # Get badge thumbnail from correct endpoint
+                            if "iconImageId" in badge_info:
+                                async with session.get(f"https://thumbnails.roblox.com/v1/assets?assetIds={badge_info['iconImageId']}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false") as thumb_response:
+                                    if thumb_response.status == 200:
+                                        thumb_data = await thumb_response.json()
+                                        if thumb_data.get("data") and thumb_data["data"][0].get("imageUrl"):
+                                            embed.set_thumbnail(url=thumb_data["data"][0]["imageUrl"])
+                        else:
+                            embed = discord.Embed(
+                                title=glove_data.get("name", badge),
+                                color=0xDA8EE7
+                            )
+            else:
+                embed = discord.Embed(
+                    title=glove_data.get("name", badge),
+                    color=0xDA8EE7
+                )
+
+                if "slaps" in glove_data:
+                    embed.description = f"Cost: {glove_data['slaps']:,} slaps"
+                
                 if "overview" in glove_data:
                     embed.add_field(name="Overview", value=glove_data["overview"], inline=False)
                 
@@ -418,7 +444,7 @@ class CGlovesGroup(app_commands.Group):
                     if "cooldowns" in ability_data:
                         cooldown_text = []
                         for mode, cooldown in ability_data["cooldowns"].items():
-                            cooldown_text.append(f"{mode.title()}: {cooldown}")
+                            cooldown_text.append(f"{mode}: {cooldown}")
                         ability_text += "\n**Cooldowns:**\n" + "\n".join(cooldown_text)
                         
                     embed.add_field(name="Ability", value=ability_text, inline=False)
@@ -434,15 +460,18 @@ class CGlovesGroup(app_commands.Group):
                     for stat, value in glove_data["stats"].items():
                         stats_text.append(f"**{stat.title()}:** {value}")
                     embed.add_field(name="Stats", value="\n".join(stats_text), inline=False)
-            
-            if "description" in glove_data:
-                embed.add_field(name="Description", value=glove_data["description"], inline=False)
-            
-            if "obtainment" in glove_data:
-                embed.add_field(name="How to Obtain", value=glove_data["obtainment"], inline=False)
 
-            if "image" in glove_data:
-                embed.set_thumbnail(url=glove_data["image"])
+                if "description" in glove_data:
+                    embed.add_field(name="Description", value=glove_data["description"], inline=False)
+                
+                if "obtainment" in glove_data:
+                    embed.add_field(name="How to Obtain", value=glove_data["obtainment"], inline=False)
+
+                if "image" in glove_data:
+                    embed.set_thumbnail(url=glove_data["image"])
+                
+                if "video" in glove_data:
+                    embed.set_image(url=glove_data["video"])
 
             if 'badges' in glove_data:
                 if user:
@@ -502,7 +531,7 @@ class CGlovesGroup(app_commands.Group):
                         if "cooldowns" in ability_data:
                             cooldown_text = []
                             for mode, cooldown in ability_data["cooldowns"].items():
-                                cooldown_text.append(f"{mode.title()}: {cooldown}")
+                                cooldown_text.append(f"{mode}: {cooldown}")
                             ability_text += "\n**Cooldowns:**\n" + "\n".join(cooldown_text)
                             
                         details_embed.add_field(name="Ability", value=ability_text, inline=False)
@@ -529,7 +558,22 @@ class CGlovesGroup(app_commands.Group):
                     details_embed.add_field(name="Obtainable in VIP servers", value=vip_status, inline=False)
                     
                     if "image" in self.glove_data:
-                        details_embed.set_thumbnail(url=self.glove_data["image"])
+                        if 'badges' in self.glove_data:
+                            async with aiohttp.ClientSession() as session:
+                                # First get the badge info to get the iconImageId
+                                badge_id = self.glove_data['badges'][0]
+                                async with session.get(f"https://badges.roblox.com/v1/badges/{badge_id}") as response:
+                                    if response.status == 200:
+                                        badge_info = await response.json()
+                                        if "iconImageId" in badge_info:
+                                            # Then get the thumbnail using the iconImageId
+                                            async with session.get(f"https://thumbnails.roblox.com/v1/assets?assetIds={badge_info['iconImageId']}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false") as thumb_response:
+                                                if thumb_response.status == 200:
+                                                    thumb_data = await thumb_response.json()
+                                                    if thumb_data.get("data") and thumb_data["data"][0].get("imageUrl"):
+                                                        details_embed.set_thumbnail(url=thumb_data["data"][0]["imageUrl"])
+                        else:
+                            details_embed.set_thumbnail(url=self.glove_data["image"])
                     
                     await interaction.response.send_message(embed=details_embed, ephemeral=True)
 
