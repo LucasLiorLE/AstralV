@@ -134,34 +134,36 @@ class UtilCog(commands.Cog):
     async def afk(self, interaction: discord.Interaction, reason: str = None):
         await interaction.response.defer(ephemeral=True)
         try:
-            user_id = str(interaction.user.id)
-            try:
-                server_id = str(interaction.guild.id)
-            except AttributeError:
-                await interaction.followup.send("This command can only be used in a server.")
-                return
+            if interaction.guild:
+                user_id = str(interaction.user.id)
+                try:
+                    server_id = str(interaction.guild.id)
+                except AttributeError:
+                    await interaction.followup.send("This command can only be used in a server.")
+                    return
 
-            server_info = open_json("storage/server_info.json")
-            afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
+                server_info = open_json("storage/server_info.json")
+                afk_data = server_info.setdefault("afk", {}).setdefault(server_id, {})
 
-            if user_id in afk_data:
-                await interaction.followup.send("You are already AFK! Talk if you want to unAFK!")
-                return
+                if user_id in afk_data:
+                    await interaction.followup.send("You are already AFK! Talk if you want to unAFK!")
+                    return
 
-            afk_data[user_id] = {
-                "reason": reason,
-                "time": datetime.now(timezone.utc).isoformat(),
-                "original_name": interaction.user.display_name
-            }
-            
-            save_json("storage/server_info.json", server_info)
+                afk_data[user_id] = {
+                    "reason": reason,
+                    "time": datetime.now(timezone.utc).isoformat(),
+                    "original_name": interaction.user.display_name
+                }
+                
+                save_json("storage/server_info.json", server_info)
 
-            try:
-                await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
-                await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
-            except discord.errors.Forbidden:
-                await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}\nI was unable to change your name.")
-
+                try:
+                    await interaction.user.edit(nick=f"[AFK] {interaction.user.display_name}")
+                    await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}")
+                except discord.errors.Forbidden:
+                    await interaction.followup.send(f"You are now AFK. Reason: {reason or 'None'}\nI was unable to change your name.")
+            else:
+                await interaction.followup.send("You can only use this in a server!")
         except Exception as e:
             await handle_logs(interaction, e)
 

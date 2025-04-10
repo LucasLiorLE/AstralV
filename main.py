@@ -16,6 +16,7 @@
 #    - Role command group
 #    - Level calculation rework
 #    - Help command & commands.json entirely reworked (Took more than a day im dying)
+#         - Now is in bot_data.json (4/9/25)
 #    - Pokemon command
 #    - cgloves search overhaul!
 #    - Hunger games commands!!
@@ -163,7 +164,7 @@ async def load_cogs():
                         error(f"Failed to load {folder}/{filename}: {e}")
 
 async def load_commands(bot: commands.Bot) -> None:
-    commands_data = open_json("storage/commands.json")
+    commands_data = open_json("storage/bot_data.json")["commands"]
     
     for command in bot.walk_commands():
         command_parts = str(command).split()

@@ -95,7 +95,7 @@ class InfoCog(commands.Cog):
 	@app_commands.command(name="help")
 	async def help(self, interaction: discord.Interaction, command: str, ephemeral: bool = True):
 		try:
-			command_help = open_json("storage/commands.json")
+			command_help = open_json("storage/bot_data.json")["commands"]
 			
 			command_parts = command.lower().split()
 			current_level = command_help
@@ -312,13 +312,15 @@ class InfoCog(commands.Cog):
 				return
 
 			embed = discord.Embed(title="Server Info", color=0x808080)
-			embed.add_field(name="Owner", value=guild.owner.mention if guild.owner else "N/A")
-			embed.add_field(name="Members", value=guild.member_count)
-			embed.add_field(name="Roles", value=len([role.name for role in guild.roles]))
-			embed.add_field(name="Category Channels", value=len(guild.categories))
-			embed.add_field(name="Text Channels", value=len([channel for channel in guild.text_channels]))
-			embed.add_field(name="Voice Channels", value=len([channel for channel in guild.voice_channels]))
-			embed.add_field(name="Role List", value=", ".join([role.name for role in guild.roles]), inline=False)
+			if interaction.guild is not None:
+				embed.add_field(name="Owner", value=guild.owner.mention if guild.owner else "N/A")
+				embed.add_field(name="Members", value=guild.member_count)
+				embed.add_field(name="Roles", value=len([role.name for role in guild.roles]))
+				embed.add_field(name="Category Channels", value=len(guild.categories))
+				embed.add_field(name="Text Channels", value=len([channel for channel in guild.text_channels]))
+				embed.add_field(name="Voice Channels", value=len([channel for channel in guild.voice_channels]))
+				embed.add_field(name="Role List", value=", ".join([role.name for role in guild.roles]), inline=False)
+
 			embed.add_field(name="Server ID", value=guild.id)
 			embed.add_field(name="Server Created", value=f"{guild.created_at.strftime('%m/%d/%Y %I:%M %p')}")
 			embed.set_footer(text=f"Requested by {interaction.user}", icon_url=interaction.user.avatar.url)
@@ -361,10 +363,12 @@ class InfoCog(commands.Cog):
 			embed = discord.Embed(title=f"Role info for {role.name}", color=role.color)
 			embed.add_field(name="Role ID", value=role.id)
 			embed.add_field(name="Color", value=str(role.color))
-			embed.add_field(name="Mentionable", value=str(role.mentionable))
-			embed.add_field(name="Hoist", value=str(role.hoist))
-			embed.add_field(name="Position",value=f"{role.position}/{len(interaction.guild.roles)}",)
-			embed.add_field(name="Member Count", value=len(role.members))
+			if interaction.guild is not None:
+				embed.add_field(name="Mentionable", value=str(role.mentionable))
+				embed.add_field(name="Hoist", value=str(role.hoist))
+				embed.add_field(name="Position",value=f"{role.position}/{len(interaction.guild.roles)}",)
+				embed.add_field(name="Member Count", value=len(role.members))
+
 			embed.add_field(name="Role Created",value=f"{role.created_at.strftime("%m/%d/%Y %H:%M")} ({(datetime.now(timezone.utc) - role.created_at).days} days ago)")
 			embed.add_field(name="Permissions",value=", ".join(permissions_list) if permissions_list else "No permissions", inline=False)
 

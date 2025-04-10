@@ -14,6 +14,7 @@ from discord.ext import commands
 from discord.ui import View, Button, button
 from discord import app_commands, ButtonStyle
 
+from main import botAdmins
 import random, asyncio, aiohttp
 from collections import deque
 from datetime import datetime
@@ -386,34 +387,32 @@ class CGlovesGroup(app_commands.Group):
 
         except Exception as error:
             await handle_logs(interaction, error)
-
+            
     @app_commands.command(name="search")
-    @app_commands.autocomplete(badge=autocomplete_all_gloves, user=get_connected_accounts)
-    async def search(self, interaction: discord.Interaction, badge: str, user: str = None):
+    @app_commands.autocomplete(glove=autocomplete_all_gloves, user=get_connected_accounts)
+    async def search(self, interaction: discord.Interaction, glove: str, user: str = None):
         await interaction.response.defer()
     
         try:
             gloves = open_json("storage/bot_data.json")["cgloves"]
-            if badge not in gloves:
+            if glove not in gloves:
                 await interaction.followup.send("Invalid glove name.")
                 return
 
-            glove_data = gloves[badge]
+            glove_data = gloves[glove]
             
-            # For badge gloves, fetch badge info from Roblox API
             if 'badges' in glove_data:
                 async with aiohttp.ClientSession() as session:
-                    badge_id = glove_data['badges'][0]  # Get first badge ID
+                    badge_id = glove_data['badges'][0]
                     async with session.get(f"https://badges.roblox.com/v1/badges/{badge_id}") as response:
                         if response.status == 200:
                             badge_info = await response.json()
                             embed = discord.Embed(
-                                title=badge_info.get("name", badge),
+                                title=badge_info.get("name", glove),
                                 description=badge_info.get("description", "No description available"),
                                 color=0xDA8EE7
                             )
                             
-                            # Get badge thumbnail from correct endpoint
                             if "iconImageId" in badge_info:
                                 async with session.get(f"https://thumbnails.roblox.com/v1/assets?assetIds={badge_info['iconImageId']}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false") as thumb_response:
                                     if thumb_response.status == 200:
@@ -422,12 +421,12 @@ class CGlovesGroup(app_commands.Group):
                                             embed.set_thumbnail(url=thumb_data["data"][0]["imageUrl"])
                         else:
                             embed = discord.Embed(
-                                title=glove_data.get("name", badge),
+                                title=glove_data.get("name", glove),
                                 color=0xDA8EE7
                             )
             else:
                 embed = discord.Embed(
-                    title=glove_data.get("name", badge),
+                    title=glove_data.get("name", glove),
                     color=0xDA8EE7
                 )
 
@@ -503,7 +502,7 @@ class CGlovesGroup(app_commands.Group):
                 @button(label="Overview & Ability", style=ButtonStyle.secondary)
                 async def show_details(self, interaction: discord.Interaction, button: Button):
                     details_embed = discord.Embed(
-                        title=f"{self.glove_data.get('name', badge)} - Details",
+                        title=f"{self.glove_data.get('name', glove)} - Details",
                         color=0xDA8EE7
                     )
                     
@@ -560,13 +559,11 @@ class CGlovesGroup(app_commands.Group):
                     if "image" in self.glove_data:
                         if 'badges' in self.glove_data:
                             async with aiohttp.ClientSession() as session:
-                                # First get the badge info to get the iconImageId
                                 badge_id = self.glove_data['badges'][0]
                                 async with session.get(f"https://badges.roblox.com/v1/badges/{badge_id}") as response:
                                     if response.status == 200:
                                         badge_info = await response.json()
                                         if "iconImageId" in badge_info:
-                                            # Then get the thumbnail using the iconImageId
                                             async with session.get(f"https://thumbnails.roblox.com/v1/assets?assetIds={badge_info['iconImageId']}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false") as thumb_response:
                                                 if thumb_response.status == 200:
                                                     thumb_data = await thumb_response.json()

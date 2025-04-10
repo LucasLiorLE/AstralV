@@ -17,6 +17,48 @@ from bot_utils import (
 )
 from main import botTesters, botAdmins
 
+class Editors(app_commands.Group):
+    def __init__(self):
+        super().__init__(
+            name="editors",
+            description="Manage editors for opp list and ratings",
+            guild_only=False
+        )
+        self.file_path = "storage/customs/editors.json"
+
+    @app_commands.command(name="toggle", description="Toggle a user's ability to add to opp list or ratings")
+    @app_commands.describe(
+        type="The type of editor to toggle (Opp or Ratings)",
+        user="The user to toggle"
+    )
+    @app_commands.choices(
+        type=[
+            app_commands.Choice(name="Opp", value="opp"),
+            app_commands.Choice(name="Ratings", value="ratings"),
+        ]
+    )
+    async def toggle(self, interaction: discord.Interaction, type: str, user: discord.User):
+        if interaction.user.id not in botAdmins:
+            await interaction.response.send_message("Only bot admins can manage editors!", ephemeral=True)
+            return
+
+        data = open_json(self.file_path)
+        if not data:
+            data = {"opp": [], "ratings": []}
+
+        user_id = str(user.id)
+        editor_type = type.lower()
+
+        if user_id in data[editor_type]:
+            data[editor_type].remove(user_id)
+            action = "removed from"
+        else:
+            data[editor_type].append(user_id)
+            action = "added to"
+
+        save_json(self.file_path, data)
+        await interaction.response.send_message(f"{user.mention} has been {action} the {editor_type} editors list.")
+
 class QuizView(View):
     def __init__(self, correct_answers, question, timeout):
         super().__init__(timeout=timeout)
@@ -102,6 +144,7 @@ class CustomCommandCog(commands.Cog):
         self.bot = bot
         self.bot.tree.add_command(OppList())
         self.bot.tree.add_command(Rating())
+        self.bot.tree.add_command(Editors())
 
     @app_commands.command(name="error_test", description="Demonstrates intentional error generation")
     async def error_test(self, interaction: discord.Interaction):
@@ -217,6 +260,7 @@ class Rating(app_commands.Group):
             guild_only=False
         )
         self.file_path = "storage/customs/ratings.json"
+        self.editors_path = "storage/customs/editors.json"
 
     async def item_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         data = open_json(self.file_path)
@@ -232,18 +276,47 @@ class Rating(app_commands.Group):
 
     @app_commands.command(name="rate", description="Rate an item")
     @app_commands.describe(
-        item="The thing to rate, can be a game, user, etc",
-        stars="The stars you would give it on a 1-10 scale",
-        rating="The rating, max of 1k characters"
+        item="The item to rate, can be a game, user, etc",
+        stars="The stars you would give it on a 0-10 scale (can use decimals like 5.5)",
+        rating="The rating, max of 2k characters",
+        extra_rating_1="Extra rating, max of 2k characters",
+        extra_rating_2="Extra rating, max of 2k characters",
+        extra_rating_3="Extra rating, max of 2k characters",
+        extra_rating_4="Extra rating, max of 2k characters",
+        extra_rating_5="Extra rating, max of 2k characters",
+        extra_rating_6="Extra rating, max of 2k characters",
+        extra_rating_7="Extra rating, max of 2k characters",
+        extra_rating_8="Extra rating, max of 2k characters",
+        extra_rating_9="Extra rating, max of 2k characters"
     )
     @app_commands.autocomplete(item=item_autocomplete)
-    async def rate(self, interaction: discord.Interaction, item: str, stars: int, rating: str):
-        if not 1 <= stars <= 10:
-            await interaction.response.send_message("Stars must be between 1 and 10!", ephemeral=True)
+    async def rate(self, interaction: discord.Interaction, item: str, stars: float, rating: str,
+                    extra_rating_1: str = None, extra_rating_2: str = None, extra_rating_3: str = None,
+                    extra_rating_4: str = None, extra_rating_5: str = None, extra_rating_6: str = None, 
+                    extra_rating_7: str = None, extra_rating_8: str = None, extra_rating_9: str = None):
+        
+        editors_data = open_json(self.editors_path)
+        if not editors_data or "ratings" not in editors_data:
+            editors_data = {"ratings": []}
+            save_json(self.editors_path, editors_data)
+        
+        if str(interaction.user.id) not in editors_data["ratings"] and interaction.user.id not in botAdmins:
+            await interaction.response.send_message("You don't have permission to rate items!", ephemeral=True)
             return
 
-        if len(rating) > 1000:
-            await interaction.response.send_message("Rating text must be 1000 characters or less!", ephemeral=True)
+        if not 0 <= stars <= 10:
+            await interaction.response.send_message("Stars must be between 0 and 10!", ephemeral=True)
+            return
+
+        if len(str(stars).split('.')[-1]) > 1:
+            await interaction.response.send_message("Stars can only have 1 decimal place (e.g. 5.5)!", ephemeral=True)
+            return
+        
+        rating = ''.join(part for part in [rating, extra_rating_1, extra_rating_2, extra_rating_3, extra_rating_4,
+               extra_rating_5, extra_rating_6, extra_rating_7, extra_rating_8, extra_rating_9] if part)
+
+        if len(rating) > 20000:
+            await interaction.response.send_message("Rating text must be 20000 characters or less!", ephemeral=True)
             return
 
         data = open_json(self.file_path)
@@ -251,9 +324,6 @@ class Rating(app_commands.Group):
             data = {}
 
         if item not in data:
-            if interaction.user.id not in botTesters:
-                await interaction.response.send_message("This item hasn't been rated yet. Only bot testers can add new items!", ephemeral=True)
-                return
             data[item] = {}
 
         user_id = str(interaction.user.id)
@@ -292,7 +362,11 @@ class Rating(app_commands.Group):
         )
         embed.add_field(name="Stars", value=f"{stars}/10", inline=True)
         embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=True)
-        embed.add_field(name="Your Rating", value=rating, inline=False)
+        
+        chunks = [rating[i:i + 1000] for i in range(0, len(rating), 1000)]
+        for i, chunk in enumerate(chunks, 1):
+            embed.add_field(name=f"Your Rating (Part {i})", value=chunk, inline=False)
+
         embed.set_footer(text=f"By {interaction.user}")
 
         await interaction.response.send_message(embed=embed)
@@ -300,17 +374,37 @@ class Rating(app_commands.Group):
     @app_commands.command(name="edit", description="Edit your rating for an item")
     @app_commands.describe(
         item="The item to edit your rating for",
-        stars="The new star rating (1-10)",
-        rating="The new rating text"
+        stars="The new star rating (0-10, can use decimals like 5.5)",
+        rating="The new rating text (max 20k characters, split into 10 parts)",
+        extra_rating_1="Extra rating, max of 2k characters",
+        extra_rating_2="Extra rating, max of 2k characters",
+        extra_rating_3="Extra rating, max of 2k characters",
+        extra_rating_4="Extra rating, max of 2k characters",
+        extra_rating_5="Extra rating, max of 2k characters",
+        extra_rating_6="Extra rating, max of 2k characters",
+        extra_rating_7="Extra rating, max of 2k characters",
+        extra_rating_8="Extra rating, max of 2k characters",
+        extra_rating_9="Extra rating, max of 2k characters"
     )
     @app_commands.autocomplete(item=item_autocomplete)
-    async def edit(self, interaction: discord.Interaction, item: str, stars: int, rating: str):
-        if not 1 <= stars <= 10:
-            await interaction.response.send_message("Stars must be between 1 and 10!", ephemeral=True)
+    async def edit(self, interaction: discord.Interaction, item: str, stars: float, rating: str,
+                    extra_rating_1: str = None, extra_rating_2: str = None, extra_rating_3: str = None,
+                    extra_rating_4: str = None, extra_rating_5: str = None, extra_rating_6: str = None, 
+                    extra_rating_7: str = None, extra_rating_8: str = None, extra_rating_9: str = None):
+        
+        if not 0 <= stars <= 10:
+            await interaction.response.send_message("Stars must be between 0 and 10!", ephemeral=True)
             return
 
-        if len(rating) > 5000:
-            await interaction.response.send_message("Rating text must be 5000 characters or less!", ephemeral=True)
+        if len(str(stars).split('.')[-1]) > 1:
+            await interaction.response.send_message("Stars can only have 1 decimal place (e.g. 5.5)!", ephemeral=True)
+            return
+        
+        rating = ''.join(part for part in [rating, extra_rating_1, extra_rating_2, extra_rating_3, extra_rating_4,
+               extra_rating_5, extra_rating_6, extra_rating_7, extra_rating_8, extra_rating_9] if part)
+
+        if len(rating) > 20000:
+            await interaction.response.send_message("Rating text must be 20000 characters or less!", ephemeral=True)
             return
 
         data = open_json(self.file_path)
@@ -349,9 +443,153 @@ class Rating(app_commands.Group):
         )
         embed.add_field(name="New Stars", value=f"{stars}/10", inline=True)
         embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=True)
-        embed.add_field(name="Your New Rating", value=rating, inline=False)
+        
+        # Split rating into chunks of 1000 characters
+        chunks = [rating[i:i + 1000] for i in range(0, len(rating), 1000)]
+        for i, chunk in enumerate(chunks, 1):
+            embed.add_field(name=f"Your New Rating (Part {i})", value=chunk, inline=False)
+
         embed.set_footer(text=f"By {interaction.user}")
 
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="admin_edit", description="[Admin] Edit someone's rating or rename an item")
+    @app_commands.describe(
+        item="The item to edit",
+        new_name="New name for the item (optional)",
+        user="User whose rating to edit (optional)",
+        stars="New star rating (0-10, can use decimals like 5.5)",
+        rating="New rating text"
+    )
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def admin_edit(
+        self, 
+        interaction: discord.Interaction, 
+        item: str, 
+        new_name: str = None,
+        user: discord.User = None,
+        stars: float = None,
+        rating: str = None
+    ):
+        if interaction.user.id not in botAdmins:
+            await interaction.response.send_message("Only bot admins can use this command!", ephemeral=True)
+            return
+
+        data = open_json(self.file_path)
+        if not data or item not in data:
+            await interaction.response.send_message("This item doesn't exist!", ephemeral=True)
+            return
+
+        if new_name:
+            if new_name in data:
+                await interaction.response.send_message(f"An item named '{new_name}' already exists!", ephemeral=True)
+                return
+            data[new_name] = data[item]
+            del data[item]
+            item = new_name
+
+        if user:
+            user_id = str(user.id)
+            if user_id not in data[item]:
+                await interaction.response.send_message(f"{user} hasn't rated this item!", ephemeral=True)
+                return
+
+            if stars is not None:
+                if not 0 <= stars <= 10:
+                    await interaction.response.send_message("Stars must be between 0 and 10!", ephemeral=True)
+                    return
+                if len(str(stars).split('.')[-1]) > 1:
+                    await interaction.response.send_message("Stars can only have 1 decimal place (e.g. 5.5)!", ephemeral=True)
+                    return
+
+            if not stars and not rating:
+                await interaction.response.send_message("Please provide either stars or rating to edit!", ephemeral=True)
+                return
+
+            current_version = data[item][user_id]["current_version"]
+            current_data = next(v for v in data[item][user_id]["versions"] if v["version"] == current_version)
+
+            new_version = current_version + 1
+            new_data = {
+                "stars": stars if stars is not None else current_data["stars"],
+                "rating": rating if rating is not None else current_data["rating"],
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "version": new_version,
+                "edited_by": str(interaction.user)
+            }
+
+            data[item][user_id]["versions"].append(new_data)
+            data[item][user_id]["current_version"] = new_version
+
+        save_json(self.file_path, data)
+
+        embed = discord.Embed(
+            title="Admin Edit Complete",
+            color=discord.Color.green(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        if new_name:
+            embed.add_field(name="Item Renamed", value=f"'{item}' (previously '{new_name}')", inline=False)
+
+        if user:
+            embed.add_field(name="User Rating Updated", value=f"Updated {user}'s rating:", inline=False)
+            if stars is not None:
+                embed.add_field(name="New Stars", value=f"{stars}/10", inline=True)
+            if rating is not None:
+                embed.add_field(name="New Rating", value=rating, inline=False)
+
+        embed.set_footer(text=f"Edited by {interaction.user}")
+        await interaction.response.send_message(embed=embed)
+
+    @app_commands.command(name="admin_delete_rating", description="[Admin] Delete a specific user's rating")
+    @app_commands.describe(
+        item="The item to delete the rating from",
+        user="The user whose rating to delete"
+    )
+    @app_commands.autocomplete(item=item_autocomplete)
+    async def admin_delete_rating(self, interaction: discord.Interaction, item: str, user: discord.User):
+        if interaction.user.id not in botAdmins:
+            await interaction.response.send_message("Only bot admins can use this command!", ephemeral=True)
+            return
+
+        data = open_json(self.file_path)
+        if not data or item not in data:
+            await interaction.response.send_message("This item doesn't exist!", ephemeral=True)
+            return
+
+        user_id = str(user.id)
+        if user_id not in data[item]:
+            await interaction.response.send_message(f"{user} hasn't rated this item!", ephemeral=True)
+            return
+
+        del data[item][user_id]
+
+        if not data[item]:
+            del data[item]
+
+        save_json(self.file_path, data)
+
+        embed = discord.Embed(
+            title="Rating Deleted",
+            description=f"Deleted {user}'s rating for {item}",
+            color=discord.Color.red(),
+            timestamp=datetime.now(timezone.utc)
+        )
+
+        if item in data:
+            total_stars = 0
+            count = 0
+            for user_ratings in data[item].values():
+                latest_version = next(v for v in user_ratings["versions"] if v["version"] == user_ratings["current_version"])
+                total_stars += latest_version["stars"]
+                count += 1
+            average_rating = total_stars / count if count > 0 else 0
+            embed.add_field(name="New Average Rating", value=f"{average_rating:.1f}/10", inline=True)
+        else:
+            embed.add_field(name="Item Status", value="Item removed (no more ratings)", inline=True)
+
+        embed.set_footer(text=f"Deleted by {interaction.user}")
         await interaction.response.send_message(embed=embed)
 
     @app_commands.command(name="view", description="View ratings for an item")
@@ -381,22 +619,36 @@ class Rating(app_commands.Group):
 
             user_data = data[item][user_id]
             if version is None:
-                version = user_data["current_version"]
+                # Show the 3 most recent versions
+                sorted_versions = sorted(user_data["versions"], key=lambda x: x["version"], reverse=True)
+                latest_versions = sorted_versions[:3]
+                
+                for v in latest_versions:
+                    embed.add_field(
+                        name=f"Version {v['version']} - {v['stars']}/10",
+                        value=f"{v['rating'][:100]}..." if len(v['rating']) > 100 else v['rating'],
+                        inline=False
+                    )
+                if len(sorted_versions) > 3:
+                    embed.set_footer(text=f"Showing 3 most recent versions out of {len(sorted_versions)}")
+            else:
+                version_data = None
+                for v in user_data["versions"]:
+                    if v["version"] == version:
+                        version_data = v
+                        break
 
-            version_data = None
-            for v in user_data["versions"]:
-                if v["version"] == version:
-                    version_data = v
-                    break
+                if not version_data:
+                    await interaction.response.send_message(f"Version {version} not found!", ephemeral=True)
+                    return
 
-            if not version_data:
-                await interaction.response.send_message(f"Version {version} not found!", ephemeral=True)
-                return
-
-            embed.add_field(name="Stars", value=f"{version_data['stars']}/10", inline=True)
-            embed.add_field(name="Version", value=str(version), inline=True)
-            embed.add_field(name="Rating", value=version_data["rating"], inline=False)
-            embed.set_footer(text=f"By {user}")
+                embed.add_field(name="Stars", value=f"{version_data['stars']}/10", inline=True)
+                embed.add_field(name="Version", value=str(version), inline=True)
+                
+                # Split rating into chunks of 1000 characters
+                chunks = [version_data['rating'][i:i + 1000] for i in range(0, len(version_data['rating']), 1000)]
+                for i, chunk in enumerate(chunks, 1):
+                    embed.add_field(name=f"Rating (Part {i})", value=chunk, inline=False)
 
         else:
             total_stars = 0
@@ -421,7 +673,21 @@ class Rating(app_commands.Group):
             embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=False)
             
             if ratings_text:
-                embed.add_field(name="All Ratings", value="\n\n".join(ratings_text[:10]), inline=False)
+                # Split ratings into chunks of 1000 characters
+                ratings_chunks = []
+                current_chunk = ""
+                for rating in ratings_text[:10]:
+                    if len(current_chunk) + len(rating) + 2 > 1000:
+                        ratings_chunks.append(current_chunk)
+                        current_chunk = rating
+                    else:
+                        current_chunk += ("\n\n" if current_chunk else "") + rating
+                if current_chunk:
+                    ratings_chunks.append(current_chunk)
+
+                for i, chunk in enumerate(ratings_chunks, 1):
+                    embed.add_field(name=f"All Ratings (Part {i})", value=chunk, inline=False)
+
                 if len(ratings_text) > 10:
                     embed.set_footer(text=f"Showing 10 of {len(ratings_text)} ratings")
 
@@ -508,6 +774,7 @@ class OppList(app_commands.Group):
             guild_only=False
         )
         self.file_path = "storage/customs/opp_list.json"
+        self.editors_path = "storage/customs/editors.json"
 
     async def user_autocomplete(self, interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         data = open_json(self.file_path)
@@ -546,7 +813,12 @@ class OppList(app_commands.Group):
     @app_commands.command(name="add", description="Add someone to the opp list")
     @app_commands.describe(user="The user to add", reason="Reason for adding")
     async def add(self, interaction: discord.Interaction, user: str, reason: str):
-        if interaction.user.id not in botTesters:
+        editors_data = open_json(self.editors_path)
+        if not editors_data or "opp" not in editors_data:
+            editors_data = {"opp": []}
+            save_json(self.editors_path, editors_data)
+        
+        if str(interaction.user.id) not in editors_data["opp"] and interaction.user.id not in botAdmins:
             await interaction.response.send_message("You don't have permission to modify the opp list!", ephemeral=True)
             return
 
