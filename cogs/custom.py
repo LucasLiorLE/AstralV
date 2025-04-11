@@ -660,7 +660,7 @@ class Rating(app_commands.Group):
                     discord_user = interaction.guild.get_member(int(user_id)) if interaction.guild else None
                     user_name = discord_user.display_name if discord_user else "Unknown User"
                 
-                ratings_text.append(f"{user_name}: {latest_version['stars']}/10 - {latest_version['rating'][:100]}{"..." if len(latest_version['rating']) > 100 else None}")
+                ratings_text.append(f"{user_name}: {latest_version['stars']}/10 - {latest_version['rating'][:100]}{"..." if len(latest_version['rating']) > 100 else ""}")
 
             average_rating = total_stars / count if count > 0 else 0
             embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=False)

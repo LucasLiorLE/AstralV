@@ -3,13 +3,13 @@ from dotenv import load_dotenv
 from pathlib import Path
 from typing import Dict, Any, TypeVar, Union, List
 from typing_extensions import deprecated
+import aiomysql
 
-import mysql.connector
 
 class DB:
     def __init__(self, env_file: str = "storage/secrets.env"):
         """
-        Initializes the DB class and loads credentials from a .env file.
+        Initializes the DataBase class and loads credentials from a .env file.
         """
         root_dir = Path(__file__).parent.parent
         secrets_path = root_dir / env_file
@@ -27,115 +27,80 @@ class DB:
         if not all([self.db_host, self.db_user, self.db_pass, self.db_name]):
             raise ValueError("Missing one or more database credentials in the .env file")
 
-    def get_db_connection(self):
-        """Establishes and returns a connection to the MySQL database."""
-        return mysql.connector.connect(
+    async def get_db_connection(self):
+        """Establish and return an asynchronous connection to the MySQL database."""
+        return await aiomysql.connect(
             host=self.db_host,
             user=self.db_user,
             password=self.db_pass,
-            database=self.db_name
+            db=self.db_name,
+            charset='utf8mb4',
+            autocommit=False
         )
 
-    def query_db(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    async def query_db(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """
         Executes a SELECT query and returns the results as a list of dictionaries.
-        
-        Parameters:
-            query (str): SQL query to execute
-            params (tuple): Parameters to pass into the query (default is empty)
-            
-        Returns:
-            List[Dict[str, Any]]: List of results, each represented as a dictionary
         """
-        conn = self.get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        try:
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            return results
-        except mysql.connector.Error as err:
-            print(f"Error: {err}")
-            return []
-        finally:
-            cursor.close()
-            conn.close()
+        conn = await self.get_db_connection()
+        async with conn.cursor(aiomysql.DictCursor) as cursor:
+            try:
+                await cursor.execute(query, params)
+                results = await cursor.fetchall()
+                return results
+            except aiomysql.MySQLError as err:
+                print(f"Error: {err}")
+                return []
+            finally:
+                conn.close()
 
-    def execute(self, query: str, params: tuple = ()) -> int:
+    async def execute(self, query: str, params: tuple = ()) -> int:
         """
         Executes an INSERT, UPDATE, or DELETE query.
-        
-        Parameters:
-            query (str): SQL query to execute
-            params (tuple): Parameters to pass into the query (default is empty)
-            
-        Returns:
-            int: The number of rows affected by the query
+        Returns the number of rows affected.
         """
-        conn = self.get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute(query, params)
-            conn.commit()
-            return cursor.rowcount
-        except mysql.connector.Error as err:
-            print(f"Error: {err}")
-            conn.rollback()
-            return 0
-        finally:
-            cursor.close()
-            conn.close()
+        conn = await self.get_db_connection()
+        async with conn.cursor() as cursor:
+            try:
+                await cursor.execute(query, params)
+                await conn.commit()
+                return cursor.rowcount
+            except aiomysql.MySQLError as err:
+                print(f"Error: {err}")
+                await conn.rollback()
+                return 0
+            finally:
+                conn.close()
 
-    def fetch_one(self, query: str, params: tuple = ()) -> Dict[str, Any]:
+    async def fetch_one(self, query: str, params: tuple = ()) -> Dict[str, Any]:
         """
         Fetch a single result from the database.
-        
-        Parameters:
-            query (str): SQL query to execute
-            params (tuple): Parameters to pass into the query (default is empty)
-            
-        Returns:
-            Dict[str, Any]: Single row result as a dictionary
         """
-        results = self.query_db(query, params)
+        results = await self.query_db(query, params)
         return results[0] if results else {}
 
-    def fetch_all(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
+    async def fetch_all(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
         """
         Fetch all results from the database.
-        
-        Parameters:
-            query (str): SQL query to execute
-            params (tuple): Parameters to pass into the query (default is empty)
-            
-        Returns:
-            List[Dict[str, Any]]: All results as a list of dictionaries
         """
-        return self.query_db(query, params)
+        return await self.query_db(query, params)
 
-    def insert_record(self, query: str, params: tuple = ()) -> int:
+    async def insert_record(self, query: str, params: tuple = ()) -> int:
         """
         Insert a new record into the database and return the last inserted ID.
-        
-        Parameters:
-            query (str): SQL insert query
-            params (tuple): Parameters for the query
-            
-        Returns:
-            int: The ID of the last inserted record
         """
-        conn = self.get_db_connection()
-        cursor = conn.cursor()
-        try:
-            cursor.execute(query, params)
-            conn.commit()
-            return cursor.lastrowid
-        except mysql.connector.Error as err:
-            print(f"Error: {err}")
-            conn.rollback()
-            return 0
-        finally:
-            cursor.close()
-            conn.close()
+        conn = await self.get_db_connection()
+        async with conn.cursor() as cursor:
+            try:
+                await cursor.execute(query, params)
+                await conn.commit()
+                return cursor.lastrowid
+            except aiomysql.MySQLError as err:
+                print(f"Error: {err}")
+                await conn.rollback()
+                return 0
+            finally:
+                conn.close()
 
 T = TypeVar('T')
 JsonData = Union[Dict[str, Any], List[Any], str, int, float, bool, None]

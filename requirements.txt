@@ -23,7 +23,7 @@ moviepy==1.0.3
 # Utility
 python-dotenv==1.0.1
 pet-pet-gif==1.0.2
-mysql-connector-python==9.2.0
+aiomysql==0.2.0
 
 # Game APIs
 ossapi==5.0.1

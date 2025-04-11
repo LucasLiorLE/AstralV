@@ -13,15 +13,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-
-class PollButtonView(discord.ui.View):
-    def __init__(self, poll_id: str, options: list):
-        super().__init__(timeout=None)
-        self.poll_id = poll_id
-        self.options = options
-        
-        for i, option in enumerate(options):
-            self.add_item(PollButton(i, option))
 class PollButton(discord.ui.Button):
     def __init__(self, index: int, option: str):
         super().__init__(label=option, style=discord.ButtonStyle.blurple, custom_id=f"poll_option_{index}")
@@ -32,10 +23,10 @@ class PollButton(discord.ui.Button):
         try:
             poll_id = int(self.view.poll_id)
 
-            db.execute("DELETE FROM poll_votes WHERE poll_id = %s AND user_id = %s", (poll_id, interaction.user.id))
-            db.execute("INSERT INTO poll_votes (poll_id, user_id, option_index) VALUES (%s, %s, %s)", (poll_id, interaction.user.id, self.index))
+            await db.execute("DELETE FROM poll_votes WHERE poll_id = %s AND user_id = %s", (poll_id, interaction.user.id))
+            await db.execute("INSERT INTO poll_votes (poll_id, user_id, option_index) VALUES (%s, %s, %s)", (poll_id, interaction.user.id, self.index))
 
-            votes = db.fetch_all("SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = %s GROUP BY option_index", (poll_id,))
+            votes = await db.fetch_all("SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = %s GROUP BY option_index", (poll_id,))
             vote_map = {row["option_index"]: row["count"] for row in votes}
             total = sum(vote_map.values())
 
@@ -53,6 +44,7 @@ class PollButton(discord.ui.Button):
         except Exception as e:
             await handle_logs(interaction, e)
 
+
 class PollButtonView(discord.ui.View):
     def __init__(self, poll_id: str, options: list):
         super().__init__(timeout=None)
@@ -65,16 +57,16 @@ async def end_poll(bot: commands.Bot, poll_id: int):
     db = DB()
     await asyncio.sleep(1)
     try:
-        poll = db.fetch_all("SELECT * FROM polls WHERE id = %s", (poll_id,))
-        if not poll:
+        poll_data = await db.fetch_all("SELECT * FROM polls WHERE id = %s", (poll_id,))
+        if not poll_data:
             return
-        poll = poll[0]
+        poll = poll_data[0]
         wait_time = poll["end_time"] - int(time.time())
         if wait_time > 0:
             await asyncio.sleep(wait_time)
 
         options = json.loads(poll["options"])
-        votes = db.fetch_all("SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = %s GROUP BY option_index", (poll_id,))
+        votes = await db.fetch_all("SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = %s GROUP BY option_index", (poll_id,))
         vote_map = {row["option_index"]: row["count"] for row in votes}
         total = sum(vote_map.values())
 
@@ -105,23 +97,30 @@ async def end_poll(bot: commands.Bot, poll_id: int):
 class PollGroup(app_commands.Group):
     def __init__(self):
         super().__init__(name="poll", description="Create and manage polls", guild_only=False)
-        DB().execute("""CREATE TABLE IF NOT EXISTS polls (
+
+    async def setup_tables(self):
+        db = DB()
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS polls (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            question TEXT NOT NULL,
-            options TEXT NOT NULL,
+            question TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+            options TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
             start_time INT NOT NULL,
             end_time INT NOT NULL,
             message_id BIGINT,
             channel_id BIGINT
-        )""")
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        """)
 
-        DB().execute("""CREATE TABLE IF NOT EXISTS poll_votes (
+        await db.execute("""
+        CREATE TABLE IF NOT EXISTS poll_votes (
             id INT AUTO_INCREMENT PRIMARY KEY,
             poll_id INT NOT NULL,
             user_id BIGINT NOT NULL,
             option_index INT NOT NULL,
             FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
-        )""")
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+        """)
 
     @app_commands.command(name="create")
     async def create(self, interaction: discord.Interaction, question: str, options: str, duration: str):
@@ -139,7 +138,7 @@ class PollGroup(app_commands.Group):
             start_time = int(time.time())
             end_time = start_time + int(parsed.total_seconds())
 
-            poll_id = db.insert_record(
+            poll_id = await db.insert_record(
                 "INSERT INTO polls (question, options, start_time, end_time) VALUES (%s, %s, %s, %s)",
                 (question, json.dumps(option_list), start_time, end_time)
             )
@@ -155,8 +154,8 @@ class PollGroup(app_commands.Group):
             view = PollButtonView(str(poll_id), option_list)
             message = await interaction.followup.send(embed=embed, view=view)
 
-            db.execute("UPDATE polls SET message_id = %s, channel_id = %s WHERE id = %s",
-                       (message.id, interaction.channel_id, poll_id))
+            await db.execute("UPDATE polls SET message_id = %s, channel_id = %s WHERE id = %s",
+                             (message.id, interaction.channel_id, poll_id))
 
             asyncio.create_task(end_poll(interaction.client, poll_id))
 
@@ -167,15 +166,15 @@ class PollGroup(app_commands.Group):
     async def view(self, interaction: discord.Interaction, id: int):
         db = DB()
         try:
-            poll = db.fetch_all("SELECT * FROM polls WHERE id = %s", (id,))
-            if not poll:
+            poll_data = await db.fetch_all("SELECT * FROM polls WHERE id = %s", (id,))
+            if not poll_data:
                 return await interaction.response.send_message("Poll not found.", ephemeral=True)
-            poll = poll[0]
+            poll = poll_data[0]
             options = json.loads(poll["options"])
             now = int(time.time())
             status = "Ended" if now >= poll["end_time"] else "Active"
 
-            votes = db.fetch_all("SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = %s GROUP BY option_index", (id,))
+            votes = await db.fetch_all("SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = %s GROUP BY option_index", (id,))
             vote_map = {row["option_index"]: row["count"] for row in votes}
             total = sum(vote_map.values())
             vote_counts = [f"{opt}: {vote_map.get(i, 0)} votes ({(vote_map.get(i, 0) / total * 100) if total else 0:.1f}%)" for i, opt in enumerate(options)]
