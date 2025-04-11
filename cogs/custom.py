@@ -365,7 +365,7 @@ class Rating(app_commands.Group):
         
         chunks = [rating[i:i + 1000] for i in range(0, len(rating), 1000)]
         for i, chunk in enumerate(chunks, 1):
-            embed.add_field(name=f"Your Rating (Part {i})", value=chunk, inline=False)
+            embed.add_field(name=f"{"Rating" if i == 1 else "\u2800"}", value=chunk, inline=False)
 
         embed.set_footer(text=f"By {interaction.user}")
 
@@ -444,10 +444,9 @@ class Rating(app_commands.Group):
         embed.add_field(name="New Stars", value=f"{stars}/10", inline=True)
         embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=True)
         
-        # Split rating into chunks of 1000 characters
         chunks = [rating[i:i + 1000] for i in range(0, len(rating), 1000)]
         for i, chunk in enumerate(chunks, 1):
-            embed.add_field(name=f"Your New Rating (Part {i})", value=chunk, inline=False)
+            embed.add_field(name=f"{"Rating" if i == 1 else "\u2800"}", value=chunk, inline=False)
 
         embed.set_footer(text=f"By {interaction.user}")
 
@@ -619,18 +618,13 @@ class Rating(app_commands.Group):
 
             user_data = data[item][user_id]
             if version is None:
-                # Show the 3 most recent versions
-                sorted_versions = sorted(user_data["versions"], key=lambda x: x["version"], reverse=True)
-                latest_versions = sorted_versions[:3]
+                embed.add_field(name="Stars", value=f"{version_data['stars']}/10", inline=True)
+                embed.add_field(name="Version", value=str(version), inline=True)
                 
-                for v in latest_versions:
-                    embed.add_field(
-                        name=f"Version {v['version']} - {v['stars']}/10",
-                        value=f"{v['rating'][:100]}..." if len(v['rating']) > 100 else v['rating'],
-                        inline=False
-                    )
-                if len(sorted_versions) > 3:
-                    embed.set_footer(text=f"Showing 3 most recent versions out of {len(sorted_versions)}")
+                chunks = [version_data['rating'][i:i + 2000] for i in range(0, len(version_data['rating']), 2000)]
+                for i, chunk in enumerate(chunks, 1):
+                    embed.add_field(name=f"{"Rating" if i == 1 else "\u2800"}", value=chunk, inline=False)
+
             else:
                 version_data = None
                 for v in user_data["versions"]:
@@ -645,10 +639,9 @@ class Rating(app_commands.Group):
                 embed.add_field(name="Stars", value=f"{version_data['stars']}/10", inline=True)
                 embed.add_field(name="Version", value=str(version), inline=True)
                 
-                # Split rating into chunks of 1000 characters
-                chunks = [version_data['rating'][i:i + 1000] for i in range(0, len(version_data['rating']), 1000)]
+                chunks = [version_data['rating'][i:i + 2000] for i in range(0, len(version_data['rating']), 2000)]
                 for i, chunk in enumerate(chunks, 1):
-                    embed.add_field(name=f"Rating (Part {i})", value=chunk, inline=False)
+                    embed.add_field(name=f"{"Rating" if i == 1 else "\u2800"}", value=chunk, inline=False)
 
         else:
             total_stars = 0
@@ -667,13 +660,12 @@ class Rating(app_commands.Group):
                     discord_user = interaction.guild.get_member(int(user_id)) if interaction.guild else None
                     user_name = discord_user.display_name if discord_user else "Unknown User"
                 
-                ratings_text.append(f"{user_name}: {latest_version['stars']}/10 - {latest_version['rating'][:100]}...")
+                ratings_text.append(f"{user_name}: {latest_version['stars']}/10 - {latest_version['rating'][:100]}{"..." if len(latest_version['rating']) > 100 else None}")
 
             average_rating = total_stars / count if count > 0 else 0
             embed.add_field(name="Average Rating", value=f"{average_rating:.1f}/10", inline=False)
-            
+
             if ratings_text:
-                # Split ratings into chunks of 1000 characters
                 ratings_chunks = []
                 current_chunk = ""
                 for rating in ratings_text[:10]:
@@ -686,7 +678,7 @@ class Rating(app_commands.Group):
                     ratings_chunks.append(current_chunk)
 
                 for i, chunk in enumerate(ratings_chunks, 1):
-                    embed.add_field(name=f"All Ratings (Part {i})", value=chunk, inline=False)
+                    embed.add_field(name=f"All Ratings", value=chunk, inline=False)
 
                 if len(ratings_text) > 10:
                     embed.set_footer(text=f"Showing 10 of {len(ratings_text)} ratings")

@@ -22,6 +22,7 @@ def is_valid_value(value: int, min_val: int, max_val: int) -> bool:
 import re, math, io
 import matplotlib.pyplot as plt
 import numpy as np
+import sympy as sp
 
 from math import gamma
 from scipy.integrate import quad
@@ -107,6 +108,42 @@ def is_safe_expression(expr: str) -> bool:
 	]
 	expr = expr.lower()
 	return not any(pattern in expr for pattern in dangerous_patterns)
+
+def to_superscript(number):
+	superscript_map = {
+		'0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵',
+		'6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹'
+	}
+	return ''.join(superscript_map.get(c, c) for c in str(number))
+
+def format_large_number(number):
+	num_str = str(number)
+	digit_count = len(num_str)
+
+	if digit_count > 1500:
+		mantissa_digits = num_str[:10]
+		mantissa = f"{mantissa_digits[0]}.{mantissa_digits[1:]}"
+		exponent = to_superscript(digit_count - 1)
+		return f"Approximation: {mantissa}×10{exponent} (≈ {digit_count} digits)"
+	
+	return num_str[:1500] + f"... ({digit_count} digits)"
+
+async def calculate_large_number(equation):
+	try:
+		if '!' in equation:
+			number_str = equation.replace('!', '').strip()
+			if number_str.isdigit():
+				n = int(number_str)
+				factorial = sp.factorial(n)
+				return format_large_number(factorial)
+		elif '^' in equation:
+			base, exp = equation.split('^')
+			base = float(base.strip())
+			exp = float(exp.strip())
+			result = sp.Pow(base, exp)
+			return format_large_number(result)
+	except Exception as e:
+		return f"Error: {str(e)}"
 
 def check_for_abs(expr: str) -> str:
 	"""

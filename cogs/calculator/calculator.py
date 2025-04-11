@@ -16,9 +16,13 @@ from .utils import (
     process_factorial,
     create_graph,
     symbolic_derivative,
-    definite_integral
+    definite_integral,
+    calculate_large_number
 )
+import sys; sys.set_int_max_str_digits(0); del sys
+import asyncio
 import numpy as np
+
 class HelpView(View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -295,6 +299,22 @@ class CalculatorCommandGroup(app_commands.Group):
         except Exception as e:
             await handle_logs(interaction, e)
 
+    @app_commands.command(name="approximate")
+    async def approximate(self, interaction: discord.Interaction, equation: str):
+        try:
+            await interaction.response.defer()
+
+            calculation_task = asyncio.create_task(calculate_large_number(equation))
+            
+            result = await asyncio.wait_for(calculation_task, timeout=600.0)
+      
+            await interaction.followup.send(result)
+
+        except asyncio.TimeoutError:
+            await interaction.followup.send("The calculation took too long to complete. Please try a smaller number or use approximation.")
+        except Exception as e:
+            await interaction.followup.send(f"Error: {str(e)}")
+            
     @app_commands.command(name="graph")
     @app_commands.choices(
         mode=[

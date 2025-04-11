@@ -276,7 +276,7 @@
                 }
             },
             "friendswith": {
-                "description": "Check if two users have a friend connection on Roblox", 
+                "description": "Check if two users have a friend connection on Roblox",
                 "parameters": {
                     "username1": "The first Roblox username",
                     "username2": "The second Roblox username"
@@ -305,7 +305,7 @@
                     "prize": "The prize of the giveaway",
                     "duration": "The duration of the giveaway (e.g., 1h30m)",
                     "description": "The description of the giveaway",
-                    "requirement": "A role requirement", 
+                    "requirement": "A role requirement",
                     "winners": "The amount of winners"
                 }
             }
@@ -657,7 +657,7 @@
                     "ephemeral": "Whether to send the response privately (default: true)"
                 }
             }
-        }, 
+        },
         "convert": {
             "image": {
                 "description": "Convert an image to a different format",
@@ -942,7 +942,7 @@
                 "parameters": {
                     "role": "The role to toggle",
                     "reason": "The reason to toggle"
-                }    
+                }
             },
             "cancel": {
                 "description": "Cancel toggling roles",
@@ -1239,6 +1239,12 @@
                 "description": "Accpets variables and some other symbols",
                 "parameters": {
                     "equation": "The equation to solve"
+                }
+            },
+            "approximate": {
+                "description": "Calculate huge values",
+                "parameteres": {
+                    "equation": "The equation to approximate"
                 }
             },
             "graph": {
@@ -1608,7 +1614,7 @@
             "obtainment": "During the Christmas event, which runs from late December to January, players can obtain the Lucky Gift badge. To get this badge, they need to receive a present airdrop from a Mitten user. There's a 1% chance that touching the present will reward the Lucky Gift badge.",
             "overview": "Mitten is a badge-required glove introduced on December 11, 2021. Its design features a candy cane handle and closely resembles a sparkling red stocking. It also emits transparent snowflakes. This festive appearance aligns with its holiday-themed motif.",
             "ability": {
-                "description": "Mitten's ability, \"Airdrop,\" summons a flying sleigh behind the user at the edge of the map. The sleigh moves forward while playing Christmas music. After 5 seconds, it drops a red present in front of the user. To open it, the player must touch the present, causing it to disappear and reveal either a positive or negative outcome. Eventually, the presents will fade away on their own after a while.\nEach present can have a positive effect, shown by a green checkmark (✓), or a negative one, marked with a red cross (X). These indicators are only visible to the user, allowing them to decide whether to keep good gifts for themselves or use bad ones against opponents. The gifts are chosen randomly, based on RNG (Random Number Generation).",
+                "description": "Mitten's ability, \"Airdrop,\" summons a flying sleigh behind the user at the edge of the map. The sleigh moves forward while playing Christmas music. After 5 seconds, it drops a red present in front of the user. To open it, the player must touch the present, causing it to disappear and reveal either a positive or negative outcome. Eventually, the presents will fade away on their own after a while.\nEach present can have a positive effect, shown by a green checkmark (\u2713), or a negative one, marked with a red cross (X). These indicators are only visible to the user, allowing them to decide whether to keep good gifts for themselves or use bad ones against opponents. The gifts are chosen randomly, based on RNG (Random Number Generation).",
                 "cooldowns": {
                     "Airdrop": 5
                 }
@@ -1809,7 +1815,7 @@
             "obtainment": "It is recommended to grind in a private server with either an alt account (recommended using the Microsoft Store version of Roblox for the alt) or a friend, both being active in the arena at the same time you are. Do note that you are slightly pushed back when using the ability, so if you're going to afk for long periods of time, do it in places like the castle or on a cloud where you can't fall off. You can also earn slaps by just playing normally in a public server while using your ability as much as possible. Additionally, you should also note that it's impossible to spawn bob while being ragdolled or stunned, so make sure you are not ragdolled while spawning a clone if you're grinding for bob.",
             "overview": "bob is a badge required glove added on April 16, 2022. It requires the bob badge to equip. Visually, the glove has a neon black texture, and bob's face can be seen sliding across the front of the glove when in the main arena. This animation does not play on the glove's stand.",
             "ability": {
-                "description": "bob's ability, \"bob (bob really likes people\" summons bob, a black humanoid surrounded by a dark spherical aura. bob will target the nearest player and accelerate based on their distance. Bob can also hover over the void and slopes. The target will be blinded with darkness the closer they are to bob. If the target is too close to bob, they will be sucked in and instantly killed. Bob despawns after killing their target.\nFom the victim's perspective, the sun will set and make the map much darker, and a wide black circular platform will spawn under the Cube of Death, which emits cubic purple particles. Above the cube, a message will appear saying \"S̸̙̅̔̌̐́̀̍̂̏̏A̷̢̠̦̪̫͇̲͖̙̬͕̦̜͆̀̿̍̊͒̐̑͒̏̕͝V̸̙̰̻̝̖̗̣̩̂̈E̸̛̤̪̻̭̲̔̆̆͐̑̂͜͠͝ ̴̡̣̰̬̣͎̥̜̙̌̓̿͛͆̓͒̑̊͊́͑͘ͅY̶̺̤͔̭͙̣̮̪̟̓̇͌͐̆̍̇̍̕O̴̙̱̓͂̆̕̚͝U̶̢͓̻͚̩̻͕̣̔̏͆ͅR̴̨̧̨̙̩̘̤̭͙̃͜S̶̪͍̗̠͆̾̚Ě̶̡̡͎̼̲̯̝͓͍͕̌̓̈̄̓͛͗̽̈́̓̔̒͝L̷̡̻̰̜̲͕̮̗͇͓̭̂̽̽̒̓͋̃̽͌̈̓͋͘̕ͅF̸̨̨̥̮̼͖̦̦̮̬̺̫̺̖̿̈\". Leading bob into the cube will result in bob dying. When bob dies, a loud scream sound effect will play.",
+                "description": "bob's ability, \"bob (bob really likes people\" summons bob, a black humanoid surrounded by a dark spherical aura. bob will target the nearest player and accelerate based on their distance. Bob can also hover over the void and slopes. The target will be blinded with darkness the closer they are to bob. If the target is too close to bob, they will be sucked in and instantly killed. Bob despawns after killing their target.\nFom the victim's perspective, the sun will set and make the map much darker, and a wide black circular platform will spawn under the Cube of Death, which emits cubic purple particles. Above the cube, a message will appear saying \"S\u0338\u0319\u0305\u0314\u030c\u0310\u0301\u0300\u030d\u0302\u030f\u030fA\u0337\u0322\u0320\u0326\u032a\u032b\u0347\u0332\u0356\u0319\u032c\u0355\u0326\u031c\u0346\u0300\u033f\u030d\u030a\u0352\u0310\u0311\u0352\u030f\u0315\u035dV\u0338\u0319\u0330\u033b\u031d\u0316\u0317\u0323\u0329\u0302\u0308E\u0338\u031b\u0324\u032a\u033b\u032d\u0332\u0314\u0306\u0306\u0350\u0311\u0302\u035c\u0360\u035d \u0334\u0321\u0323\u0330\u032c\u0323\u034e\u0325\u031c\u0319\u030c\u0313\u033f\u035b\u0346\u0313\u0352\u0311\u030a\u034a\u0301\u0351\u0358\u0345Y\u0336\u033a\u0324\u0354\u032d\u0359\u0323\u032e\u032a\u031f\u0313\u0307\u034c\u0350\u0306\u030d\u0307\u030d\u0315O\u0334\u0319\u0331\u0313\u0342\u0306\u0315\u031a\u035dU\u0336\u0322\u0353\u033b\u035a\u0329\u033b\u0355\u0323\u0314\u030f\u0346\u0345R\u0334\u0328\u0327\u0328\u0319\u0329\u0318\u0324\u032d\u0359\u0303\u035cS\u0336\u032a\u034d\u0317\u0320\u0346\u033e\u031a\u011a\u0336\u0321\u0321\u034e\u033c\u0332\u032f\u031d\u0353\u034d\u0355\u030c\u0313\u0308\u0304\u0313\u035b\u0357\u033d\u0308\u0301\u0313\u0314\u0312\u035dL\u0337\u0321\u033b\u0330\u031c\u0332\u0355\u032e\u0317\u0347\u0353\u032d\u0302\u033d\u033d\u0312\u0313\u034b\u0303\u033d\u034c\u0308\u0313\u034b\u0358\u0315\u0345F\u0338\u0328\u0328\u0325\u032e\u033c\u0356\u0326\u0326\u032e\u032c\u033a\u032b\u033a\u0316\u033f\u0308\". Leading bob into the cube will result in bob dying. When bob dies, a loud scream sound effect will play.",
                 "cooldowns": {
                     "bob (bob really likes people) (Normal)": 15,
                     "bob (bob really likes people) (No target)": 0.5,
@@ -1832,7 +1838,7 @@
             "obtainment": "To get the touch of midas badge, you must use Golden's ability and slap three different people before the ability ends. You do not need to kill them, only slap them.",
             "overview": "buddies is a badge-required glove added on May 7, 2022. It is obtained through the the touch of midas badge. The appearance of the glove is that of Default, the only difference is that there is a slightly modified image of the \"Smile\" avatar item on the front portion of the glove.",
             "ability": {
-                "description": "The \"Forceful Friendship\" passive ability marks any player you slap with a green outline and an electric sound effect. This outline is visible only to you, while the affected player sees a green outline around you, signifying that neither of you can slap each other until you die. If a marked player dies and respawns, they lose the green outline, but the passive effect still remains—this might be a bug. There's no limit to how many players you can mark, so you could potentially “befriend” everyone in the server. Unlike Blocked's ability, you can still slap a marked player without breaking the passive effect.",
+                "description": "The \"Forceful Friendship\" passive ability marks any player you slap with a green outline and an electric sound effect. This outline is visible only to you, while the affected player sees a green outline around you, signifying that neither of you can slap each other until you die. If a marked player dies and respawns, they lose the green outline, but the passive effect still remains\u2014this might be a bug. There's no limit to how many players you can mark, so you could potentially \u201cbefriend\u201d everyone in the server. Unlike Blocked's ability, you can still slap a marked player without breaking the passive effect.",
                 "cooldowns": {
                     "Forceful Friendship": "Passive"
                 }
@@ -1977,7 +1983,7 @@
             "obtainment": "To earn the Brick Master badge, players must place 1,000 bricks using Brick's ability in a single life. When you place your 1,000th brick, an image of Saul Goodman giving a thumbs up will appear on your screen, and you'll receive the badge. There's a brick counter displayed above to help you keep track of how many bricks you've placed.",
             "overview": "Trap is a glove added on July 23, 2022 obtained through the Brick Master badge. Visually, it is a black glove adorned with silver plates.",
             "ability": {
-                "description": "The ability is called \"Bear Trap.\" It drops a bear trap in front of the user. After a second, the trap will glow red, and become invisible to everyone except the user. Traps can only be stepped on once it turns red. If someone steps on one, they will be trapped for a 3 seconds or until someone hits them. After being freed from the trap, the victim will temporarily lose their legs, decreasing their jump height and slowing their movement speed to around 5 walkspeed, and the trap dissapears 3 seconds afterwards. The effect lasts for 10 seconds, then the victim grows their legs back. Traps can be spawned midair and during God's Hand's Time Stop. Traps are affected by gravity, and the user can be caught in their own trap, giving them the 🗿 glove.",
+                "description": "The ability is called \"Bear Trap.\" It drops a bear trap in front of the user. After a second, the trap will glow red, and become invisible to everyone except the user. Traps can only be stepped on once it turns red. If someone steps on one, they will be trapped for a 3 seconds or until someone hits them. After being freed from the trap, the victim will temporarily lose their legs, decreasing their jump height and slowing their movement speed to around 5 walkspeed, and the trap dissapears 3 seconds afterwards. The effect lasts for 10 seconds, then the victim grows their legs back. Traps can be spawned midair and during God's Hand's Time Stop. Traps are affected by gravity, and the user can be caught in their own trap, giving them the \ud83d\uddff glove.",
                 "cooldowns": {
                     "Bear Trap": 3.5
                 }
@@ -2108,7 +2114,7 @@
                 }
             },
             "tooltips": {
-                "default": "IS THIS… A CLASH ROYALE REFERENCE?!?!?!?!?!?!?!?"
+                "default": "IS THIS\u2026 A CLASH ROYALE REFERENCE?!?!?!?!?!?!?!?"
             },
             "stats": {
                 "power": 52,
@@ -2191,7 +2197,7 @@
                 }
             },
             "tooltips": {
-                "default": "i forgor💀"
+                "default": "i forgor\ud83d\udc80"
             },
             "stats": {
                 "power": 52,
@@ -2237,7 +2243,7 @@
             },
             "stats": {
                 "power": 52,
-                "speed": 16 
+                "speed": 16
             },
             "VIP": true
         },
@@ -2245,10 +2251,10 @@
             "badges": [
                 2129871858
             ],
-            "obtainment": "To obtain the EXPOSED badge, players must first locate a keypad, which has a 20% chance (1 in 5) of spawning every 10 minutes. The keypad can appear on the back of the main tree on Slapple Island or the back of the tree on Moai Island. Once the correct code is entered into the keypad, players are teleported to a location titled “?”, also known as the Elude Maze.\nIn the Elude Maze, players have 666 seconds (11 minutes and 6 seconds) to find four hidden artifacts before the timer runs out. If the timer hits zero, a kick message saying \"You've been Taken\" appears, along with a jumpscare featuring Pim in the background. Clicking \"Leave\" on the message sends players back to the keypad on either Slapple Island or Moai Island.\nSuccessfully collecting all four artifacts transports players to an altar where the badge glove awaits. Touching the glove grants players the EXPOSED badge, after which they are kicked from the game.",
+            "obtainment": "To obtain the EXPOSED badge, players must first locate a keypad, which has a 20% chance (1 in 5) of spawning every 10 minutes. The keypad can appear on the back of the main tree on Slapple Island or the back of the tree on Moai Island. Once the correct code is entered into the keypad, players are teleported to a location titled \u201c?\u201d, also known as the Elude Maze.\nIn the Elude Maze, players have 666 seconds (11 minutes and 6 seconds) to find four hidden artifacts before the timer runs out. If the timer hits zero, a kick message saying \"You've been Taken\" appears, along with a jumpscare featuring Pim in the background. Clicking \"Leave\" on the message sends players back to the keypad on either Slapple Island or Moai Island.\nSuccessfully collecting all four artifacts transports players to an altar where the badge glove awaits. Touching the glove grants players the EXPOSED badge, after which they are kicked from the game.",
             "overview": "Elude is a badge glove introduced on December 16, 2022, requiring the EXPOSED badge for acquisition. Its visual design showcases a pitch-black glove adorned with scattered realistic eyes all over, with a completely black handle completing its eerie appearance.",
             "ability": {
-                "description": "Elude's ability, \"Relocation,\" when slapped, the user instantly teleports to a random location on the map, effectively dodging the slap. Possible teleportation destinations include various strategic spots such as:\n- Anywhere on the Main Island.\n- The North, East, and West islands.\n- Any of the bridges connecting the smaller islands to the Main Island.\n- Slapple Island.\n- Moai island.\n- The Fort.\n- The Plate.\n- Cannon island.\n- On top of the Cube of Death.\n- On top of MEGAROCK/CUSTOM or Pusher’s wall, if available.\nUpon teleportation using Elude's ability \"Relocation,\" the user leaves behind a brief area of black smoke at their original location. This smoke dissipates after a second, visually indicating their recent presence.",
+                "description": "Elude's ability, \"Relocation,\" when slapped, the user instantly teleports to a random location on the map, effectively dodging the slap. Possible teleportation destinations include various strategic spots such as:\n- Anywhere on the Main Island.\n- The North, East, and West islands.\n- Any of the bridges connecting the smaller islands to the Main Island.\n- Slapple Island.\n- Moai island.\n- The Fort.\n- The Plate.\n- Cannon island.\n- On top of the Cube of Death.\n- On top of MEGAROCK/CUSTOM or Pusher\u2019s wall, if available.\nUpon teleportation using Elude's ability \"Relocation,\" the user leaves behind a brief area of black smoke at their original location. This smoke dissipates after a second, visually indicating their recent presence.",
                 "cooldowns": {
                     "Relocation": "Passive"
                 }
@@ -2288,7 +2294,7 @@
             "badges": [
                 2130032297
             ],
-            "obtainment": "To get the glove, you will need to equip the ZZZZZZZ glove and stay under the ability’s effect for 1 hour straight in one life without being woke up.",
+            "obtainment": "To get the glove, you will need to equip the ZZZZZZZ glove and stay under the ability\u2019s effect for 1 hour straight in one life without being woke up.",
             "overview": "fish is a badge glove released on December 23, 2022 along with the RNG glove and is obtained by having the DEEP SLUMBER badge. Visually, this glove is orange and resembles a fish's scales.",
             "ability": {
                 "description": "fish's ability, \"Flop,\" makes the player get flung with 50 knockback in the direction the player is trying to move to when using the ability. Flop seemingly flings players in a fashion similar to fish out of water, where they bounce around trying to find their way back to the sea. Apart from being dead (0 health,) this can be used at any time.",
@@ -2309,21 +2315,21 @@
             "badges": [
                 2130155314
             ],
-            "obtainment": "To obtain 🗿, players must step on one of their own bear traps spawned from the Trap glove. There's a common misconception that any trap will suffice, but it specifically requires using your own.",
-            "overview": "🗿, mostly referred to as \"Moai\" or \"Moyai\", is a badge glove added on December 30, 2022, and received a Mastery on February 7, 2025. The Moai glove is obtained through the 🗿 badge. Visually, this glove features a light grey, stone-like texture.",
+            "obtainment": "To obtain \ud83d\uddff, players must step on one of their own bear traps spawned from the Trap glove. There's a common misconception that any trap will suffice, but it specifically requires using your own.",
+            "overview": "\ud83d\uddff, mostly referred to as \"Moai\" or \"Moyai\", is a badge glove added on December 30, 2022, and received a Mastery on February 7, 2025. The Moai glove is obtained through the \ud83d\uddff badge. Visually, this glove features a light grey, stone-like texture.",
             "ability": {
-                "description": "🗿's ability is named \"🗿\". Upon pressing E, a translucent green moai appears in front of the user, which can be placed by selecting a suitable spot. If the spot turns red, it indicates the moai cannot be placed there.\nAfter placement, a voice pronouncing \"moai\" plays, followed by the moai statue emitting shockwaves that expand from within the statue, 1 shockwave every 2 seconds. Each shockwave triggers a vine boom sound effect, and it ragdolls players for 1.25 seconds caught within its range and startling them with an image of a moai wearing sunglasses for a second.\nThe 🗿 is permanent until the user is dead, or they place another one.",
+                "description": "\ud83d\uddff's ability is named \"\ud83d\uddff\". Upon pressing E, a translucent green moai appears in front of the user, which can be placed by selecting a suitable spot. If the spot turns red, it indicates the moai cannot be placed there.\nAfter placement, a voice pronouncing \"moai\" plays, followed by the moai statue emitting shockwaves that expand from within the statue, 1 shockwave every 2 seconds. Each shockwave triggers a vine boom sound effect, and it ragdolls players for 1.25 seconds caught within its range and startling them with an image of a moai wearing sunglasses for a second.\nThe \ud83d\uddff is permanent until the user is dead, or they place another one.",
                 "cooldowns": {
-                    "🗿 (Normal)": 14,
-                    "🗿 (Missed)": 0.5 
+                    "\ud83d\uddff (Normal)": 14,
+                    "\ud83d\uddff (Missed)": 0.5
                 }
             },
             "tooltips": {
-                "default": "🗿"
+                "default": "\ud83d\uddff"
             },
             "stats": {
-                "power": "🗿 (55)",
-                "speed": "🗿 (16)"
+                "power": "\ud83d\uddff (55)",
+                "speed": "\ud83d\uddff (16)"
             },
             "VIP": true
         },
@@ -2344,7 +2350,7 @@
             },
             "stats": {
                 "power": 52,
-                "speed": 16 
+                "speed": 16
             },
             "VIP": true,
             "mastery": {
@@ -2360,10 +2366,10 @@
             "badges": [
                 2132544202
             ],
-            "obtainment": "In order to obtain the Insanity badge, the user must be under Ghost’s ability for 60 minutes straight without deactivating their ability, dying or slapping a player, as doing so will deactivate the ability.",
+            "obtainment": "In order to obtain the Insanity badge, the user must be under Ghost\u2019s ability for 60 minutes straight without deactivating their ability, dying or slapping a player, as doing so will deactivate the ability.",
             "overview": "Voodoo is a badge glove added on January 20, 2023. It is obtained through the Insanity badge. Visually, the glove resembles a light brown voodoo doll with its eyes as buttons and its mouth as a black stitch, shaped into a glove.",
             "ability": {
-                "description": "Voodoo’s ability is called \"Voodoo Possession.\" When activated, the glove radiates a purple glow for 10 seconds before fading away. If the user slaps someone during this period, it adds about 10 extra power to the slap and creates a voodoo doll of the individual, replicating their exact pose at that moment. Whatever happens to the doll will also affect the person. This also applies to abilities. However, it can only be hit once, resulting in a large purple explosion.",
+                "description": "Voodoo\u2019s ability is called \"Voodoo Possession.\" When activated, the glove radiates a purple glow for 10 seconds before fading away. If the user slaps someone during this period, it adds about 10 extra power to the slap and creates a voodoo doll of the individual, replicating their exact pose at that moment. Whatever happens to the doll will also affect the person. This also applies to abilities. However, it can only be hit once, resulting in a large purple explosion.",
                 "cooldowns": {
                     "Voodoo Possession (Normal)": 10,
                     "Voodoo Possession (Spawn)": 1
@@ -2395,7 +2401,7 @@
             },
             "stats": {
                 "power": 52,
-                "speed": 16 
+                "speed": 16
             },
             "VIP": true
         },
@@ -2416,7 +2422,7 @@
             },
             "stats": {
                 "power": 52,
-                "speed": 16 
+                "speed": 16
             },
             "VIP": true
         },
@@ -2427,7 +2433,7 @@
             "obtainment": "To get this glove, the player must own the Underkill badge. To obtain it, the player has to kill 5 different OVERKILL users with Boomerang. The kills you get reset if you leave a server, but not if you die, or switch gloves. If you die before an OVERKILL you slapped does, it won't count as a kill.",
             "overview": "Flamarang is a glove added on February 10, 2023 obtained through the Underkill badge. Visually, this glove has a neon, amber color to it, and emits fiery particles.",
             "ability": {
-                "description": "Flamarang's ability is called \"Flaming Boomerang.\" The ability has a ½ second wind-up, where they spin clockwise, then they create a burning boomerang that starts from their left side. The boomerang is 10 studs wide and leaves fire particles behind as it moves.\nSlapping players gives them a small flame effect that lasts for about 10 seconds, used for the target ability, but it disappears afterwards.\n\nOrbit Ability\nIf the ability is used without any marked players, the boomerang will revolve clockwise around the user every second for four seconds, hitting anyone nearby with 30 knockback and makes a sound on contact, then gets smaller and disappears.\n\nTarget Ability\nIf at least one player is marked, the boomerang homes on the marked player(s), dealing about 50 knockback, and non-marked players hit by the boomerang will receive 30 knockback. The boomerang follows the user's facing direction while it's moving. If the user marked several players beforehand, the boomerang would chase them in the order the user marked them before it returns and vanishes. Theoretically, this ability could last forever.",
+                "description": "Flamarang's ability is called \"Flaming Boomerang.\" The ability has a \u00bd second wind-up, where they spin clockwise, then they create a burning boomerang that starts from their left side. The boomerang is 10 studs wide and leaves fire particles behind as it moves.\nSlapping players gives them a small flame effect that lasts for about 10 seconds, used for the target ability, but it disappears afterwards.\n\nOrbit Ability\nIf the ability is used without any marked players, the boomerang will revolve clockwise around the user every second for four seconds, hitting anyone nearby with 30 knockback and makes a sound on contact, then gets smaller and disappears.\n\nTarget Ability\nIf at least one player is marked, the boomerang homes on the marked player(s), dealing about 50 knockback, and non-marked players hit by the boomerang will receive 30 knockback. The boomerang follows the user's facing direction while it's moving. If the user marked several players beforehand, the boomerang would chase them in the order the user marked them before it returns and vanishes. Theoretically, this ability could last forever.",
                 "cooldowns": {
                     "Flaming Boomerang": 10
                 }
@@ -2436,8 +2442,8 @@
                 "default": "For when a boomerang just isn't cool enough."
             },
             "stats": {
-                "power": 50, 
-                "speed": 16 
+                "power": 50,
+                "speed": 16
             },
             "VIP": true
         },
@@ -2448,17 +2454,17 @@
             "obtainment": "In order to get Kinetic, you must get ragdolled 100 times, and use Stun's ability 50 times to stun at least 1 person per use. All of this must be done without dying.",
             "overview": "Kinetic is a badge glove added on February 24, 2023requiring the Kinetically Charged badge. Visually, the glove is a solid dark blue/black color with a lighting-like texture.",
             "ability": {
-                "description": "Kinetic's passive ability, \"Percussive Blast,\" causes the user's character and glove to generate an electric aura that intensifies each time they are ragdolled. When the ability is activated, the user freezes in place, spreads their arms wide, and unleashes a spherical electric blast around them. This blast knocks back nearby players and resets the user’s aura buildup to zero.\nThe size and power of the blast depend on how many times the user has been ragdolled before activating the ability. The ability has three phases, with each phase increasing the blast's size and effectiveness.",
+                "description": "Kinetic's passive ability, \"Percussive Blast,\" causes the user's character and glove to generate an electric aura that intensifies each time they are ragdolled. When the ability is activated, the user freezes in place, spreads their arms wide, and unleashes a spherical electric blast around them. This blast knocks back nearby players and resets the user\u2019s aura buildup to zero.\nThe size and power of the blast depend on how many times the user has been ragdolled before activating the ability. The ability has three phases, with each phase increasing the blast's size and effectiveness.",
                 "cooldowns": {
                     "Percussive Blast": 15
                 }
             },
             "tooltips": {
-                "default": "leave me alone or you shall see what happens when you anger the nice guy…"
+                "default": "leave me alone or you shall see what happens when you anger the nice guy\u2026"
             },
             "stats": {
                 "power": 49,
-                "speed": 15 
+                "speed": 15
             },
             "VIP": false
         },
@@ -2466,7 +2472,7 @@
             "badges": [
                 2141784233
             ],
-            "obtainment": "In order to get the glove and badge, the player needs to survive 3 of Kinetic’s stage three \"Percussive Blasts\" without dying, which requires the Kinetic user to be ragdolled at least 50 times, and 150 times in total.",
+            "obtainment": "In order to get the glove and badge, the player needs to survive 3 of Kinetic\u2019s stage three \"Percussive Blasts\" without dying, which requires the Kinetic user to be ragdolled at least 50 times, and 150 times in total.",
             "overview": "Berserk is a badge-required glove added on March 3, 2023. It requires the GO BERSERK badge to equip. It is visually resembles a darker yellow texture with rough bright yellow scrapes all over it. The glove also is illuminated, and glows in darkness and shadows.",
             "ability": {
                 "description": "Berserk's ability is named \"RAHHHH.\" When its activated, the user performs a lifting motion and gets a power boost that starts off weaker than the glove's original strength. It starts at 20, and each activation makes it 20+ stronger. At the same time, the \"TikTok Augh\" meme plays, and its pitch gets higher with every charge. Each time the ability is used, a bright yellow aura surrounds the user, but their health starts to decrease, and the rate of health loss goes up with each activation. After the user slaps someone, the health loss, extra power and aura disappear, but their health remains unchanged.\nAt 5 charges and above, slaps have a small AOE effect, launching nearby players in the same direction as the primary target, but with half of the power. A crackling sound effect also plays.\nThe maximum number of charges is 10. At 10 charges, a loud version of the Clash Royale \"Grrrrr\" King emote sound effect plays, and slaps deliver 200 power. Pressing E at 10 charges has no effect.\nEach charge adds approximately 20 power. The power increase stops at 200.\nCharge Health:\n- 1 Charge: 1 damage every second. (Survive indefinitely.)\n- 2 Charges: 1 damage every 0.95 seconds. (Survive almost indefinitely.)\n- 3 Charges: 1 damage every 0.85 seconds. (Survive for ~8.25 minutes.)\n- 4 Charges: 1 damage every 0.6 seconds. (Survive for ~2.75 minutes.)\n- 5 Charges: 1 damage every 0.5 seconds. (Survive for ~1.75 minutes.)\n- 6 Charges: 1 damage every 0.4 seconds. (Survive for ~1.25 minutes.)\n- 7 Charges: 1 damage every 0.37 seconds. (Survive for ~1 minute.)\n- 8 Charges: 1 damage every 0.33 seconds. (Survive for ~50 seconds.)\n- 9 Charges: 1 damage every 0.27 seconds. (Survive for ~30 seconds.)\n- 10 Charges: 1 damage every 0.25 seconds. (Survive for ~25 seconds.)",
@@ -2487,7 +2493,7 @@
             "badges": [
                 2145381761
             ],
-            "obtainment": "To get the \"Escape the Abyss\" badge, players need to equip the Squid glove and get slapped into the void by a fish or Killerfish user.\nOnce you're in The Abyss, the screen turns dark blue for three seconds, then the player is on a ship in the ocean. Everything has a dark blue hue to it. A boss fight will start after a few seconds, and a blue health bar will appear at the top of the screen showing the boss’s name; \"The Kraken.\"\n\nAttacks:\nAfter 3 seconds, 8 tentacles appear around the ship, 4 on each side. The tentacles attack by slamming down on the ship's columns (4 columns total.) Each attack takes 2 seconds - 1 to slam down and 1 to rise back up. Only one tentacle attacks each column at a time, so the other tentacle on the opposite side does not attack.\nThe Kraken attacks 2 or 3 columns at once, always leaving at least one safe spot. Orange outlines show where the tentacles will strike. Getting hit deals 30 knockback and takes away 25% of your health. (Falling off the ship or losing your health will kill you and you will spawn in the lobby.)\nTentacles attack every 3-4 seconds for 2-4 times, and stay down for 5 seconds afterward. Each hit on the Kraken deals about 5% damage to the health bar.\nWhen half of The Kraken's health is depleted, it will start attacking faster. Defeating the Kraken rewards you with the Kraken glove.\nIf you die, there will be a 5-minute cooldown before you can re-attempt the boss fight.",
+            "obtainment": "To get the \"Escape the Abyss\" badge, players need to equip the Squid glove and get slapped into the void by a fish or Killerfish user.\nOnce you're in The Abyss, the screen turns dark blue for three seconds, then the player is on a ship in the ocean. Everything has a dark blue hue to it. A boss fight will start after a few seconds, and a blue health bar will appear at the top of the screen showing the boss\u2019s name; \"The Kraken.\"\n\nAttacks:\nAfter 3 seconds, 8 tentacles appear around the ship, 4 on each side. The tentacles attack by slamming down on the ship's columns (4 columns total.) Each attack takes 2 seconds - 1 to slam down and 1 to rise back up. Only one tentacle attacks each column at a time, so the other tentacle on the opposite side does not attack.\nThe Kraken attacks 2 or 3 columns at once, always leaving at least one safe spot. Orange outlines show where the tentacles will strike. Getting hit deals 30 knockback and takes away 25% of your health. (Falling off the ship or losing your health will kill you and you will spawn in the lobby.)\nTentacles attack every 3-4 seconds for 2-4 times, and stay down for 5 seconds afterward. Each hit on the Kraken deals about 5% damage to the health bar.\nWhen half of The Kraken's health is depleted, it will start attacking faster. Defeating the Kraken rewards you with the Kraken glove.\nIf you die, there will be a 5-minute cooldown before you can re-attempt the boss fight.",
             "overview": "Kraken is a glove added on May 12, 2023 obtained through the Escape The Abyss badge. Visually, the glove appears to have a turquoise color and pink octopus tentacles for its texture.",
             "ability": {
                 "description": "Kraken has an ability called \"Hand of the Abyss,\" which summons a giant tentacle that slams forward and knockbacks players within its reach. You can see the range of this move marked by an orange outline. When the tentacle strikes, it also creates a small crack on the ground where it slams down. The tentacle gives  1 per player hit (increases with multipliers).",
@@ -2533,7 +2539,7 @@
             "obtainment": "To obtain Sparky, the user needs to get hit by an OVERKILL while running at it with the Speedrun glove, with the Conveyor and Reaper effects active. To obtain the glove, the OVERKILL has to be directly away from the Conveyor so that the Speedrun user can run towards the OVERKILL at \"max speed.\"",
             "overview": "Sparky is a badge glove added on March 24, 2023 and is obtained by getting the Incredible Running Man badge. The glove has a cracked, bright cyan texture with electric particles emitting from it.",
             "ability": {
-                "description": "Sparky's ability, \"SPARKYGAN,\" plays a looping electric sound and increases the user's speed for 20 seconds. Each second, the player's walkspeed will increase by 5, and at the end being 100 walkspeed. While the ability is active, there will be circles coming out from behind the glove, more sparks being emitted, as well as a concentrated point of light coming from the handle of the glove. During the ability, the cooldown also decreases. When you run into someone, you halt (sometimes delayed) and send the victim sliding forward. The faster you are, the further they're sent. You will also get  1 (increases with multipliers). If you don't run into someone in 20 seconds, you simply halt.\nThe knockback formula appears to be: Seconds running × 5 (Ex: 10 seconds of running then colliding with a player deals 50 knockback to them.)\nIf anybody gets hit by a Sparky user with its charge active, that hit player will have electricity particles emitting from their avatar, although it's not easily noticeable.",
+                "description": "Sparky's ability, \"SPARKYGAN,\" plays a looping electric sound and increases the user's speed for 20 seconds. Each second, the player's walkspeed will increase by 5, and at the end being 100 walkspeed. While the ability is active, there will be circles coming out from behind the glove, more sparks being emitted, as well as a concentrated point of light coming from the handle of the glove. During the ability, the cooldown also decreases. When you run into someone, you halt (sometimes delayed) and send the victim sliding forward. The faster you are, the further they're sent. You will also get  1 (increases with multipliers). If you don't run into someone in 20 seconds, you simply halt.\nThe knockback formula appears to be: Seconds running \u00d7 5 (Ex: 10 seconds of running then colliding with a player deals 50 knockback to them.)\nIf anybody gets hit by a Sparky user with its charge active, that hit player will have electricity particles emitting from their avatar, although it's not easily noticeable.",
                 "cooldowns": {
                     "Sparkygan (Normal)": 25,
                     "Sparkygan (Spawn)": 0
@@ -2594,10 +2600,10 @@
             "badges": [
                 2144766764
             ],
-            "obtainment": "To obtain the badge, the player must fully charge Berserk’s ability, and then be hit by woah’s shockwave into a fully charged Home Run swing while still ragdolled.",
+            "obtainment": "To obtain the badge, the player must fully charge Berserk\u2019s ability, and then be hit by woah\u2019s shockwave into a fully charged Home Run swing while still ragdolled.",
             "overview": "Quake is a badge glove added on April 28, 2023. It is aquired through the Blasting Off Again badge. Visually, the glove has a neon, orange, hexagonal lava texture.",
             "ability": {
-                "description": "Quake's ability, \"I HATE THE FLOOR\", is an active ability. When it's held, the user slows down and charges a shockwave with the glove in the air. Releasing the button (E) makes it slam the ground, creating cracks around and sending nearby players flying. The longer it's charged, the farther and stronger the shockwave becomes. It takes 3 seconds to fully charge, and the user will flash green when it's at full power. Quake's ability counts as a slap, even though it doesn't actually give any. It will trigger abilities like Parry and transfer Link. If the user gets slapped or dies while using the ability, it stops. Even if the user isn't on the ground after using the ability, the effects will still take place.\nThe cooldown is refunded a certain amount of time depending on how much the user holds the charge, 4 seconds being the shortest cooldown and 9 being the longest after a full charge.\nIf players are near your glove when you release the shockwave, they’ll get partially buried in the ground. How long they stay stuck depends on how much the ability was charged (about the same time as the charge.) While they’re stuck, the Quake user's slap power doubles on those in the ground, so hitting them will send them flying with the power of a 100-power slap instead of 50.",
+                "description": "Quake's ability, \"I HATE THE FLOOR\", is an active ability. When it's held, the user slows down and charges a shockwave with the glove in the air. Releasing the button (E) makes it slam the ground, creating cracks around and sending nearby players flying. The longer it's charged, the farther and stronger the shockwave becomes. It takes 3 seconds to fully charge, and the user will flash green when it's at full power. Quake's ability counts as a slap, even though it doesn't actually give any. It will trigger abilities like Parry and transfer Link. If the user gets slapped or dies while using the ability, it stops. Even if the user isn't on the ground after using the ability, the effects will still take place.\nThe cooldown is refunded a certain amount of time depending on how much the user holds the charge, 4 seconds being the shortest cooldown and 9 being the longest after a full charge.\nIf players are near your glove when you release the shockwave, they\u2019ll get partially buried in the ground. How long they stay stuck depends on how much the ability was charged (about the same time as the charge.) While they\u2019re stuck, the Quake user's slap power doubles on those in the ground, so hitting them will send them flying with the power of a 100-power slap instead of 50.",
                 "cooldowns": {
                     "I HATE THE FLOOR (Previously Shatter)": "4-9 (Short-Longest Held)"
                 }
@@ -2615,16 +2621,16 @@
             "badges": [
                 2145165421
             ],
-            "obtainment": "To get the Ultimate Control badge, the player must go to The Ruins. To get to The Ruins, the player must use Reverse’s ability or be under Mitten’s “Reverse” positive effect and hit another player who also has the Reverse or El gato's ability active. There is a 3% chance for the 2 to be teleported to The Ruins every time this is done. Once the player is at The Ruins, the player must go down the stairs and to the edge of the island.\nWhen you reach the edge, several pillars will appear, some of them spinning, creating an obby you need to complete. After reaching the final island, head back to where your clone was. Instead of the clone, you'll find the Psycho glove. Click it to equip it, and you’ll be reset with the badge.\nOnce you step onto the first island, lightning will strike you, starting a one-minute timer to complete the obby. Reaching the last island cancels the timer, giving you unlimited time to return to the obby’s start. After reaching the final island, platform movement slows down.",
+            "obtainment": "To get the Ultimate Control badge, the player must go to The Ruins. To get to The Ruins, the player must use Reverse\u2019s ability or be under Mitten\u2019s \u201cReverse\u201d positive effect and hit another player who also has the Reverse or El gato's ability active. There is a 3% chance for the 2 to be teleported to The Ruins every time this is done. Once the player is at The Ruins, the player must go down the stairs and to the edge of the island.\nWhen you reach the edge, several pillars will appear, some of them spinning, creating an obby you need to complete. After reaching the final island, head back to where your clone was. Instead of the clone, you'll find the Psycho glove. Click it to equip it, and you\u2019ll be reset with the badge.\nOnce you step onto the first island, lightning will strike you, starting a one-minute timer to complete the obby. Reaching the last island cancels the timer, giving you unlimited time to return to the obby\u2019s start. After reaching the final island, platform movement slows down.",
             "overview": "Psycho is a badge glove added on May 5, 2023. The glove is obtained through the Ultimate Control badge. Visually, the glove is a glowing, neon, cyan texture.",
             "ability": {
-                "description": "Psycho has two abilities.\n- When you slap someone, a brief blue light flashes, and a mark appears on them that disappears after 4 seconds. Pressing *E* pulls the marked player(s) back to you, floating and with a blue outline and particles, approximately 5 studs forward and 5 studs in the air, and you can control where they go with telekinesis. You can move them around for a the remaining duration of the mark, and pressing *E* again launches them in the direction you’re facing, dealing around 35 knockback. This launch can be charged for up to 5 seconds, increasing the distance to around 50 knockback. Alternatively, you can slap them instead, which also ends the ability.\n- Double-jumping (by jumping in the air) allows you to float for 1.25 seconds in the direction of your camera with around 35 walkspeed. This marks you with blue and emits particles. During this time, you can’t be slapped, but you can’t slap others either. You can use this while controlling someone.",
+                "description": "Psycho has two abilities.\n- When you slap someone, a brief blue light flashes, and a mark appears on them that disappears after 4 seconds. Pressing *E* pulls the marked player(s) back to you, floating and with a blue outline and particles, approximately 5 studs forward and 5 studs in the air, and you can control where they go with telekinesis. You can move them around for a the remaining duration of the mark, and pressing *E* again launches them in the direction you\u2019re facing, dealing around 35 knockback. This launch can be charged for up to 5 seconds, increasing the distance to around 50 knockback. Alternatively, you can slap them instead, which also ends the ability.\n- Double-jumping (by jumping in the air) allows you to float for 1.25 seconds in the direction of your camera with around 35 walkspeed. This marks you with blue and emits particles. During this time, you can\u2019t be slapped, but you can\u2019t slap others either. You can use this while controlling someone.",
                 "cooldowns": {
                     "Telekinesis": 4
                 }
             },
             "tooltips": {
-                "default": "No superpowers?👽"
+                "default": "No superpowers?\ud83d\udc7d"
             },
             "stats": {
                 "power": 55,
@@ -2636,10 +2642,10 @@
             "badges": [
                 2146540403
             ],
-            "obtainment": "Engineer’s sentry has a 10% (1/10) chance to spawn a toolbox upon use. Clicking on the toolbox will grant the player the badge. Anyone but the Engineer user can get it. Only one person can claim a toolbox at a time, and once a person clicks the toolbox, it will disappear. Be aware that if a person doesn't obtain it in 30 seconds, the toolbox will disappear.",
+            "obtainment": "Engineer\u2019s sentry has a 10% (1/10) chance to spawn a toolbox upon use. Clicking on the toolbox will grant the player the badge. Anyone but the Engineer user can get it. Only one person can claim a toolbox at a time, and once a person clicks the toolbox, it will disappear. Be aware that if a person doesn't obtain it in 30 seconds, the toolbox will disappear.",
             "overview": "Hammer is a badge glove released on June 2, 2023. The glove is obtained through the Toolbox badge. The glove's appearance is the white Default texture, with a hammer in its palm, but on the stand, the glove is gray. The handle seems to be made of wood.",
             "ability": {
-                "description": "This glove has a ability called 'Hammer Time.' When the user slaps another player, a nail symbol pops up over their head with a timer that can be anywhere from 1 to 25 seconds. Once the timer runs out, a huge hammer drops down on that player, taking 0.75 seconds to drop, sending them flying with approximately 70 knockback in a random direction. If the user gets slapped by someone who has a nail above them, the nail and timer will disappear. Just remember, hitting someone with the giant hammer won’t give any slaps.",
+                "description": "This glove has a ability called 'Hammer Time.' When the user slaps another player, a nail symbol pops up over their head with a timer that can be anywhere from 1 to 25 seconds. Once the timer runs out, a huge hammer drops down on that player, taking 0.75 seconds to drop, sending them flying with approximately 70 knockback in a random direction. If the user gets slapped by someone who has a nail above them, the nail and timer will disappear. Just remember, hitting someone with the giant hammer won\u2019t give any slaps.",
                 "cooldowns": {
                     "Hammer Time": "Passive"
                 }
@@ -2657,7 +2663,7 @@
             "badges": [
                 2147429609
             ],
-            "obtainment": "In order to obtain rob, the player must defeat The Eternal BOB (TeB short). To reach The Eternal BOB, five (can be reached with four - see below) players are required. Each player must equip any one of these gloves: Tycoon, Reaper, Killstreak, God's Hand, and bob (You can also spawn bob with Angler). Both the Killstreak and Reaper users must have at least 3 kills. The Eternal BOB portal can be summoned with only 4 players if the player using bob spawns bob on one of the players, resets, and then equips another required glove for the boss.\nOnce the players have met the requirements, the bob user needs to use their ability on any of the players. It is recommended that the player who bob is targeting is on an object such as a tree or the top of the Tycoon if it was spawned, as bob cannot reach players if they are above him. After doing all of that, every player involved must be close to the bob entity. When every single person meets these requirements, the God's Hand user must stop time. A portal will spawn, and all players except the bob user (assuming they didn't change their glove), will be sent into The Dark Realm. From there, the players must defeat The Eternal BOB, which typically takes around 45-60 minutes. Players have a total of four lives to beat the boss which can be recovered with specific Tycoon upgrades.\nOnce the majority of The Eternal BOB’s health has been depleted, the remaining teammates will have to duel with Default. The player who won the duel must defeat The Eternal BOB's final phase for everybody else to obtain rob. If they instead decide to die, they will be awarded the Clipped Wings badge, while everyone else gets nothing.",
+            "obtainment": "In order to obtain rob, the player must defeat The Eternal BOB (TeB short). To reach The Eternal BOB, five (can be reached with four - see below) players are required. Each player must equip any one of these gloves: Tycoon, Reaper, Killstreak, God's Hand, and bob (You can also spawn bob with Angler). Both the Killstreak and Reaper users must have at least 3 kills. The Eternal BOB portal can be summoned with only 4 players if the player using bob spawns bob on one of the players, resets, and then equips another required glove for the boss.\nOnce the players have met the requirements, the bob user needs to use their ability on any of the players. It is recommended that the player who bob is targeting is on an object such as a tree or the top of the Tycoon if it was spawned, as bob cannot reach players if they are above him. After doing all of that, every player involved must be close to the bob entity. When every single person meets these requirements, the God's Hand user must stop time. A portal will spawn, and all players except the bob user (assuming they didn't change their glove), will be sent into The Dark Realm. From there, the players must defeat The Eternal BOB, which typically takes around 45-60 minutes. Players have a total of four lives to beat the boss which can be recovered with specific Tycoon upgrades.\nOnce the majority of The Eternal BOB\u2019s health has been depleted, the remaining teammates will have to duel with Default. The player who won the duel must defeat The Eternal BOB's final phase for everybody else to obtain rob. If they instead decide to die, they will be awarded the Clipped Wings badge, while everyone else gets nothing.",
             "overview": "rob is a badge glove obtained through the Emissary of Light badge. It was released on June 23, 2023. It has a similar appearance to bob, however the texture color is white instead of being black. The face rotates around it slightly faster than bob does.",
             "ability": {
                 "description": "rob's ability, \"rob (rob really dislikes bob),\" will cause the user to stop moving and play an animation resembling a breakdown for exactly 3 seconds. The user becomes the entity rob, which possesses the ability to float and is largely invulnerable to slaps or attacks from most abilities. As a player approaches rob, their screen becomes whiter. Upon making contact with another player, that person will be drawn into the entity, consuming and killing them, after which the user reverts to their player form. This ability has a duration of 10 seconds before it automatically transforms back.",
@@ -2670,8 +2676,8 @@
                 "default": "You don't spawn rob, rob spawns you"
             },
             "stats": {
-                "power": "ŗ̸̓̊̀̍͝͝ȏ̵̧̖̥̜̟̾͝b̵͈̖̔̓̿̕  (52)",
-                "speed": "ŗ̸̓̊̀̍͝͝ȏ̵̧̖̥̜̟̾͝b̵͈̖̔̓̿̕  (16)"
+                "power": "\u0157\u0338\u0313\u030a\u0300\u030d\u035d\u035d\u020f\u0335\u0327\u0316\u0325\u031c\u031f\u033e\u035db\u0335\u0348\u0316\u0314\u0313\u033f\u0315  (52)",
+                "speed": "\u0157\u0338\u0313\u030a\u0300\u030d\u035d\u035d\u020f\u0335\u0327\u0316\u0325\u031c\u031f\u033e\u035db\u0335\u0348\u0316\u0314\u0313\u033f\u0315  (16)"
             },
             "VIP": true,
             "mastery": {
@@ -2688,10 +2694,10 @@
             "badges": [
                 2148234934
             ],
-            "obtainment": "To Obtain Total Rhythm, you must slap 10 different players under your Boogie ball’s effect in a single life[1]. You do not need to slap 10 players under one disco ball, and you can use multiple as long as you don’t die.",
+            "obtainment": "To Obtain Total Rhythm, you must slap 10 different players under your Boogie ball\u2019s effect in a single life[1]. You do not need to slap 10 players under one disco ball, and you can use multiple as long as you don\u2019t die.",
             "overview": "Rhythm is a glove added on July 7, 2023 obtained through the Total Rhythm badge. The glove is yellow and holds a black eighth note.",
             "ability": {
-                "description": "This glove's ability is called \"Rhythm.\" Upon entering the arena with the glove equipped, a small black bar will be displayed on the bottom of the user’s screen along with a counter. After a few seconds, music will play, and white notes will flow along the black bar. Clicking when the notes are at the pointer will make the counter go up and the glove's power to increase. After a while, golden notes will start appearing. Hitting golden notes are at the correct time will cause a shockwave to explode around the player, dealing high knockback (30 - 90 power). The shockwaves get more powerful as the player clicks more notes. When using this glove, a song (Uptown) will play and a ring will appear around you, it has bars that go higher and lower depending on what part of the music is played. There are 359 notes in the song.\nIf you click when no notes are nearby, you’ll lose 5 points. Also, every time a note reaches the end of the screen without being hit, 1 point is deducted from your score.",
+                "description": "This glove's ability is called \"Rhythm.\" Upon entering the arena with the glove equipped, a small black bar will be displayed on the bottom of the user\u2019s screen along with a counter. After a few seconds, music will play, and white notes will flow along the black bar. Clicking when the notes are at the pointer will make the counter go up and the glove's power to increase. After a while, golden notes will start appearing. Hitting golden notes are at the correct time will cause a shockwave to explode around the player, dealing high knockback (30 - 90 power). The shockwaves get more powerful as the player clicks more notes. When using this glove, a song (Uptown) will play and a ring will appear around you, it has bars that go higher and lower depending on what part of the music is played. There are 359 notes in the song.\nIf you click when no notes are nearby, you\u2019ll lose 5 points. Also, every time a note reaches the end of the screen without being hit, 1 point is deducted from your score.",
                 "cooldowns": {
                     "Rhythm": "Passive"
                 }
@@ -2709,7 +2715,7 @@
             "badges": [
                 2148480065
             ],
-            "obtainment": "The player must be under Nightmare's and Reaper’s effects and kill bob using the Cube of Death. No particular glove must be equipped.",
+            "obtainment": "The player must be under Nightmare's and Reaper\u2019s effects and kill bob using the Cube of Death. No particular glove must be equipped.",
             "overview": "Rojo is a badge glove added on July 14, 2023. It is obtained through the See in the dark badge. This glove has black color with purple lines across it. The glove also has a white outline that only appears on the stand.",
             "ability": {
                 "description": "Rojo's ability, \"Hollow Purple,\" starts an animation where the player merges a red and blue orb to create a larger purple orb, about as big as the player. During this animation, the user is invincible. After 4 seconds, the user can aim their character to decide where to fire the purple orb. After 2 seconds and a white flash, the orb is launched in the chosen direction, and anyone hit will be knocked back greatly. The user will gain a  1 for each player hit (increases with multipliers).",
@@ -2732,10 +2738,10 @@
                 2148934270,
                 2124760907
             ],
-            "obtainment": "To obtain this glove, you require both the Sharp Shooter badge and the court evidence badge. The Sharp Shooter badge is obtained by killing 10 players using Track’s ability in a single life. They do not have to be 10 different people to obtain it. The court evidence badge is obtained by clicking on the knife in The Guide underneath the lobby.",
+            "obtainment": "To obtain this glove, you require both the Sharp Shooter badge and the court evidence badge. The Sharp Shooter badge is obtained by killing 10 players using Track\u2019s ability in a single life. They do not have to be 10 different people to obtain it. The court evidence badge is obtained by clicking on the knife in The Guide underneath the lobby.",
             "overview": "Hitman is a badge glove released on July 21, 2023. The glove is obtained through the Sharp Shooter and court evidence badges.",
             "ability": {
-                "description": "The Hitman's \"Mystery Ability\" allows the user to see the number of times each player has been slapped. When the user kills a player with an active slap count, they will collect their slaps. The collected slaps determine the user's abilities. The bounty on a player increases based on how many times they have slapped others. Slapples do not increase a person's bounty, but Slap Multipliers will affect a person’s bounty.",
+                "description": "The Hitman's \"Mystery Ability\" allows the user to see the number of times each player has been slapped. When the user kills a player with an active slap count, they will collect their slaps. The collected slaps determine the user's abilities. The bounty on a player increases based on how many times they have slapped others. Slapples do not increase a person's bounty, but Slap Multipliers will affect a person\u2019s bounty.",
                 "cooldowns": {
                     "Mystery Ability (Teleportation, Invisibility)": 5,
                     "Mystery Ability (Normal, Golden Revolver)": 10
@@ -2769,7 +2775,7 @@
             },
             "stats": {
                 "power": 48,
-                "speed": 10 
+                "speed": 10
             },
             "VIP": true
         },
@@ -2777,7 +2783,7 @@
             "badges": [
                 2150485950
             ],
-            "obtainment": "To obtain The Relic, players must equip Default and be sucked into the portal spawned by bob and rob’s collision. A maximum of 4 people can be sent. This will teleport players to The Null Zone. Completing the main path will reward the badge and the glove. If you die when in The Null Zone, 100 slaps will be removed from your total slap count and you will return to the Lobby. You can avoid getting your slaps removed if you leave or close the game quickly. The full tutorial can be found on this page.",
+            "obtainment": "To obtain The Relic, players must equip Default and be sucked into the portal spawned by bob and rob\u2019s collision. A maximum of 4 people can be sent. This will teleport players to The Null Zone. Completing the main path will reward the badge and the glove. If you die when in The Null Zone, 100 slaps will be removed from your total slap count and you will return to the Lobby. You can avoid getting your slaps removed if you leave or close the game quickly. The full tutorial can be found on this page.",
             "overview": "Null is a badge glove added on August 18, 2023. It is completely black and covered with neon dark purple chains. It has curled fingers and long nails rather than the standard glove mesh.\nThe glove was released with the rob Plushie, which was a limited back accessory for your Roblox avatar. Upon arrival to the end of The Null Zone, players would be greeted by a giant rob plushie. Clicking the plushie used to award the Plushie, as well as the badge. The stock for the plushie has been depleted, but you can still obtain the badge.",
             "ability": {
                 "description": "Null's ability, \"Null Spawn,\" makes a black hole in the ground that summons a horde of nine small Imps, gremlin-like creatures with horns, purple joints and devilish smiles, with a purple body, and claws and feet. The Imps will chase the player that is closest to the user and stay locked on until they are killed or de-spawned (killed by being slapped or through abilities, causing a small purple explosion.) When an Imp is next to their target, no matter the altitude level, they will jump and latch onto them. If 3 of them latch onto their victim, a large black hand with purple chains, similar to the Null glove itself, will emerge from the ground under them, which will then grab and crush them, killing them instantly.",
@@ -2787,11 +2793,11 @@
                 }
             },
             "tooltips": {
-                "default": "l̸̨͍̏o̶̲͐̂ö̴̯̑k̴͎̳̉ ̵̧̧̚i̵͍͐n̴͖͗̑ṫ̶̝͇o̶̳̒ ̶̜̏̏t̵̛͇̭h̴͕̿ȩ̸̑ ̸̱̖̆ȩ̵͗̒ň̵͇d̶̡́"
+                "default": "l\u0338\u0328\u034d\u030fo\u0336\u0332\u0350\u0302\u00f6\u0334\u032f\u0311k\u0334\u034e\u0333\u0309 \u0335\u0327\u0327\u031ai\u0335\u034d\u0350n\u0334\u0356\u0357\u0311\u1e6b\u0336\u031d\u0347o\u0336\u0333\u0312 \u0336\u031c\u030f\u030ft\u0335\u031b\u0347\u032dh\u0334\u0355\u033f\u0229\u0338\u0311 \u0338\u0331\u0316\u0306\u0229\u0335\u0357\u0312\u0148\u0335\u0347d\u0336\u0321\u0301"
             },
             "stats": {
                 "power": 55,
-                "speed": 16 
+                "speed": 16
             },
             "VIP": true
         },
@@ -2835,7 +2841,7 @@
             },
             "stats": {
                 "power": 54,
-                "speed": 16 
+                "speed": 16
             },
             "VIP": true
         },
@@ -2843,10 +2849,10 @@
             "badges": [
                 2152906832
             ],
-            "obtainment": "To acquire the Necromancer glove, you need to earn the “Sweet-Tooth Sovereign” badge. This badge requires the collection of 2,000 Candy Corns, akin to Rattlebones' requirement of 1,000 Candy Corns.",
+            "obtainment": "To acquire the Necromancer glove, you need to earn the \u201cSweet-Tooth Sovereign\u201d badge. This badge requires the collection of 2,000 Candy Corns, akin to Rattlebones' requirement of 1,000 Candy Corns.",
             "overview": "Necromancer glove, a limited badge-required addition introduced during the October 6, 2023, Halloween Update, features a greenish-grey texture adorned with the deathly hallows symbol from Harry Potter on its palm, along with some other intricate symbols. It prominently displays a staff capped with a human skull and ribcage.",
             "ability": {
-                "description": "Passive Ability: \"Twisted Blessing\"\nThe Necromancer’s passive ability, \"Twisted Blessing,\" lets the user zombify any players they kill. When the user delivers the final blow, a grave appears a short distance in front of them, and the defeated player rises as a zombie from the grave. These zombies can attack other players, turning them into additional zombies. As the zombie count grows, they become stronger. If a zombie is killed, it will respawn near the Necromancer, climbing out of its grave. However, if the Necromancer dies, all their zombies will be destroyed.\n\nActive Abilities:\n\"**Undead Swap**\": The user can press \"E\" to switch places with the nearest zombie\n\"**Zombie Recall**\": By holding \"E,\" the user can summon all their zombies back, except for those in a ragdoll state. Ragdolled zombies will respawn at the location of their ragdoll, which might sometimes be in the void.",
+                "description": "Passive Ability: \"Twisted Blessing\"\nThe Necromancer\u2019s passive ability, \"Twisted Blessing,\" lets the user zombify any players they kill. When the user delivers the final blow, a grave appears a short distance in front of them, and the defeated player rises as a zombie from the grave. These zombies can attack other players, turning them into additional zombies. As the zombie count grows, they become stronger. If a zombie is killed, it will respawn near the Necromancer, climbing out of its grave. However, if the Necromancer dies, all their zombies will be destroyed.\n\nActive Abilities:\n\"**Undead Swap**\": The user can press \"E\" to switch places with the nearest zombie\n\"**Zombie Recall**\": By holding \"E,\" the user can summon all their zombies back, except for those in a ragdoll state. Ragdolled zombies will respawn at the location of their ragdoll, which might sometimes be in the void.",
                 "cooldowns": {
                     "Twisted Blessing": 5
                 }
@@ -2864,7 +2870,7 @@
             "badges": [
                 2153473254
             ],
-            "obtainment": "To unlock the Alchemist glove, you need the Containment Breach badge. To get this badge, you must kill 10 different players in a single life using the Plague glove’s passive ability.",
+            "obtainment": "To unlock the Alchemist glove, you need the Containment Breach badge. To get this badge, you must kill 10 different players in a single life using the Plague glove\u2019s passive ability.",
             "overview": "Alchemist is a glove added on October 20, 2023 requiring the Containment Breach badge. Visually, the glove resembles a hand soaked in green liquid coming out of a cauldron with small potions of varying colors adorning it. The glove also releases tiny glowing green particles.",
             "ability": {
                 "description": "Alchemist's ability, \"Summon Cauldron,\" allows the user to summon a cauldron. This cauldron is normally sized and contains a slanted wooden spoon resting in a mysterious blue liquid. The user can create potions by gathering ingredients found throughout the map by clicking them or walking over them, which are kept in an inventory UI at the bottom left of the screen labeled Ingredients. When holding an ingredient, the user can click on the cauldron's liquid to mix it in, changing its color. Clicking the spoon then brews a potion that gets added to the player's regular inventory, along with their glove. If the recipe is wrong, the cauldron will explode, resetting the liquid and knocking back anyone nearby. Note that the game doesn't provide the recipes. Potions and ingredients can be stacked. Only the Alchemist can use the cauldron, and other players can't interact with the spoon. If the ability is used again, the previous cauldron is removed, and any ingredients inside are cleared.\nDrink Potions: Interacting with the screen allows the user to drink the potion, which will provide effects depending on the type of potion.\nThrow Potions: Certain potions can be thrown by holding down the mouse or using mobile buttons. Throwing potions breaks them in front of the player, affecting anyone within the splash radius. However, potions like Power, Haste, and Invincibility can't be thrown to prevent overpowering certain gloves. Corrupted potions are also restricted from being thrown, as they could disrupt gameplay.\nToxin Bar: When the user drinks a potion for the first time, a Toxin Bar will show up above the Ingredients UI. Each potion that's consumed contributes 1/4 to the bar. The bar will slowly reset over time, taking 20 seconds to clear 1/4. Once the bar is cleared, it will disappear again. If the Toxin Bar is completely full, the user dies.",
@@ -2885,7 +2891,7 @@
             "badges": [
                 2153911928
             ],
-            "obtainment": "To obtain Druid, you will need to brew the Corrupted Vines Potion using Alchemist. The required ingredients are:\n- 3 Wild Vines\n- 1 Blood Rose\n- 1 Dark Root\n- 1 Elder Wood\n- 1 Jade Stone\nThese ingredients have low spawn rates compared to others found around the map.\nBy consuming the potion, you'll be transported to the Unknown World. Your task in this alternate realm is to defend against waves of mobs trying to breach the course's endpoint in a Tower Defense scenario. If you fail to stop them, your health will gradually decrease until you are defeated.\nYou have access to a shop that offers three defense towers:\n- Defence 1 (Teeth): Costs 120 coins, 8 can be placed, fires a fireball projectile at enemies. Its appearance is a blue Piranha plant.\n- Defence 2 (Scope): Costs 200 coins, 5 can be placed, fires a dart with an extended attack range and more damage. Its appearance is a yellow piranha plant.\n- Defence 3 (Tencelll): Costs 450 coins, 6 can be placed, creates vines similar to Druid, dealing substantial damage. It takes the form of Tencelll’s avatar holding the Druid glove.\nAs you advance through the waves, the minions will become progressively more difficult. Defeating Wave 6 will unlock the Druid Glove, while conquering Wave 8 will grant you the limited-edition Alchemist Hood UGC, which is no longer available elsewhere.",
+            "obtainment": "To obtain Druid, you will need to brew the Corrupted Vines Potion using Alchemist. The required ingredients are:\n- 3 Wild Vines\n- 1 Blood Rose\n- 1 Dark Root\n- 1 Elder Wood\n- 1 Jade Stone\nThese ingredients have low spawn rates compared to others found around the map.\nBy consuming the potion, you'll be transported to the Unknown World. Your task in this alternate realm is to defend against waves of mobs trying to breach the course's endpoint in a Tower Defense scenario. If you fail to stop them, your health will gradually decrease until you are defeated.\nYou have access to a shop that offers three defense towers:\n- Defence 1 (Teeth): Costs 120 coins, 8 can be placed, fires a fireball projectile at enemies. Its appearance is a blue Piranha plant.\n- Defence 2 (Scope): Costs 200 coins, 5 can be placed, fires a dart with an extended attack range and more damage. Its appearance is a yellow piranha plant.\n- Defence 3 (Tencelll): Costs 450 coins, 6 can be placed, creates vines similar to Druid, dealing substantial damage. It takes the form of Tencelll\u2019s avatar holding the Druid glove.\nAs you advance through the waves, the minions will become progressively more difficult. Defeating Wave 6 will unlock the Druid Glove, while conquering Wave 8 will grant you the limited-edition Alchemist Hood UGC, which is no longer available elsewhere.",
             "overview": "Druid is a badge-required glove added on November 3, 2023. It features a dark green glove with a lighter green spikey vine spiraling around it. This glove is unlocked by earning the Gardens and Ghouls badge.",
             "ability": {
                 "description": "Druid's ability, \"Wild Vines,\" makes the user take a stance, sending out large, rolling vines that travel at the player's speed for 2.5 seconds before disappearing. Players who touch the vines experience about 40 knockback and are stuck in roots for 5 seconds.\nHowever, certain abilities or gloves like Speedrun, which can alter walking speed, can bypass this paralysis effect, allowing them to freely move after being hit by the ability.",
@@ -2910,7 +2916,7 @@
             "obtainment": "To obtain Jester you have to get slapped while using Elude for the first time when you join the arena and teleport to the Cube of Death. If you end up somewhere else, you won't get the badge, so you'll need to start over in order to try again.",
             "overview": "Jester is a badge glove added on November 24, 2023 along with Ferryman. It requires the Now You See Me badge. It has an appearance of a checkered red and purple squares pattern texture, a white dress-like bottom, and a red bow with two yellow jingle bells on both sides of the glove.",
             "ability": {
-                "description": "Jester's ability, Cards & Pies, are two active abilities, \"Blinding Pies\" and \"Magic Cards.\" You can switch between these two abilities by double jumping.\n\nBlinding Pies:\nThe Blinding Pies ability throws a pie which covers the center of the victim’s screen with a pink pie splatter and dissipates after 3 seconds.\n\nMagic Cards:\nThe Magic Cards ability summons a black circle with red playing card suits around your character that lasts for less than a second. The circle will trigger one of five card effects onto the nearest person who is inside the circle aswell as playing 1 of 5 laugh sounds, or to whoever slaps you during the ability time. There are 5 cards, each with their own unique ability.\n- Diamonds: Turns the target person into a rock for 4 seconds, similar to Rocky's ability, but won't slow them down after they are freed.\n- Clubs: Slows the target player down to 5 walkspeed for 5 seconds.\n- Spades: Blows up the targeted player with 70 knockback, which sends them wherever the users avatar is pointing.\n- Hearts: Swaps the target player's position with another random player.\n- Joker: Make the target player dance for a five seconds, before losing their health and dying immediately. This card has a rarer chance of appearing than other cards.",
+                "description": "Jester's ability, Cards & Pies, are two active abilities, \"Blinding Pies\" and \"Magic Cards.\" You can switch between these two abilities by double jumping.\n\nBlinding Pies:\nThe Blinding Pies ability throws a pie which covers the center of the victim\u2019s screen with a pink pie splatter and dissipates after 3 seconds.\n\nMagic Cards:\nThe Magic Cards ability summons a black circle with red playing card suits around your character that lasts for less than a second. The circle will trigger one of five card effects onto the nearest person who is inside the circle aswell as playing 1 of 5 laugh sounds, or to whoever slaps you during the ability time. There are 5 cards, each with their own unique ability.\n- Diamonds: Turns the target person into a rock for 4 seconds, similar to Rocky's ability, but won't slow them down after they are freed.\n- Clubs: Slows the target player down to 5 walkspeed for 5 seconds.\n- Spades: Blows up the targeted player with 70 knockback, which sends them wherever the users avatar is pointing.\n- Hearts: Swaps the target player's position with another random player.\n- Joker: Make the target player dance for a five seconds, before losing their health and dying immediately. This card has a rarer chance of appearing than other cards.",
                 "cooldowns": {
                     "Blinding Pie": 4,
                     "Magic Cards": 8
@@ -3165,5 +3171,26 @@
             "video": "https://cdn.discordapp.com/attachments/1336901904462118975/1359029605864050748/IMG_1865.gif?ex=67f5fe73&is=67f4acf3&hm=f03148cae9a39e53714cacc04b4764b9e1e45f2b1854b0bcd6f50abe45ce7442&"
         }
     },
-    "polls": {}
+    "polls": {
+        "last_id": 1,
+        "1": {
+            "option_0": [
+                1173963781706088451
+            ],
+            "option_1": [],
+            "option_2": [
+                721151215010054165
+            ],
+            "question": "test",
+            "options": [
+                "1",
+                "2",
+                "3"
+            ],
+            "startTime": 1744336866,
+            "endTime": 1744336926,
+            "channel_id": 1350841628868345908,
+            "message_id": 1360072166825136320
+        }
+    }
 }
