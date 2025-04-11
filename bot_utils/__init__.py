@@ -7,7 +7,7 @@ from .utils import *
 
 VERSION = {
     'major': 2,
-    'minor': 5,
+    'minor': 4,
     'patch': 0,
 }
 
